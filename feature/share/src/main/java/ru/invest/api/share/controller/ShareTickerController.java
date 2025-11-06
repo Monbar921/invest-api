@@ -1,10 +1,11 @@
-package ru.invest.api.ticker.service.controller;
+package ru.invest.api.share.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import ru.invest.api.ticker.service.usecase.ShareUseCase;
+import ru.invest.api.share.usecase.ShareUseCase;
 
 import java.math.BigDecimal;
 
@@ -14,9 +15,9 @@ import java.math.BigDecimal;
 public class ShareTickerController {
     private final ShareUseCase shareUseCase;
 
-    @GetMapping
-    public void getPrice(){
-        final BigDecimal price = shareUseCase.getSharePrice("SBER", "TQBR");
+    @GetMapping("/{code}")
+    public void getPrice(final @PathVariable String code){
+        final BigDecimal price = shareUseCase.getCommonSharePrice(code);
         System.out.println(price.toString());
     }
 }

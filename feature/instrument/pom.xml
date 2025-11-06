@@ -4,29 +4,17 @@
 
     <parent>
         <groupId>ru.invest.api</groupId>
-        <artifactId>invest-api</artifactId>
+        <artifactId>feature</artifactId>
         <version>${project.revision}</version>
     </parent>
 
-    <artifactId>app</artifactId>
+    <artifactId>instrument</artifactId>
 
     <dependencies>
         <dependency>
             <groupId>ru.invest.api</groupId>
-            <artifactId>share</artifactId>
+            <artifactId>common</artifactId>
             <version>${project.version}</version>
-        </dependency>
-
-
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-test</artifactId>
-            <scope>test</scope>
         </dependency>
     </dependencies>
 

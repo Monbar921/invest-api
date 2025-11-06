@@ -23,6 +23,7 @@
 
     <modules>
         <module>app</module>
+        <module>common</module>
         <module>feature</module>
     </modules>
 

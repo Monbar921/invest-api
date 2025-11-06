@@ -8,17 +8,19 @@
         <version>${project.revision}</version>
     </parent>
 
-    <artifactId>ticker-service</artifactId>
+    <artifactId>share</artifactId>
 
     <dependencies>
         <dependency>
-            <groupId>ru.tinkoff.piapi</groupId>
-            <artifactId>java-sdk-spring-boot-starter</artifactId>
+            <groupId>ru.invest.api</groupId>
+            <artifactId>common</artifactId>
+            <version>${project.version}</version>
         </dependency>
 
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
+            <groupId>ru.invest.api</groupId>
+            <artifactId>instrument</artifactId>
+            <version>${project.version}</version>
         </dependency>
     </dependencies>
 

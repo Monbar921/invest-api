@@ -1,9 +1,10 @@
-package ru.invest.api.ticker.service.usecase.impl;
+package ru.invest.api.share.usecase.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import ru.invest.api.ticker.service.usecase.ShareUseCase;
+import ru.invest.api.share.usecase.ShareUseCase;
+import ru.invest.api.common.model.enums.ClassCode;
 import ru.tinkoff.piapi.contract.v1.GetLastPricesRequest;
 import ru.tinkoff.piapi.contract.v1.GetLastPricesResponse;
 import ru.tinkoff.piapi.contract.v1.InstrumentIdType;
@@ -24,7 +25,11 @@ import java.math.BigDecimal;
 public class ShareUseCaseImpl implements ShareUseCase {
     private final ServiceStubFactory serviceStubFactory;
 
-    public BigDecimal getSharePrice(final String ticker, final String classCode) {
+    public BigDecimal getCommonSharePrice(final String ticker) {
+        return getSharePrice(ticker, ClassCode.TQBR.name());
+    }
+
+    private BigDecimal getSharePrice(final String ticker, final String classCode) {
         final SyncStubWrapper<InstrumentsServiceGrpc.InstrumentsServiceBlockingStub> stubWrapper =
                 serviceStubFactory.newSyncService(InstrumentsServiceGrpc::newBlockingStub);
 
@@ -36,10 +41,10 @@ public class ShareUseCaseImpl implements ShareUseCase {
 
         final Share instrument = stubWrapper.getStub().shareBy(request).getInstrument();
 
-        return getPriceFromShare(instrument);
+        return extractPrice(instrument);
     }
 
-    private BigDecimal getPriceFromShare(final Share share){
+    private BigDecimal extractPrice(final Share share){
         if(share == null){
             log.warn("Trying to get price from null share");
             return null;

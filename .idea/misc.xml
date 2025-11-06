@@ -7,6 +7,9 @@
         <option value="$PROJECT_DIR$/pom.xml" />
         <option value="$PROJECT_DIR$/feature/pom.xml" />
         <option value="$PROJECT_DIR$/feature/ticket-service/pom.xml" />
+        <option value="$PROJECT_DIR$/common/pom.xml" />
+        <option value="$PROJECT_DIR$/feature/instrument/pom.xml" />
+        <option value="$PROJECT_DIR$/feature/share/pom.xml" />
       </list>
     </option>
   </component>
