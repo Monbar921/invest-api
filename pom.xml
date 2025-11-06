@@ -1,0 +1,93 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.5.7</version>
+        <relativePath/> <!-- lookup parent from repository -->
+    </parent>
+
+    <groupId>ru.invest.api</groupId>
+    <artifactId>invest-api</artifactId>
+    <version>${project.revision}</version>
+    <packaging>pom</packaging>
+
+    <properties>
+        <project.revision>1.0-SNAPSHOT</project.revision>
+        <java.version>17</java.version>
+
+        <tinkoff.piapi.version>1.42</tinkoff.piapi.version>
+    </properties>
+
+    <modules>
+        <module>app</module>
+        <module>feature</module>
+    </modules>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>ru.tinkoff.piapi</groupId>
+                <artifactId>java-sdk-spring-boot-starter</artifactId>
+                <version>${tinkoff.piapi.version}</version>
+            </dependency>
+            <!-- Для поддержки стратегий -->
+            <dependency>
+                <groupId>ru.tinkoff.piapi</groupId>
+                <artifactId>java-sdk-strategy</artifactId>
+                <version>${tinkoff.piapi.version}</version>
+            </dependency>
+
+<!--            <dependency>-->
+<!--                <groupId>ru.tinkoff.piapi</groupId>-->
+<!--                <artifactId>java-sdk-core</artifactId>-->
+<!--                <version>${tinkoff.piapi.version}</version>-->
+<!--            </dependency>-->
+
+            <dependency>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>1.18.36</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>flatten-maven-plugin</artifactId>
+                <version>1.6.0</version>
+                <configuration>
+                    <updatePomFile>true</updatePomFile>
+                    <flattenMode>resolveCiFriendliesOnly</flattenMode>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>flatten</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>flatten</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>flatten.clean</id>
+                        <phase>clean</phase>
+                        <goals>
+                            <goal>clean</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
