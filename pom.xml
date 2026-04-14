@@ -35,17 +35,12 @@
                 <version>${tinkoff.piapi.version}</version>
             </dependency>
             <!-- Для поддержки стратегий -->
+
             <dependency>
                 <groupId>ru.tinkoff.piapi</groupId>
-                <artifactId>java-sdk-strategy</artifactId>
+                <artifactId>java-sdk-core</artifactId>
                 <version>${tinkoff.piapi.version}</version>
             </dependency>
-
-<!--            <dependency>-->
-<!--                <groupId>ru.tinkoff.piapi</groupId>-->
-<!--                <artifactId>java-sdk-core</artifactId>-->
-<!--                <version>${tinkoff.piapi.version}</version>-->
-<!--            </dependency>-->
 
             <dependency>
                 <groupId>org.projectlombok</groupId>

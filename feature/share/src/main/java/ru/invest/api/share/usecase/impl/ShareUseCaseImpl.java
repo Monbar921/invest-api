@@ -5,10 +5,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import ru.invest.api.share.usecase.ShareUseCase;
 import ru.invest.api.common.model.enums.ClassCode;
+import ru.tinkoff.piapi.contract.v1.BondsResponse;
 import ru.tinkoff.piapi.contract.v1.GetLastPricesRequest;
 import ru.tinkoff.piapi.contract.v1.GetLastPricesResponse;
 import ru.tinkoff.piapi.contract.v1.InstrumentIdType;
 import ru.tinkoff.piapi.contract.v1.InstrumentRequest;
+import ru.tinkoff.piapi.contract.v1.InstrumentStatus;
+import ru.tinkoff.piapi.contract.v1.InstrumentsRequest;
 import ru.tinkoff.piapi.contract.v1.InstrumentsServiceGrpc;
 import ru.tinkoff.piapi.contract.v1.LastPrice;
 import ru.tinkoff.piapi.contract.v1.MarketDataServiceGrpc;
@@ -40,6 +43,13 @@ public class ShareUseCaseImpl implements ShareUseCase {
                 .build();
 
         final Share instrument = stubWrapper.getStub().shareBy(request).getInstrument();
+
+        InstrumentsRequest bondsRequest = InstrumentsRequest.newBuilder()
+                .setInstrumentStatus(InstrumentStatus.INSTRUMENT_STATUS_ALL)
+                .build();
+
+        // 2. Execute the request to get the BondsResponse
+        BondsResponse response = stubWrapper.getStub().bonds(bondsRequest);
 
         return extractPrice(instrument);
     }
