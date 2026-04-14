@@ -1,11 +1,11 @@
-package ru.invest.api.share.controller;
+package ru.invest.api.stock.supplier.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import ru.invest.api.share.usecase.ShareUseCase;
+import ru.invest.api.stock.supplier.usecase.ShareUseCase;
 
 import java.math.BigDecimal;
 

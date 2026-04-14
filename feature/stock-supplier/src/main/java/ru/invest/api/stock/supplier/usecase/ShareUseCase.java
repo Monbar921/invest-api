@@ -1,4 +1,4 @@
-package ru.invest.api.share.usecase;
+package ru.invest.api.stock.supplier.usecase;
 
 import java.math.BigDecimal;
 

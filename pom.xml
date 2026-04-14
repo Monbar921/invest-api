@@ -19,6 +19,7 @@
         <java.version>17</java.version>
 
         <tinkoff.piapi.version>1.42</tinkoff.piapi.version>
+        <apache.commons.collections.version>4.5.0</apache.commons.collections.version>
     </properties>
 
     <modules>
@@ -34,7 +35,6 @@
                 <artifactId>java-sdk-spring-boot-starter</artifactId>
                 <version>${tinkoff.piapi.version}</version>
             </dependency>
-            <!-- Для поддержки стратегий -->
 
             <dependency>
                 <groupId>ru.tinkoff.piapi</groupId>
@@ -43,9 +43,9 @@
             </dependency>
 
             <dependency>
-                <groupId>org.projectlombok</groupId>
-                <artifactId>lombok</artifactId>
-                <version>1.18.36</version>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-collections4</artifactId>
+                <version>${apache.commons.collections.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

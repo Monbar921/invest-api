@@ -1,9 +1,9 @@
-package ru.invest.api.share.usecase.impl;
+package ru.invest.api.stock.supplier.usecase.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import ru.invest.api.share.usecase.ShareUseCase;
+import ru.invest.api.stock.supplier.usecase.ShareUseCase;
 import ru.invest.api.common.model.enums.ClassCode;
 import ru.tinkoff.piapi.contract.v1.BondsResponse;
 import ru.tinkoff.piapi.contract.v1.GetLastPricesRequest;

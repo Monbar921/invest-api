@@ -4,6 +4,7 @@ target/
 !**/src/test/**/target/
 
 ### IntelliJ IDEA ###
+/.idea/
 /.idea/**
 .idea/**
 .idea/modules.xml
@@ -14,6 +15,8 @@ target/
 *.iml
 *.ipr
 *.flattened-pom.xml
+
+app/src/test/resources/application.yml
 
 ### Eclipse ###
 .apt_generated
