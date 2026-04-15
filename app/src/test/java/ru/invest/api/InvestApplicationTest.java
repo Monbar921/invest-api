@@ -3,7 +3,13 @@ package ru.invest.api;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import ru.invest.api.common.model.BondModel;
 import ru.invest.api.stock.supplier.usecase.BondUseCase;
+
+import java.util.List;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
 
 @SpringBootTest
 public class InvestApplicationTest {
@@ -12,6 +18,7 @@ public class InvestApplicationTest {
 
     @Test
     public void plain() {
-        bondUseCase.getForeignCurrencyBonds();
+        final List<BondModel> bonds = bondUseCase.getForeignCurrencyBonds();
+        assertThat(!bonds.isEmpty(), is(true));
     }
 }
