@@ -10,7 +10,10 @@ import java.math.BigDecimal;
 @Accessors(chain = true)
 @NoArgsConstructor
 public class PriceModel {
+    private String uid;
     private BigDecimal price;
     private String currency;
+    private BigDecimal nominalQuantity;
     private BigDecimal nominalPercentage;
+    private String nominalCurrency;
 }

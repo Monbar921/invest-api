@@ -5,22 +5,16 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.stereotype.Component;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.PriceModel;
-import ru.invest.api.common.usecase.CurrencyUseCase;
 import ru.invest.api.stock.supplier.mapper.BondMapper;
 import ru.invest.api.stock.supplier.usecase.BondUseCase;
 import ru.invest.api.stock.supplier.usecase.PriceUseCase;
 import ru.tinkoff.piapi.contract.v1.Bond;
 import ru.tinkoff.piapi.contract.v1.BondsResponse;
-import ru.tinkoff.piapi.contract.v1.GetLastPricesRequest;
-import ru.tinkoff.piapi.contract.v1.GetLastPricesResponse;
 import ru.tinkoff.piapi.contract.v1.InstrumentStatus;
 import ru.tinkoff.piapi.contract.v1.InstrumentsRequest;
 import ru.tinkoff.piapi.contract.v1.InstrumentsServiceGrpc;
-import ru.tinkoff.piapi.contract.v1.LastPrice;
-import ru.tinkoff.piapi.contract.v1.MarketDataServiceGrpc;
 import ru.ttech.piapi.core.connector.SyncStubWrapper;
 
-import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -43,10 +37,13 @@ public class BondUseCaseImpl implements BondUseCase {
     @Override
     public List<BondModel> getForeignCurrencyBonds() {
         final List<Bond> allBonds = getAllBonds();
-        final List<Bond> foreignBonds = filterForeignBonds(allBonds);
-        priceUseCase.getBondPrice(foreignBonds);
+        final Map<String, Bond> foreignBonds = filterForeignBonds(allBonds)
+                .stream()
+                .filter(Objects::nonNull)
+                .collect(Collectors.toMap(Bond::getUid, Function.identity()));
+        final Map<String, PriceModel> bondPrices = priceUseCase.getBondPrice(foreignBonds);
 
-        return bondMapper.toModel(foreignBonds);
+        return bondMapper.toModel(foreignBonds, bondPrices);
     }
 
     private List<Bond> getAllBonds() {

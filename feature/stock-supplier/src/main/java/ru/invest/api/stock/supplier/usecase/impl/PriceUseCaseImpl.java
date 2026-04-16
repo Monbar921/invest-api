@@ -57,7 +57,7 @@ public class PriceUseCaseImpl implements PriceUseCase {
         return response.getLastPricesList().stream()
                 .filter(Objects::nonNull)
                 .map(lastPrice -> getPrice(lastPrice, bonds))
-                .collect(Collectors.toMap(LastPrice::getInstrumentUid, Function.identity()));
+                .collect(Collectors.toMap(PriceModel::getUid, Function.identity()));
     }
 
     private PriceModel getPrice(final LastPrice lastPrice, final Map<String, Bond> bonds) {
