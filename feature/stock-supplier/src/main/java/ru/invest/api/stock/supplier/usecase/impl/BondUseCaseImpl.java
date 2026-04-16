@@ -4,8 +4,11 @@ import lombok.RequiredArgsConstructor;
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.stereotype.Component;
 import ru.invest.api.common.model.BondModel;
+import ru.invest.api.common.model.PriceModel;
+import ru.invest.api.common.usecase.CurrencyUseCase;
 import ru.invest.api.stock.supplier.mapper.BondMapper;
 import ru.invest.api.stock.supplier.usecase.BondUseCase;
+import ru.invest.api.stock.supplier.usecase.PriceUseCase;
 import ru.tinkoff.piapi.contract.v1.Bond;
 import ru.tinkoff.piapi.contract.v1.BondsResponse;
 import ru.tinkoff.piapi.contract.v1.GetLastPricesRequest;
@@ -17,6 +20,7 @@ import ru.tinkoff.piapi.contract.v1.LastPrice;
 import ru.tinkoff.piapi.contract.v1.MarketDataServiceGrpc;
 import ru.ttech.piapi.core.connector.SyncStubWrapper;
 
+import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -31,16 +35,16 @@ import static ru.invest.api.stock.supplier.predicates.BondPredicates.ISIN_PREDIC
 @RequiredArgsConstructor
 public class BondUseCaseImpl implements BondUseCase {
     private final SyncStubWrapper<InstrumentsServiceGrpc.InstrumentsServiceBlockingStub> instrumentsServiceBlockingStub;
-    private final SyncStubWrapper<MarketDataServiceGrpc.MarketDataServiceBlockingStub> marketDataServiceBlockingStub;
 
     private final BondMapper bondMapper;
+
+    private final PriceUseCase priceUseCase;
 
     @Override
     public List<BondModel> getForeignCurrencyBonds() {
         final List<Bond> allBonds = getAllBonds();
         final List<Bond> foreignBonds = filterForeignBonds(allBonds);
-
-        getLastPricesForBonds(foreignBonds);
+        priceUseCase.getBondPrice(foreignBonds);
 
         return bondMapper.toModel(foreignBonds);
     }
@@ -66,21 +70,5 @@ public class BondUseCaseImpl implements BondUseCase {
                 .filter(FOREIGN_CURRENCY_PREDICATE)
                 .filter(ISIN_PREDICATE)
                 .toList();
-    }
-
-    private Map<String, LastPrice> getLastPricesForBonds(List<Bond> bonds) {
-        List<String> figis = bonds.stream()
-                .map(Bond::getFigi)
-                .collect(Collectors.toList());
-
-        GetLastPricesRequest request = GetLastPricesRequest.newBuilder()
-                .addAllFigi(figis)
-                .build();
-
-        GetLastPricesResponse response = marketDataServiceBlockingStub.getStub()
-                .getLastPrices(request);
-
-        return response.getLastPricesList().stream()
-                .collect(Collectors.toMap(LastPrice::getFigi, Function.identity()));
     }
 }

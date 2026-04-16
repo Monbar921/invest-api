@@ -12,4 +12,5 @@ import java.math.BigDecimal;
 public class PriceModel {
     private BigDecimal price;
     private String currency;
+    private BigDecimal nominalPercentage;
 }
