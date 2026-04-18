@@ -9,10 +9,9 @@ import lombok.experimental.Accessors;
 @NoArgsConstructor
 public class BondModel {
     private String ticker;
-    private String currency;
     private String uid;
     private String isin;
     private String name;
-    private PriceModel nominal;
+    private PriceModel price;
     private CouponModel coupon;
 }

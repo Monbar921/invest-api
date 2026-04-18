@@ -4,13 +4,10 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 
-import java.math.BigDecimal;
-
 @Data
 @Accessors(chain = true)
 @NoArgsConstructor
-public class PriceModel {
-    private String uid;
-    private MoneyModel nominal;
-    private BigDecimal nominalPercentage;
+public class MoneyModel {
+    private long quantity;
+    private String currency;
 }

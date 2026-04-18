@@ -28,7 +28,8 @@ import java.util.stream.Collectors;
 @Component
 @RequiredArgsConstructor
 public class PriceUseCaseImpl implements PriceUseCase {
-    private static final BigDecimal PERCENTAGE_DIVISOR = BigDecimal.valueOf(100);
+    private static final int SCALE = 9;
+    private static final BigDecimal NANO_DIVISOR = BigDecimal.valueOf(1_000_000_000);
 
     private final SyncStubWrapper<MarketDataServiceGrpc.MarketDataServiceBlockingStub> marketDataServiceBlockingStub;
 
@@ -68,7 +69,8 @@ public class PriceUseCaseImpl implements PriceUseCase {
         final BigDecimal nano = BigDecimal.valueOf(lastPrice.getPrice().getNano());
         final BigDecimal units = BigDecimal.valueOf(lastPrice.getPrice().getUnits());
 
-        final BigDecimal nominalPercentage = nano.multiply(units).divide(PERCENTAGE_DIVISOR, RoundingMode.UNNECESSARY);
+        final BigDecimal nominalPercentage = (units.multiply(BigDecimal.valueOf(1.0)))
+                .add(nano.divide(NANO_DIVISOR, SCALE, RoundingMode.FLOOR ));
 
         final Bond bond = Optional.ofNullable(bonds.get(lastPrice.getInstrumentUid()))
                 .orElseThrow(() -> new GeneralNotFoundEntityException(ExceptionErrorCode.NOT_FOUND

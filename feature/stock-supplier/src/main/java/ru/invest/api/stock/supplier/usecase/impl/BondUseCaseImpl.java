@@ -13,6 +13,7 @@ import ru.tinkoff.piapi.contract.v1.BondsResponse;
 import ru.tinkoff.piapi.contract.v1.InstrumentStatus;
 import ru.tinkoff.piapi.contract.v1.InstrumentsRequest;
 import ru.tinkoff.piapi.contract.v1.InstrumentsServiceGrpc;
+import ru.tinkoff.piapi.contract.v1.MoneyValue;
 import ru.ttech.piapi.core.connector.SyncStubWrapper;
 
 import java.util.Collections;
