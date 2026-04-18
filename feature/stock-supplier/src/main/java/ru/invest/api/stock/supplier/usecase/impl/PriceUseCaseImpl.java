@@ -5,6 +5,7 @@ import org.apache.commons.collections4.MapUtils;
 import org.springframework.stereotype.Component;
 import ru.invest.api.common.exception.GeneralNotFoundEntityException;
 import ru.invest.api.common.exception.enums.ExceptionErrorCode;
+import ru.invest.api.common.mapper.BigDecimalMapper;
 import ru.invest.api.common.model.PriceModel;
 import ru.invest.api.stock.supplier.mapper.PriceMapper;
 import ru.invest.api.stock.supplier.usecase.PriceUseCase;
@@ -16,7 +17,6 @@ import ru.tinkoff.piapi.contract.v1.MarketDataServiceGrpc;
 import ru.ttech.piapi.core.connector.SyncStubWrapper;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -28,12 +28,10 @@ import java.util.stream.Collectors;
 @Component
 @RequiredArgsConstructor
 public class PriceUseCaseImpl implements PriceUseCase {
-    private static final int SCALE = 9;
-    private static final BigDecimal NANO_DIVISOR = BigDecimal.valueOf(1_000_000_000);
-
     private final SyncStubWrapper<MarketDataServiceGrpc.MarketDataServiceBlockingStub> marketDataServiceBlockingStub;
 
     private final PriceMapper priceMapper;
+    private final BigDecimalMapper bigDecimalMapper;
 
     @Override
     public Map<String, PriceModel> getBondPrice(final Map<String, Bond> bonds) {
@@ -66,11 +64,8 @@ public class PriceUseCaseImpl implements PriceUseCase {
             return null;
         }
 
-        final BigDecimal nano = BigDecimal.valueOf(lastPrice.getPrice().getNano());
-        final BigDecimal units = BigDecimal.valueOf(lastPrice.getPrice().getUnits());
-
-        final BigDecimal nominalPercentage = (units.multiply(BigDecimal.valueOf(1.0)))
-                .add(nano.divide(NANO_DIVISOR, SCALE, RoundingMode.FLOOR ));
+        final BigDecimal nominalPercentage = bigDecimalMapper.fromBaseAndNanoFloatParts(lastPrice.getPrice().getUnits(),
+                lastPrice.getPrice().getNano());
 
         final Bond bond = Optional.ofNullable(bonds.get(lastPrice.getInstrumentUid()))
                 .orElseThrow(() -> new GeneralNotFoundEntityException(ExceptionErrorCode.NOT_FOUND

@@ -7,10 +7,10 @@ import ru.tinkoff.piapi.contract.v1.Bond;
 
 import java.math.BigDecimal;
 
-@Mapper(uses = {MoneyValueMapper.class})
+@Mapper(uses = {MoneyMapper.class})
 public interface PriceMapper {
     @Mapping(target = "uid", source = "bond.uid")
-    @Mapping(target = "nominal", source = "bond.nominal", qualifiedByName = "toNominalMoney")
+    @Mapping(target = "nominal", source = "bond.nominal")
     @Mapping(target = "nominalPercentage", source = "nominalPercentage")
     PriceModel toModel(Bond bond, BigDecimal nominalPercentage);
 }

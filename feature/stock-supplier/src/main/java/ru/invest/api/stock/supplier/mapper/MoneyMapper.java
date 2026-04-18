@@ -2,14 +2,15 @@ package ru.invest.api.stock.supplier.mapper;
 
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-import org.mapstruct.Named;
 import ru.invest.api.common.model.MoneyModel;
 import ru.tinkoff.piapi.contract.v1.MoneyValue;
 
 @Mapper
-public interface MoneyValueMapper {
+public interface MoneyMapper {
 
-    @Named("toNominalMoney")
     @Mapping(target = "quantity", source = "units")
-    MoneyModel toNominalMoneyModel(MoneyValue moneyValue);
+    MoneyModel toModel(MoneyValue moneyValue);
+
+
+    MoneyModel toModel(String name);
 }

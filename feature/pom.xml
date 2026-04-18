@@ -13,6 +13,7 @@
 
     <modules>
         <module>stock-supplier</module>
+        <module>ui-service</module>
     </modules>
 
     <dependencies>

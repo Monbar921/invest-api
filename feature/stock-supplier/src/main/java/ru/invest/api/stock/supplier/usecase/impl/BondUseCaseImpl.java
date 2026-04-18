@@ -5,6 +5,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.stereotype.Component;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.PriceModel;
+import ru.invest.api.common.model.parameters.BondParameters;
 import ru.invest.api.stock.supplier.mapper.BondMapper;
 import ru.invest.api.stock.supplier.usecase.BondUseCase;
 import ru.invest.api.stock.supplier.usecase.PriceUseCase;
@@ -13,7 +14,6 @@ import ru.tinkoff.piapi.contract.v1.BondsResponse;
 import ru.tinkoff.piapi.contract.v1.InstrumentStatus;
 import ru.tinkoff.piapi.contract.v1.InstrumentsRequest;
 import ru.tinkoff.piapi.contract.v1.InstrumentsServiceGrpc;
-import ru.tinkoff.piapi.contract.v1.MoneyValue;
 import ru.ttech.piapi.core.connector.SyncStubWrapper;
 
 import java.util.Collections;
@@ -36,15 +36,15 @@ public class BondUseCaseImpl implements BondUseCase {
     private final PriceUseCase priceUseCase;
 
     @Override
-    public List<BondModel> getForeignCurrencyBonds() {
+    public List<BondModel> getForeignCurrencyBonds(final BondParameters bondParameters) {
         final List<Bond> allBonds = getAllBonds();
         final Map<String, Bond> foreignBonds = filterForeignBonds(allBonds)
                 .stream()
                 .filter(Objects::nonNull)
                 .collect(Collectors.toMap(Bond::getUid, Function.identity()));
-        final Map<String, PriceModel> bondPrices = priceUseCase.getBondPrice(foreignBonds);
 
-        return bondMapper.toModel(foreignBonds, bondPrices);
+        final Map<String, PriceModel> bondPrices = priceUseCase.getBondPrice(foreignBonds);
+        return bondMapper.toModel(foreignBonds, bondPrices, bondParameters);
     }
 
     private List<Bond> getAllBonds() {
@@ -52,7 +52,8 @@ public class BondUseCaseImpl implements BondUseCase {
                 .setInstrumentStatus(InstrumentStatus.INSTRUMENT_STATUS_BASE)
                 .build();
 
-        final BondsResponse response = instrumentsServiceBlockingStub.getStub().bonds(bondsRequest);
+        final BondsResponse response = instrumentsServiceBlockingStub.getStub()
+                .bonds(bondsRequest);
 
         return response.getInstrumentsList();
     }
@@ -69,4 +70,5 @@ public class BondUseCaseImpl implements BondUseCase {
                 .filter(ISIN_PREDICATE)
                 .toList();
     }
+
 }
