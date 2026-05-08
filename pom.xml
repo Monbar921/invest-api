@@ -19,9 +19,11 @@
         <java.version>17</java.version>
         <spring.version>3.5.7</spring.version>
 
+        <spring-boot-starter-aop.version>3.5.14</spring-boot-starter-aop.version>
         <tinkoff.piapi.version>1.42</tinkoff.piapi.version>
         <apache.commons.collections.version>4.5.0</apache.commons.collections.version>
         <mapstruct.version>1.6.3</mapstruct.version>
+        <protobuf.java.version>4.34.1</protobuf.java.version>
     </properties>
 
     <modules>
@@ -58,6 +60,16 @@
                 <groupId>org.mapstruct</groupId>
                 <artifactId>mapstruct-processor</artifactId>
                 <version>${mapstruct.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.protobuf</groupId>
+                <artifactId>protobuf-java</artifactId>
+                <version>${protobuf.java.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-aop</artifactId>
+                <version>${spring-boot-starter-aop.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
