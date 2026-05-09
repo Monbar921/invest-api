@@ -12,5 +12,5 @@ import java.math.BigDecimal;
 public class PriceModel {
     private String uid;
     private MoneyModel nominal;
-    private BigDecimal nominalPercentage;
+    private BigDecimal current;
 }

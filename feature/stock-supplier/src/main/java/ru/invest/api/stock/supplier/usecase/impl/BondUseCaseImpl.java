@@ -2,7 +2,10 @@ package ru.invest.api.stock.supplier.usecase.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
+import ru.invest.api.common.exception.GeneralNotFoundEntityException;
+import ru.invest.api.common.exception.enums.ExceptionErrorCode;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.PriceModel;
 import ru.invest.api.common.model.parameters.BondParameters;
@@ -14,11 +17,14 @@ import ru.tinkoff.piapi.contract.v1.Bond;
 import ru.tinkoff.piapi.contract.v1.BondsResponse;
 import ru.tinkoff.piapi.contract.v1.InstrumentStatus;
 import ru.tinkoff.piapi.contract.v1.InstrumentsRequest;
+import ru.tinkoff.piapi.contract.v1.MoneyValue;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -42,7 +48,15 @@ public class BondUseCaseImpl implements BondUseCase {
                 .filter(Objects::nonNull)
                 .collect(Collectors.toMap(Bond::getUid, Function.identity()));
 
-        final Map<String, PriceModel> bondPrices = priceUseCase.getBondPrice(foreignBonds);
+        final List<String> uids = foreignBonds.entrySet()
+                .stream()
+                .filter(Objects::nonNull)
+                .map(Map.Entry::getValue)
+                .filter(Objects::nonNull)
+                .map(Bond::getUid)
+                .toList();
+
+        final Map<String, PriceModel> bondPrices = priceUseCase.getLastPrices(uids, getNominalPrice());
         return bondMapper.toModel(foreignBonds, bondPrices, bondParameters);
     }
 
@@ -68,6 +82,20 @@ public class BondUseCaseImpl implements BondUseCase {
                 .filter(FOREIGN_CURRENCY_PREDICATE)
                 .filter(ISIN_PREDICATE)
                 .toList();
+    }
+
+    private static BiFunction<Map<String, Bond>, String, MoneyValue> getNominalPrice() {
+        return (bonds, uid) -> {
+            if (StringUtils.isBlank(uid)) {
+                return null;
+            }
+
+            final Bond bond = Optional.ofNullable(bonds.get(uid))
+                    .orElseThrow(() -> new GeneralNotFoundEntityException(ExceptionErrorCode.NOT_FOUND
+                            , "Bond is not present while calculating current price"));
+
+            return bond.getNominal();
+        };
     }
 
 }
