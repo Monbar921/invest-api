@@ -9,12 +9,11 @@ import ru.invest.api.common.model.parameters.BondParameters;
 import ru.invest.api.stock.supplier.mapper.BondMapper;
 import ru.invest.api.stock.supplier.usecase.BondUseCase;
 import ru.invest.api.stock.supplier.usecase.PriceUseCase;
+import ru.invest.api.stock.supplier.wrapper.impl.InstrumentsGrpcRateLimitedWrapperImpl;
 import ru.tinkoff.piapi.contract.v1.Bond;
 import ru.tinkoff.piapi.contract.v1.BondsResponse;
 import ru.tinkoff.piapi.contract.v1.InstrumentStatus;
 import ru.tinkoff.piapi.contract.v1.InstrumentsRequest;
-import ru.tinkoff.piapi.contract.v1.InstrumentsServiceGrpc;
-import ru.ttech.piapi.core.connector.SyncStubWrapper;
 
 import java.util.Collections;
 import java.util.List;
@@ -29,7 +28,7 @@ import static ru.invest.api.stock.supplier.predicates.BondPredicates.ISIN_PREDIC
 @Component
 @RequiredArgsConstructor
 public class BondUseCaseImpl implements BondUseCase {
-    private final SyncStubWrapper<InstrumentsServiceGrpc.InstrumentsServiceBlockingStub> instrumentsServiceBlockingStub;
+    private final InstrumentsGrpcRateLimitedWrapperImpl instrumentsGrpcRateLimitedWrapper;
 
     private final BondMapper bondMapper;
 
@@ -52,7 +51,7 @@ public class BondUseCaseImpl implements BondUseCase {
                 .setInstrumentStatus(InstrumentStatus.INSTRUMENT_STATUS_BASE)
                 .build();
 
-        final BondsResponse response = instrumentsServiceBlockingStub.getStub()
+        final BondsResponse response = instrumentsGrpcRateLimitedWrapper
                 .bonds(bondsRequest);
 
         return response.getInstrumentsList();

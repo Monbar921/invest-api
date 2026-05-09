@@ -8,11 +8,10 @@ import ru.invest.api.common.model.CouponDataModel;
 import ru.invest.api.common.model.CouponModel;
 import ru.invest.api.stock.supplier.mapper.CouponMapper;
 import ru.invest.api.stock.supplier.usecase.CouponUseCase;
+import ru.invest.api.stock.supplier.wrapper.impl.InstrumentsGrpcRateLimitedWrapperImpl;
 import ru.tinkoff.piapi.contract.v1.Bond;
 import ru.tinkoff.piapi.contract.v1.GetBondCouponsRequest;
 import ru.tinkoff.piapi.contract.v1.GetBondCouponsResponse;
-import ru.tinkoff.piapi.contract.v1.InstrumentsServiceGrpc;
-import ru.ttech.piapi.core.connector.SyncStubWrapper;
 
 import java.util.List;
 import java.util.Objects;
@@ -23,7 +22,7 @@ import static ru.invest.api.common.exception.enums.ExceptionErrorCode.EMPTY_UID;
 @RequiredArgsConstructor
 public class CouponUseCaseImpl implements CouponUseCase {
     private final CouponMapper couponMapper;
-    protected SyncStubWrapper<InstrumentsServiceGrpc.InstrumentsServiceBlockingStub> instrumentsServiceBlockingStub;
+    private final InstrumentsGrpcRateLimitedWrapperImpl instrumentsGrpcRateLimitedWrapper;
 
     @Override
     public CouponModel getCoupons(final Bond bond) {
@@ -44,7 +43,7 @@ public class CouponUseCaseImpl implements CouponUseCase {
                 .setInstrumentId(uid)
                 .build();
 
-        final GetBondCouponsResponse response = instrumentsServiceBlockingStub.getStub()
+        final GetBondCouponsResponse response = instrumentsGrpcRateLimitedWrapper
                 .getBondCoupons(request);
 
         return response.getEventsList()
