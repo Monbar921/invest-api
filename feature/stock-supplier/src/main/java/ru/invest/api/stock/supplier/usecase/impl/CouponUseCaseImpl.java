@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
 import ru.invest.api.common.exception.GeneralUnprocessableEntityException;
+import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.CouponDataModel;
 import ru.invest.api.common.model.CouponModel;
 import ru.invest.api.stock.supplier.mapper.CouponMapper;
@@ -25,13 +26,13 @@ public class CouponUseCaseImpl implements CouponUseCase {
     private final InstrumentsGrpcRateLimitedWrapperImpl instrumentsGrpcRateLimitedWrapper;
 
     @Override
-    public CouponModel getCoupons(final Bond bond) {
+    public CouponModel getCoupons(final BondModel bondModel, final Bond bond) {
         if (bond == null) {
             return null;
         }
 
         final List<CouponDataModel> couponDtoList = getCouponData(bond.getUid());
-        return couponMapper.toModel(bond, couponDtoList);
+        return couponMapper.toModel(bond, bondModel, couponDtoList);
     }
 
     private List<CouponDataModel> getCouponData(final String uid) {

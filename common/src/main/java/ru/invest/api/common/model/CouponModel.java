@@ -14,5 +14,6 @@ import java.util.List;
 public class CouponModel {
     private String uid;
     private int quantityPerYear;
+    private BigDecimal interest;
     private List<CouponDataModel> couponData;
 }

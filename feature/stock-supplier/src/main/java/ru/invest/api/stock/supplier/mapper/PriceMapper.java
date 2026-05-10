@@ -11,6 +11,6 @@ import java.math.BigDecimal;
 public interface PriceMapper {
     @Mapping(target = "uid", source = "uid")
     @Mapping(target = "nominal", source = "nominal")
-    @Mapping(target = "nominalPercentage", source = "nominalPercentage")
-    PriceModel toBondPriceModel(String uid, MoneyValue nominal, BigDecimal nominalPercentage);
+    @Mapping(target = "current", source = "current")
+    PriceModel toBondPriceModel(String uid, MoneyValue nominal, BigDecimal current);
 }

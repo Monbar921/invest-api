@@ -6,11 +6,10 @@ import ru.invest.api.common.mapper.BigDecimalMapper;
 import ru.invest.api.common.model.PriceModel;
 import ru.invest.api.stock.supplier.mapper.PriceMapper;
 import ru.invest.api.stock.supplier.usecase.PriceUseCase;
+import ru.invest.api.stock.supplier.wrapper.MarketDataGrpcRateLimitedWrapper;
 import ru.tinkoff.piapi.contract.v1.GetLastPricesRequest;
 import ru.tinkoff.piapi.contract.v1.GetLastPricesResponse;
-import ru.tinkoff.piapi.contract.v1.MarketDataServiceGrpc;
 import ru.tinkoff.piapi.contract.v1.MoneyValue;
-import ru.ttech.piapi.core.connector.SyncStubWrapper;
 
 import java.math.BigDecimal;
 import java.util.Collections;
@@ -24,7 +23,7 @@ import java.util.stream.Collectors;
 @Component
 @RequiredArgsConstructor
 public class PriceUseCaseImpl implements PriceUseCase {
-    private final SyncStubWrapper<MarketDataServiceGrpc.MarketDataServiceBlockingStub> marketDataServiceBlockingStub;
+    private final MarketDataGrpcRateLimitedWrapper marketDataServiceBlockingStub;
 
     private final PriceMapper priceMapper;
     private final BigDecimalMapper bigDecimalMapper;
@@ -41,8 +40,7 @@ public class PriceUseCaseImpl implements PriceUseCase {
                 .addAllInstrumentId(uids)
                 .build();
 
-        final GetLastPricesResponse response = marketDataServiceBlockingStub.getStub()
-                .getLastPrices(request);
+        final GetLastPricesResponse response = marketDataServiceBlockingStub.getLastPrices(request);
 
         return response.getLastPricesList().stream()
                 .filter(Objects::nonNull)

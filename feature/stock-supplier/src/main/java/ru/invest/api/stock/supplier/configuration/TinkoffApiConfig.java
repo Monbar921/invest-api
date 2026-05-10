@@ -19,8 +19,8 @@ public class TinkoffApiConfig {
     }
 
     @Bean
-    public SyncStubWrapper<MarketDataServiceGrpc.MarketDataServiceBlockingStub> marketDataServiceBlockingStub(
+    public MarketDataServiceGrpc.MarketDataServiceBlockingStub marketDataServiceBlockingStub(
             final ServiceStubFactory serviceStubFactory) {
-        return serviceStubFactory.newSyncService(MarketDataServiceGrpc::newBlockingStub);
+        return serviceStubFactory.newSyncService(MarketDataServiceGrpc::newBlockingStub).getStub();
     }
 }

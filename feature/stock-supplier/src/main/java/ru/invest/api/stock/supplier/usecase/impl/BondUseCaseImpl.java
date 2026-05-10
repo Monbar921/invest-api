@@ -56,8 +56,8 @@ public class BondUseCaseImpl implements BondUseCase {
                 .map(Bond::getUid)
                 .toList();
 
-        final Map<String, PriceModel> bondPrices = priceUseCase.getLastPrices(uids, getNominalPrice());
-        return bondMapper.toModel(foreignBonds, bondPrices, bondParameters);
+        final Map<String, PriceModel> bondPrices = priceUseCase.getLastPrices(uids, foreignBonds, getNominalPrice());
+        return bondMapper.toModel(foreignBonds, bondPrices);
     }
 
     private List<Bond> getAllBonds() {

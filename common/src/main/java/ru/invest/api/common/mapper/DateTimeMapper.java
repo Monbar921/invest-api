@@ -5,11 +5,12 @@ import org.mapstruct.Mapper;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.Optional;
 
 @Mapper
-public abstract class DateTimeMapper {
-    public LocalDateTime toLocalDateTime(final Timestamp timestamp) {
+public interface DateTimeMapper {
+    default LocalDateTime toLocalDateTime(final Timestamp timestamp) {
         return Optional.ofNullable(timestamp)
                 .map(time -> LocalDateTime.ofInstant(
                         java.time.Instant.ofEpochSecond(timestamp.getSeconds(), timestamp.getNanos()),
@@ -17,5 +18,9 @@ public abstract class DateTimeMapper {
                 ))
                 .orElse(null);
 
+    }
+
+    default LocalDateTime getNow() {
+        return LocalDateTime.now(ZoneOffset.UTC);
     }
 }

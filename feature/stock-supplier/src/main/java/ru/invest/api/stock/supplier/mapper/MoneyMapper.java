@@ -10,7 +10,4 @@ public interface MoneyMapper {
 
     @Mapping(target = "quantity", source = "units")
     MoneyModel toModel(MoneyValue moneyValue);
-
-
-    MoneyModel toModel(String name);
 }
