@@ -20,6 +20,7 @@ import ru.tinkoff.piapi.contract.v1.InstrumentsRequest;
 import ru.tinkoff.piapi.contract.v1.MoneyValue;
 
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -57,7 +58,9 @@ public class BondUseCaseImpl implements BondUseCase {
                 .toList();
 
         final Map<String, PriceModel> bondPrices = priceUseCase.getLastPrices(uids, foreignBonds, getNominalPrice());
-        return bondMapper.toModel(foreignBonds, bondPrices);
+        return bondMapper.toModel(foreignBonds, bondPrices)
+                .stream()
+                .sorted(bondComparator()).toList();
     }
 
     private List<Bond> getAllBonds() {
@@ -95,6 +98,27 @@ public class BondUseCaseImpl implements BondUseCase {
                             , "Bond is not present while calculating current price"));
 
             return bond.getNominal();
+        };
+    }
+
+    private static Comparator<BondModel> bondComparator() {
+        return Comparator.comparingInt(BondUseCaseImpl::getRiskPriority)
+                .thenComparing(bond -> {
+                    if (bond.getCoupon() == null) {
+                        return null;
+                    }
+                    return bond.getCoupon().getInterest();
+                }, Comparator.nullsLast(Comparator.reverseOrder()));
+    }
+
+    private static int getRiskPriority(BondModel bond) {
+        if (bond.getRiskLevel() == null) {
+            return 2;
+        }
+
+        return switch (bond.getRiskLevel()) {
+            case RISK_LEVEL_LOW, RISK_LEVEL_MODERATE -> 0;
+            default -> 1;
         };
     }
 

@@ -3,6 +3,7 @@ package ru.invest.api.common.model;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
+import ru.invest.api.common.model.enums.RiskLevel;
 
 @Data
 @Accessors(chain = true)
@@ -12,6 +13,8 @@ public class BondModel {
     private String uid;
     private String isin;
     private String name;
-    private PriceModel price;
+    private PriceModel valuePrice;
+    private PriceModel percentagePrice;
     private CouponModel coupon;
+    private RiskLevel riskLevel;
 }

@@ -25,6 +25,8 @@ import java.util.Optional;
 
 @Mapper(uses = {MoneyMapper.class, DateTimeMapper.class})
 public abstract class CouponMapper {
+    private static final int SCALE = 10;
+
     @Setter(onMethod_ = {@Autowired})
     private DateTimeMapper dateTimeMapper;
 
@@ -57,7 +59,7 @@ public abstract class CouponMapper {
                 .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        couponModel.setInterest(getInterest(paymentSum, bondModel.getPrice()));
+        couponModel.setInterest(getInterest(paymentSum, bondModel.getValuePrice()));
     }
 
     protected BigDecimal getInterest(final BigDecimal paymentSum, final PriceModel currentPrice) {
@@ -65,8 +67,7 @@ public abstract class CouponMapper {
             return null;
         }
         return Optional.ofNullable(currentPrice)
-                .map(PriceModel::getCurrent)
-                .map(current -> paymentSum.divide(current, RoundingMode.FLOOR))
+                .map(price -> paymentSum.divide(price.getCurrent(), SCALE, RoundingMode.FLOOR))
                 .orElse(null);
     }
 }

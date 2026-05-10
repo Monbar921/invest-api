@@ -13,6 +13,8 @@ import ru.invest.api.common.model.PriceModel;
 import ru.invest.api.stock.supplier.usecase.CouponUseCase;
 import ru.tinkoff.piapi.contract.v1.Bond;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -25,18 +27,23 @@ import static ru.invest.api.stock.supplier.constants.Constants.COUPON_EXECUTOR_S
 
 @Mapper(uses = {PriceMapper.class})
 public abstract class BondMapper {
+    private static final int SCALE = 10;
+    private static final BigDecimal PERCENTAGE = BigDecimal.valueOf(100);
+
     @Setter(onMethod_ = {@Autowired})
     private CouponUseCase couponUseCase;
     @Setter(onMethod_ = {@Autowired, @Qualifier(COUPON_EXECUTOR_SERVICE)})
     private ExecutorService couponExecutorService;
 
+    @Mapping(target = "valuePrice", ignore = true)
+    @Mapping(target = "percentagePrice", source = "percentagePrice")
     @Mapping(target = "ticker", source = "bond.ticker")
     @Mapping(target = "uid", source = "bond.uid")
     @Mapping(target = "isin", source = "bond.isin")
     @Mapping(target = "name", source = "bond.name")
-    @Mapping(target = "price", source = "price")
+    @Mapping(target = "riskLevel", source = "bond.riskLevel")
     @Mapping(target = "coupon", source = "bond")
-    public abstract BondModel toModel(Bond bond, PriceModel price);
+    public abstract BondModel toModel(Bond bond, PriceModel percentagePrice);
 
     public List<BondModel> toModel(final Map<String, Bond> bonds, final Map<String, PriceModel> bondPrices) {
         if (MapUtils.isEmpty(bonds)) {
@@ -67,6 +74,29 @@ public abstract class BondMapper {
 
     @AfterMapping
     protected void afterMapping(final @MappingTarget BondModel bondModel, final Bond bond) {
+        bondModel.setValuePrice(toValuePrice(bondModel));
         bondModel.setCoupon(couponUseCase.getCoupons(bondModel, bond));
+    }
+
+    protected PriceModel toValuePrice(final BondModel bondModel) {
+        if (bondModel == null || bondModel.getPercentagePrice() == null) {
+            return null;
+        }
+
+        final PriceModel percentagePrice = bondModel.getPercentagePrice();
+
+        final BigDecimal current = Optional.of(percentagePrice)
+                .filter(price -> price.getCurrent() != null)
+                .filter(price -> price.getNominal() != null && price.getNominal().getQuantity() != null)
+                .map(price -> price.getCurrent()
+                        .multiply(price.getNominal().getQuantity()
+                                .divide(PERCENTAGE, SCALE, RoundingMode.FLOOR))
+                )
+                .orElse(null);
+
+        return new PriceModel()
+                .setUid(percentagePrice.getUid())
+                .setNominal(percentagePrice.getNominal())
+                .setCurrent(current);
     }
 }
