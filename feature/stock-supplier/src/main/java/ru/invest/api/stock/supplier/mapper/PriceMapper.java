@@ -12,5 +12,6 @@ public interface PriceMapper {
     @Mapping(target = "uid", source = "uid")
     @Mapping(target = "nominal", source = "nominal")
     @Mapping(target = "current", source = "current")
-    PriceModel toBondPriceModel(String uid, MoneyValue nominal, BigDecimal current);
+    @Mapping(target = "currency", source = "currency")
+    PriceModel toBondPriceModel(String uid, MoneyValue nominal, BigDecimal current, String currency);
 }

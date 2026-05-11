@@ -12,5 +12,6 @@ public interface PriceUseCase {
     Map<String, PriceModel> getLastPrices(List<String> uids);
 
     <T> Map<String, PriceModel> getLastPrices(List<String> uids, Map<String, T> specificModels,
-                                              BiFunction<Map<String, T>, String, MoneyValue> nominalGetter);
+                                              BiFunction<Map<String, T>, String, MoneyValue> nominalGetter,
+                                              BiFunction<Map<String, T>, String, String> currencyGetter);
 }

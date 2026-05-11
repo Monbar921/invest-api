@@ -30,12 +30,13 @@ public class PriceUseCaseImpl implements PriceUseCase {
 
     @Override
     public Map<String, PriceModel> getLastPrices(final List<String> uids) {
-        return getLastPrices(uids, Collections.emptyMap(), null);
+        return getLastPrices(uids, Collections.emptyMap(), null, null);
     }
 
     @Override
     public <T> Map<String, PriceModel> getLastPrices(final List<String> uids, final Map<String, T> specificModels,
-                                                     final BiFunction<Map<String, T>, String, MoneyValue> nominalGetter) {
+                                                     final BiFunction<Map<String, T>, String, MoneyValue> nominalGetter,
+                                                     final BiFunction<Map<String, T>, String, String> currencyGetter) {
         final GetLastPricesRequest request = GetLastPricesRequest.newBuilder()
                 .addAllInstrumentId(uids)
                 .build();
@@ -49,7 +50,8 @@ public class PriceUseCaseImpl implements PriceUseCase {
                             lastPrice.getPrice().getNano());
                     return priceMapper.toBondPriceModel(lastPrice.getInstrumentUid(),
                             nominalGetter != null ? nominalGetter.apply(specificModels, lastPrice.getInstrumentUid()) : null,
-                            currentPrice);
+                            currentPrice,
+                            currencyGetter != null ? currencyGetter.apply(specificModels, lastPrice.getInstrumentUid()) : null);
                 })
                 .collect(Collectors.toMap(PriceModel::getUid, Function.identity()));
     }

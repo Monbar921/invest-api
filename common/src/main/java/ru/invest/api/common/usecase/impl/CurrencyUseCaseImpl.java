@@ -22,7 +22,7 @@ public class CurrencyUseCaseImpl implements CurrencyUseCase {
     );
 
     @Override
-    public BigDecimal getCate(final String currency) {
+    public BigDecimal getRate(final String currency) {
         if (StringUtils.isBlank(currency)) {
             throw new GeneralUnprocessableEntityException(EMPTY_CURRENCY, "Provide currency code");
         }

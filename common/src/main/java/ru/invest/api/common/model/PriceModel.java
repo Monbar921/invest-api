@@ -13,4 +13,5 @@ public class PriceModel {
     private String uid;
     private MoneyModel nominal;
     private BigDecimal current;
+    private String currency;
 }
