@@ -9,6 +9,7 @@ import ru.invest.api.stock.supplier.usecase.PriceUseCase;
 import ru.invest.api.stock.supplier.wrapper.MarketDataGrpcRateLimitedWrapper;
 import ru.tinkoff.piapi.contract.v1.GetLastPricesRequest;
 import ru.tinkoff.piapi.contract.v1.GetLastPricesResponse;
+import ru.tinkoff.piapi.contract.v1.LastPrice;
 import ru.tinkoff.piapi.contract.v1.MoneyValue;
 
 import java.math.BigDecimal;
@@ -45,14 +46,20 @@ public class PriceUseCaseImpl implements PriceUseCase {
 
         return response.getLastPricesList().stream()
                 .filter(Objects::nonNull)
-                .map(lastPrice -> {
-                    final BigDecimal currentPrice = bigDecimalMapper.fromBaseAndNanoFloatParts(lastPrice.getPrice().getUnits(),
-                            lastPrice.getPrice().getNano());
-                    return priceMapper.toBondPriceModel(lastPrice.getInstrumentUid(),
-                            nominalGetter != null ? nominalGetter.apply(specificModels, lastPrice.getInstrumentUid()) : null,
-                            currentPrice,
-                            currencyGetter != null ? currencyGetter.apply(specificModels, lastPrice.getInstrumentUid()) : null);
-                })
+                .map(lastPrice -> toModel(specificModels, nominalGetter, currencyGetter, lastPrice))
                 .collect(Collectors.toMap(PriceModel::getUid, Function.identity()));
+    }
+
+    private <T> PriceModel toModel(
+            final Map<String, T> specificModels,
+            final BiFunction<Map<String, T>, String, MoneyValue> nominalGetter,
+            final BiFunction<Map<String, T>, String, String> currencyGetter,
+            final LastPrice lastPrice) {
+        final BigDecimal currentPrice = bigDecimalMapper.fromBaseAndNanoFloatParts(lastPrice.getPrice().getUnits(),
+                lastPrice.getPrice().getNano());
+        return priceMapper.toBondPriceModel(lastPrice.getInstrumentUid(),
+                nominalGetter != null ? nominalGetter.apply(specificModels, lastPrice.getInstrumentUid()) : null,
+                currentPrice,
+                currencyGetter != null ? currencyGetter.apply(specificModels, lastPrice.getInstrumentUid()) : null);
     }
 }

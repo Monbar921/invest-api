@@ -19,6 +19,8 @@ public abstract class MoneyMapper {
     @Mapping(target = "quantity", source = "moneyValue", qualifiedByName = "toQuantity")
     public abstract MoneyModel toModel(MoneyValue moneyValue);
 
+    public abstract MoneyModel toModel(String currency, BigDecimal quantity);
+
     @Named("toQuantity")
     protected BigDecimal toQuantity(final MoneyValue moneyValue) {
         if (moneyValue == null) {
