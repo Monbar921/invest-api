@@ -2,7 +2,6 @@ package ru.invest.api.stock.supplier.usecase.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import ru.invest.api.common.mapper.BigDecimalMapper;
 import ru.invest.api.common.model.PriceModel;
 import ru.invest.api.stock.supplier.mapper.PriceMapper;
 import ru.invest.api.stock.supplier.usecase.PriceUseCase;
@@ -12,8 +11,6 @@ import ru.tinkoff.piapi.contract.v1.GetLastPricesResponse;
 import ru.tinkoff.piapi.contract.v1.LastPrice;
 import ru.tinkoff.piapi.contract.v1.MoneyValue;
 
-import java.math.BigDecimal;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -27,17 +24,10 @@ public class PriceUseCaseImpl implements PriceUseCase {
     private final MarketDataGrpcRateLimitedWrapper marketDataServiceBlockingStub;
 
     private final PriceMapper priceMapper;
-    private final BigDecimalMapper bigDecimalMapper;
-
-    @Override
-    public Map<String, PriceModel> getLastPrices(final List<String> uids) {
-        return getLastPrices(uids, Collections.emptyMap(), null, null);
-    }
 
     @Override
     public <T> Map<String, PriceModel> getLastPrices(final List<String> uids, final Map<String, T> specificModels,
-                                                     final BiFunction<Map<String, T>, String, MoneyValue> nominalGetter,
-                                                     final BiFunction<Map<String, T>, String, String> currencyGetter) {
+                                                     final BiFunction<Map<String, T>, String, MoneyValue> nominalGetter) {
         final GetLastPricesRequest request = GetLastPricesRequest.newBuilder()
                 .addAllInstrumentId(uids)
                 .build();
@@ -46,20 +36,15 @@ public class PriceUseCaseImpl implements PriceUseCase {
 
         return response.getLastPricesList().stream()
                 .filter(Objects::nonNull)
-                .map(lastPrice -> toModel(specificModels, nominalGetter, currencyGetter, lastPrice))
+                .map(lastPrice -> toModel(specificModels, nominalGetter, lastPrice))
                 .collect(Collectors.toMap(PriceModel::getUid, Function.identity()));
     }
 
     private <T> PriceModel toModel(
             final Map<String, T> specificModels,
             final BiFunction<Map<String, T>, String, MoneyValue> nominalGetter,
-            final BiFunction<Map<String, T>, String, String> currencyGetter,
             final LastPrice lastPrice) {
-        final BigDecimal currentPrice = bigDecimalMapper.fromBaseAndNanoFloatParts(lastPrice.getPrice().getUnits(),
-                lastPrice.getPrice().getNano());
-        return priceMapper.toBondPriceModel(lastPrice.getInstrumentUid(),
-                nominalGetter != null ? nominalGetter.apply(specificModels, lastPrice.getInstrumentUid()) : null,
-                currentPrice,
-                currencyGetter != null ? currencyGetter.apply(specificModels, lastPrice.getInstrumentUid()) : null);
+        return priceMapper.toBondPriceModel(lastPrice,
+                nominalGetter != null ? nominalGetter.apply(specificModels, lastPrice.getInstrumentUid()) : null);
     }
 }

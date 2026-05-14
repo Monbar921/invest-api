@@ -57,7 +57,7 @@ public class BondUseCaseImpl implements BondUseCase {
                 .map(Bond::getUid)
                 .toList();
 
-        final Map<String, PriceModel> bondPrices = priceUseCase.getLastPrices(uids, foreignBonds, getNominalPrice(), getCurrency());
+        final Map<String, PriceModel> bondPrices = priceUseCase.getLastPrices(uids, foreignBonds, getNominalPrice());
         return bondMapper.toModel(foreignBonds, bondPrices)
                 .stream()
                 .sorted(bondComparator()).toList();
@@ -98,20 +98,6 @@ public class BondUseCaseImpl implements BondUseCase {
                             , "Bond is not present while calculating current price"));
 
             return bond.getNominal();
-        };
-    }
-
-    private static BiFunction<Map<String, Bond>, String, String> getCurrency() {
-        return (bonds, uid) -> {
-            if (StringUtils.isBlank(uid)) {
-                return null;
-            }
-
-            final Bond bond = Optional.ofNullable(bonds.get(uid))
-                    .orElseThrow(() -> new GeneralNotFoundEntityException(ExceptionErrorCode.NOT_FOUND
-                            , "Bond is not present while calculating current price"));
-
-            return bond.getCurrency();
         };
     }
 

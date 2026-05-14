@@ -13,8 +13,7 @@ public class BondModel {
     private String uid;
     private String isin;
     private String name;
-    private PriceModel valuePrice;
-    private PriceModel percentagePrice;
+    private PriceModel price;
     private CouponModel coupon;
     private RiskLevel riskLevel;
 }

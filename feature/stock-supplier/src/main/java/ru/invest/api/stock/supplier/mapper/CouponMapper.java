@@ -23,6 +23,7 @@ import ru.tinkoff.piapi.contract.v1.Coupon;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -30,6 +31,7 @@ import java.util.Optional;
 @Mapper(uses = {MoneyMapper.class, DateTimeMapper.class})
 public abstract class CouponMapper {
     private static final int SCALE = 10;
+    private static final BigDecimal PERCENT = BigDecimal.valueOf(100.0);
 
     @Setter(onMethod_ = {@Autowired})
     private DateTimeMapper dateTimeMapper;
@@ -52,33 +54,46 @@ public abstract class CouponMapper {
             return;
         }
 
-        final LocalDateTime now = dateTimeMapper.getNow();
-        final LocalDateTime oneYearLater = now.plusDays(365);
-
-        final String bondPriceCurrency = Optional.ofNullable(bondModel.getValuePrice())
+        final String bondPriceCurrency = Optional.ofNullable(bondModel.getPrice())
                 .map(PriceModel::getCurrent)
                 .map(MoneyModel::getCurrency)
                 .orElse(null);
 
-        final BigDecimal paymentSum = couponData.stream()
-                .filter(coupon -> coupon.getPaymentDate() != null)
-                .filter(coupon -> coupon.getPaymentDate().isAfter(now) &&
-                        coupon.getPaymentDate().isBefore(oneYearLater))
+        if (StringUtils.isBlank(bondPriceCurrency)) {
+            return;
+        }
+
+        final List<CouponDataModel> oneYearCoupons = getOneYearCoupons(couponData, couponModel.getQuantityPerYear());
+
+        final BigDecimal paymentSum = oneYearCoupons
+                .stream()
                 .map(CouponDataModel::getPrice)
                 .filter(Objects::nonNull)
+                .filter(price -> StringUtils.isNotBlank(price.getCurrency()) && price.getQuantity() != null)
                 .map(coupon -> fixQuantityByCurrency(coupon, bondPriceCurrency))
                 .map(MoneyModel::getQuantity)
-                .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        couponModel.setInterest(getInterest(paymentSum, bondModel.getValuePrice()));
+        couponModel.setInterest(getInterest(paymentSum, bondModel.getPrice()));
+    }
+
+    protected List<CouponDataModel> getOneYearCoupons(final List<CouponDataModel> couponData, final int payments) {
+        if (CollectionUtils.isEmpty(couponData) || payments == 0) {
+            return couponData;
+        }
+
+        final LocalDateTime now = dateTimeMapper.getNow();
+        return couponData
+                .stream()
+                .filter(Objects::nonNull)
+                .filter(coupon -> coupon.getPaymentDate() != null)
+                .filter(coupon -> coupon.getPaymentDate().isAfter(now))
+                .sorted(Comparator.comparing(CouponDataModel::getPaymentDate, Comparator.naturalOrder()))
+                .limit(payments)
+                .toList();
     }
 
     protected MoneyModel fixQuantityByCurrency(final MoneyModel coupon, final String bondPriceCurrency) {
-        if (coupon == null || coupon.getCurrency() == null || coupon.getQuantity() == null || StringUtils.isBlank(bondPriceCurrency)) {
-            return coupon;
-        }
-
         if (!bondPriceCurrency.equalsIgnoreCase(coupon.getCurrency())) {
             final CurrencyModel calculatedCurrency = currencyUseCase.calculateAmount(
                     coupon.getCurrency(), bondPriceCurrency, coupon.getQuantity());
@@ -96,6 +111,6 @@ public abstract class CouponMapper {
             return null;
         }
 
-        return paymentSum.divide(currentPrice.getCurrent().getQuantity(), SCALE, RoundingMode.FLOOR);
+        return paymentSum.multiply(PERCENT).divide(currentPrice.getCurrent().getQuantity(), SCALE, RoundingMode.FLOOR);
     }
 }

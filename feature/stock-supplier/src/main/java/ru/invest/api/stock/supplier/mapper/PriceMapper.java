@@ -1,54 +1,58 @@
 package ru.invest.api.stock.supplier.mapper;
 
 import lombok.Setter;
+import org.apache.commons.lang3.ObjectUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.mapstruct.AfterMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 import org.springframework.beans.factory.annotation.Autowired;
-import ru.invest.api.common.model.CurrencyModel;
+import ru.invest.api.common.mapper.BigDecimalMapper;
+import ru.invest.api.common.model.MoneyModel;
 import ru.invest.api.common.model.PriceModel;
-import ru.invest.api.common.usecase.CurrencyUseCase;
+import ru.tinkoff.piapi.contract.v1.LastPrice;
 import ru.tinkoff.piapi.contract.v1.MoneyValue;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 @Mapper(uses = {MoneyMapper.class})
 public abstract class PriceMapper {
-    @Setter(onMethod_ = @Autowired)
-    private MoneyMapper moneyMapper;
-    @Setter(onMethod_ = @Autowired)
-    private CurrencyUseCase currencyUseCase;
+    private static final BigDecimal PERCENTAGE = BigDecimal.valueOf(100.0);
+    private static final int SCALE = 10;
 
-    @Mapping(target = "uid", source = "uid")
+    @Setter(onMethod_ = @Autowired)
+    private BigDecimalMapper bigDecimalMapper;
+
+
+    @Mapping(target = "uid", source = "lastPrice.instrumentUid")
     @Mapping(target = "nominal", source = "nominal")
     @Mapping(target = "current", ignore = true)
-    public abstract PriceModel toBondPriceModel(String uid, MoneyValue nominal, BigDecimal current, String currency);
+    @Mapping(target = "percentagePrice", ignore = true)
+    public abstract PriceModel toBondPriceModel(LastPrice lastPrice, MoneyValue nominal);
 
     @AfterMapping
-    protected void afterMapping(@MappingTarget final PriceModel priceModel, final String uid, final MoneyValue nominal
-            , final BigDecimal current, final String currency) {
-        priceModel.setCurrent(moneyMapper.toModel(currency, current));
-        if (quantityNotNullComparator(priceModel) && currencyNotNullComparator(priceModel) && !currencyComparator(priceModel)) {
-            final CurrencyModel currencyModel = currencyUseCase.calculateAmount(
-                    priceModel.getCurrent().getCurrency(), priceModel.getNominal().getCurrency(), priceModel.getCurrent().getQuantity());
-            priceModel.getCurrent()
-                    .setCurrency(currencyModel.getTarget())
-                    .setQuantity(currencyModel.getRate());
+    protected void afterMapping(@MappingTarget final PriceModel priceModel, final LastPrice lastPrice) {
+
+        final BigDecimal currentPercentage = bigDecimalMapper.fromBaseAndNanoFloatParts(lastPrice.getPrice().getUnits(),
+                lastPrice.getPrice().getNano());
+        priceModel.setPercentagePrice(currentPercentage);
+        priceModel.setCurrent(
+                getCurrent(priceModel.getNominal(), currentPercentage)
+        );
+    }
+
+    protected MoneyModel getCurrent(final MoneyModel nominal, final BigDecimal currentPercentage) {
+        if (ObjectUtils.anyNull(nominal, currentPercentage) || StringUtils.isBlank(nominal.getCurrency())
+                || nominal.getQuantity() == null) {
+            return null;
         }
-    }
 
-    protected boolean quantityNotNullComparator(final PriceModel priceModel) {
-        return priceModel.getNominal() != null && priceModel.getNominal().getQuantity() != null
-                && priceModel.getCurrent() != null && priceModel.getCurrent().getQuantity() != null;
-    }
+        final BigDecimal currentValue = currentPercentage.divide(PERCENTAGE, SCALE, RoundingMode.CEILING).multiply(nominal.getQuantity());
 
-    protected boolean currencyNotNullComparator(final PriceModel priceModel) {
-        return priceModel.getNominal() != null && priceModel.getNominal().getCurrency() != null
-                && priceModel.getCurrent() != null && priceModel.getCurrent().getCurrency() != null;
-    }
-
-    protected boolean currencyComparator(final PriceModel priceModel) {
-        return priceModel.getCurrent().getCurrency().equalsIgnoreCase(priceModel.getNominal().getCurrency());
+        return new MoneyModel()
+                .setQuantity(currentValue)
+                .setCurrency(nominal.getCurrency());
     }
 }
