@@ -16,6 +16,7 @@
         <module>cb-rf-supplier</module>
         <module>budget-org-supplier</module>
         <module>ui-service</module>
+        <module>currency-service</module>
     </modules>
 
     <dependencies>

@@ -35,7 +35,7 @@ public class CurrencyElementDto {
 
     @XmlElement(name = "Value")
     @XmlJavaTypeAdapter(BigDecimalAdapter.class)
-    private BigDecimal value;
+    private BigDecimal rate;
 
     @XmlElement(name = "VunitRate")
     private String vunitRate;

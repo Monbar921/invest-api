@@ -16,7 +16,7 @@ import ru.invest.api.common.model.CouponModel;
 import ru.invest.api.common.model.CurrencyModel;
 import ru.invest.api.common.model.MoneyModel;
 import ru.invest.api.common.model.PriceModel;
-import ru.invest.api.common.usecase.CurrencyUseCase;
+import ru.invest.api.currency.service.usecase.CurrencyUseCase;
 import ru.tinkoff.piapi.contract.v1.Bond;
 import ru.tinkoff.piapi.contract.v1.Coupon;
 

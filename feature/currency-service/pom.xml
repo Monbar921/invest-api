@@ -8,24 +8,19 @@
         <version>${project.revision}</version>
     </parent>
 
-    <artifactId>tinkoff-supplier</artifactId>
+    <artifactId>currency-service</artifactId>
 
     <dependencies>
         <dependency>
             <groupId>ru.invest.api</groupId>
-            <artifactId>currency-service</artifactId>
+            <artifactId>budget-org-supplier</artifactId>
             <version>${project.version}</version>
         </dependency>
-
         <dependency>
-            <groupId>ru.tinkoff.piapi</groupId>
-            <artifactId>java-sdk-spring-boot-starter</artifactId>
+            <groupId>ru.invest.api</groupId>
+            <artifactId>cb-rf-supplier</artifactId>
+            <version>${project.version}</version>
         </dependency>
-        <dependency>
-            <groupId>io.vavr</groupId>
-            <artifactId>vavr</artifactId>
-        </dependency>
-
     </dependencies>
 
 </project>
