@@ -13,10 +13,22 @@
     <dependencies>
         <dependency>
             <groupId>ru.invest.api</groupId>
-            <artifactId>tinkof-stock-supplier</artifactId>
+            <artifactId>tinkoff-supplier</artifactId>
             <version>${project.version}</version>
         </dependency>
 
+        <dependency>
+            <groupId>ru.invest.api</groupId>
+            <artifactId>cb-rf-supplier</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>ru.invest.api</groupId>
+            <artifactId>budget-org-supplier</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>

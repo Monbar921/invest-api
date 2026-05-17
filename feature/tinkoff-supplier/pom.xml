@@ -4,26 +4,22 @@
 
     <parent>
         <groupId>ru.invest.api</groupId>
-        <artifactId>invest-api</artifactId>
+        <artifactId>feature</artifactId>
         <version>${project.revision}</version>
     </parent>
 
-    <artifactId>feature</artifactId>
-    <packaging>pom</packaging>
-
-    <modules>
-        <module>tinkoff-supplier</module>
-        <module>cb-rf-supplier</module>
-        <module>budget-org-supplier</module>
-        <module>ui-service</module>
-    </modules>
+    <artifactId>tinkoff-supplier</artifactId>
 
     <dependencies>
         <dependency>
-            <groupId>ru.invest.api</groupId>
-            <artifactId>common</artifactId>
-            <version>${project.version}</version>
+            <groupId>ru.tinkoff.piapi</groupId>
+            <artifactId>java-sdk-spring-boot-starter</artifactId>
         </dependency>
+        <dependency>
+            <groupId>io.vavr</groupId>
+            <artifactId>vavr</artifactId>
+        </dependency>
+
     </dependencies>
 
 </project>

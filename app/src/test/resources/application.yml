@@ -1,6 +1,6 @@
 invest:
   connector:
-    token: t.z6hPPZhPR6oBmMsOLKodIIYdI5EKobOKzSYaKhan-m_DWM7Oj-GIExaIbio2EnK4KDMluBo7r1QIg4SgqAaTbA
+    token:
 
 ru:
   invest:
@@ -13,3 +13,14 @@ ru:
 spring:
   cache:
     type: caffeine
+  cloud:
+    openfeign:
+      autoconfiguration:
+        jackson:
+          enabled: true
+      client:
+        config:
+          cb-rf-client:
+            url: https://www.cbr.ru/
+          budget-org-client:
+            url: https://api.budjet.org/

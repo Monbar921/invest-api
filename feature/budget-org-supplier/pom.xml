@@ -4,25 +4,20 @@
 
     <parent>
         <groupId>ru.invest.api</groupId>
-        <artifactId>invest-api</artifactId>
+        <artifactId>feature</artifactId>
         <version>${project.revision}</version>
     </parent>
 
-    <artifactId>feature</artifactId>
-    <packaging>pom</packaging>
-
-    <modules>
-        <module>tinkoff-supplier</module>
-        <module>cb-rf-supplier</module>
-        <module>budget-org-supplier</module>
-        <module>ui-service</module>
-    </modules>
+    <artifactId>budget-org-supplier</artifactId>
 
     <dependencies>
         <dependency>
-            <groupId>ru.invest.api</groupId>
-            <artifactId>common</artifactId>
-            <version>${project.version}</version>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-openfeign</artifactId>
         </dependency>
     </dependencies>
 

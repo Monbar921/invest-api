@@ -3,9 +3,11 @@ package ru.invest.api;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import ru.invest.api.budget.org.supplier.client.feign.BudgetOrgClient;
+import ru.invest.api.cb.rf.supplier.client.feign.CbRfClient;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.parameters.BondParameters;
-import ru.invest.api.tinkof.stock.supplier.usecase.BondUseCase;
+import ru.invest.api.tinkoff.supplier.usecase.BondUseCase;
 
 import java.util.List;
 
@@ -16,11 +18,20 @@ import static org.hamcrest.Matchers.is;
 public class InvestApplicationTest {
     @Autowired
     private BondUseCase bondUseCase;
+    @Autowired
+    private CbRfClient cbRfClient;
+    @Autowired
+    private BudgetOrgClient budgetOrgClient;
 
     @Test
     public void plain() {
         final BondParameters parameters = new BondParameters().setBatchLimit(10);
         final List<BondModel> bonds = bondUseCase.getForeignCurrencyBonds(parameters);
         assertThat(!bonds.isEmpty(), is(true));
+    }
+
+    @Test
+    public void currencyTest(){
+        System.out.println(1);
     }
 }
