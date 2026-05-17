@@ -24,6 +24,7 @@
         <apache.commons.collections.version>4.5.0</apache.commons.collections.version>
         <mapstruct.version>1.6.3</mapstruct.version>
         <protobuf.java.version>4.34.1</protobuf.java.version>
+        <caffeine.version>3.2.4</caffeine.version>
     </properties>
 
     <modules>
@@ -70,6 +71,11 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-starter-aop</artifactId>
                 <version>${spring-boot-starter-aop.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.github.ben-manes.caffeine</groupId>
+                <artifactId>caffeine</artifactId>
+                <version>${caffeine.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

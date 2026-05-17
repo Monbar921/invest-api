@@ -1,7 +1,7 @@
 package ru.invest.api.stock.supplier.usecase.impl;
 
 import lombok.RequiredArgsConstructor;
-import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
 import ru.invest.api.common.exception.GeneralNotFoundEntityException;
@@ -10,13 +10,10 @@ import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.PriceModel;
 import ru.invest.api.common.model.parameters.BondParameters;
 import ru.invest.api.stock.supplier.mapper.BondMapper;
+import ru.invest.api.stock.supplier.usecase.BondRetrieverUseCase;
 import ru.invest.api.stock.supplier.usecase.BondUseCase;
 import ru.invest.api.stock.supplier.usecase.PriceUseCase;
-import ru.invest.api.stock.supplier.wrapper.impl.InstrumentsGrpcRateLimitedWrapperImpl;
 import ru.tinkoff.piapi.contract.v1.Bond;
-import ru.tinkoff.piapi.contract.v1.BondsResponse;
-import ru.tinkoff.piapi.contract.v1.InstrumentStatus;
-import ru.tinkoff.piapi.contract.v1.InstrumentsRequest;
 import ru.tinkoff.piapi.contract.v1.MoneyValue;
 
 import java.util.Collections;
@@ -26,7 +23,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiFunction;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static ru.invest.api.stock.supplier.predicates.BondPredicates.FOREIGN_CURRENCY_PREDICATE;
@@ -35,19 +31,14 @@ import static ru.invest.api.stock.supplier.predicates.BondPredicates.ISIN_PREDIC
 @Component
 @RequiredArgsConstructor
 public class BondUseCaseImpl implements BondUseCase {
-    private final InstrumentsGrpcRateLimitedWrapperImpl instrumentsGrpcRateLimitedWrapper;
-
     private final BondMapper bondMapper;
 
     private final PriceUseCase priceUseCase;
+    private final BondRetrieverUseCase bondRetrieverUseCase;
 
     @Override
     public List<BondModel> getForeignCurrencyBonds(final BondParameters bondParameters) {
-        final List<Bond> allBonds = getAllBonds();
-        final Map<String, Bond> foreignBonds = filterForeignBonds(allBonds)
-                .stream()
-                .filter(Objects::nonNull)
-                .collect(Collectors.toMap(Bond::getUid, Function.identity()));
+        final Map<String, Bond> foreignBonds = filterForeignBonds(bondRetrieverUseCase.getAllBonds());
 
         final List<String> uids = foreignBonds.entrySet()
                 .stream()
@@ -63,28 +54,21 @@ public class BondUseCaseImpl implements BondUseCase {
                 .sorted(bondComparator()).toList();
     }
 
-    private List<Bond> getAllBonds() {
-        final InstrumentsRequest bondsRequest = InstrumentsRequest.newBuilder()
-                .setInstrumentStatus(InstrumentStatus.INSTRUMENT_STATUS_BASE)
-                .build();
-
-        final BondsResponse response = instrumentsGrpcRateLimitedWrapper
-                .bonds(bondsRequest);
-
-        return response.getInstrumentsList();
-    }
-
-    private List<Bond> filterForeignBonds(final List<Bond> allBonds) {
-        if (CollectionUtils.isEmpty(allBonds)) {
-            return Collections.emptyList();
+    private Map<String, Bond> filterForeignBonds(final Map<String, Bond> allBonds) {
+        if (MapUtils.isEmpty(allBonds)) {
+            return Collections.emptyMap();
         }
 
         return allBonds
+                .entrySet()
                 .stream()
                 .filter(Objects::nonNull)
-                .filter(FOREIGN_CURRENCY_PREDICATE)
-                .filter(ISIN_PREDICATE)
-                .toList();
+                .filter(entry -> FOREIGN_CURRENCY_PREDICATE.test(entry.getValue()))
+                .filter(entry -> ISIN_PREDICATE.test(entry.getValue()))
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        Map.Entry::getValue
+                ));
     }
 
     private static BiFunction<Map<String, Bond>, String, MoneyValue> getNominalPrice() {
