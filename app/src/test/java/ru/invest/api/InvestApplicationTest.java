@@ -5,7 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.parameters.BondParameters;
-import ru.invest.api.stock.supplier.usecase.BondUseCase;
+import ru.invest.api.tinkof.stock.supplier.usecase.BondUseCase;
 
 import java.util.List;
 

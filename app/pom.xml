@@ -13,7 +13,7 @@
     <dependencies>
         <dependency>
             <groupId>ru.invest.api</groupId>
-            <artifactId>stock-supplier</artifactId>
+            <artifactId>tinkof-stock-supplier</artifactId>
             <version>${project.version}</version>
         </dependency>
 
