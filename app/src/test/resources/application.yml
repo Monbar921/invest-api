@@ -1,6 +1,7 @@
 invest:
+  enabled: false
   connector:
-    token: ${TINKOFF_TOKEN}
+    token: token
 
 ru:
   invest:
@@ -21,6 +22,8 @@ spring:
       client:
         config:
           cb-rf-client:
-            url: https://www.cbr.ru/
+            enabled: false
+            url: localhost:8082
           budget-org-client:
-            url: https://api.budjet.org/
+            enabled: false
+            url: localhost:8082
