@@ -1,0 +1,75 @@
+name: Java CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main", "develop" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    # ========== PREPARATION ==========
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v3
+      
+    - name: ☕ Setup Java Environment
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+    
+    # ========== BUILD PHASE ==========
+    - name: 🔨 BUILD - Compile Source
+      id: compile
+      run: |
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "📦 COMPILING JAVA SOURCE CODE"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        if mvn clean compile; then
+          echo "✅ COMPILE: SUCCESS"
+          echo "status=success" >> $GITHUB_OUTPUT
+        else
+          echo "❌ COMPILE: FAILED"
+          echo "status=failed" >> $GITHUB_OUTPUT
+          exit 1
+        fi
+    
+    # ========== TEST PHASE ==========
+    - name: 🧪 TEST - Run Unit Tests
+      id: test
+      run: |
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "🧪 RUNNING TEST SUITE"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        if mvn test; then
+          echo "✅ TESTS: SUCCESS ($(grep -c "Tests run:" target/surefire-reports/*.xml) tests passed)"
+          echo "status=success" >> $GITHUB_OUTPUT
+        else
+          echo "❌ TESTS: FAILED"
+          echo "status=failed" >> $GITHUB_OUTPUT
+          exit 1
+        fi
+    
+    # ========== PACKAGE PHASE ==========
+    - name: 📦 PACKAGE - Create JAR
+      id: package
+      run: |
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "📦 CREATING EXECUTABLE JAR"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        mvn package
+        JAR_NAME=$(ls target/*.jar | grep -v original | head -1)
+        echo "✅ JAR created: $JAR_NAME"
+        echo "jar_name=$JAR_NAME" >> $GITHUB_OUTPUT
+    
+    # ========== ARTIFACT PHASE ==========
+    - name: 💾 UPLOAD - Store Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: java-app-jar
+        path: target/*.jar
+        retention-days: 7
+    
