@@ -2,9 +2,9 @@ name: Java CI/CD Pipeline
 
 on:
   push:
-    branches: [ "main", "develop" ]
+    branches: [ "master", "uat", "develop" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "uat" ]
 
 jobs:
   build-and-deploy:
