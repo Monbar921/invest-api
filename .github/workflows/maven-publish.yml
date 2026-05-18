@@ -7,7 +7,7 @@ on:
     branches: [ "main", "uat" ]
 
 jobs:
-  build-and-package:
+  build-and-upload:
     runs-on: ubuntu-latest
 
     steps:
@@ -20,28 +20,16 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      # ============================================
-      # 🚀 MAVEN DEPENDENCY CACHING - ADDED
-      # ============================================
-
       - name: 💾 Cache Maven Dependencies
         uses: actions/cache@v4
         with:
-          # Cache Maven local repository
           path: ~/.m2/repository
-          # Generate unique cache key based on OS and pom.xml files
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          # Restore from most recent cache if exact match not found
           restore-keys: |
             ${{ runner.os }}-maven-
-            ${{ runner.os }}-
 
       - name: 🔨 Build & Package All Modules
-        run: |
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "📦 BUILDING MULTI-MODULE PROJECT"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          mvn clean package -DskipTests
+        run: mvn clean package -DskipTests
 
       - name: 🧪 Run Tests
         run: mvn test
@@ -53,82 +41,19 @@ jobs:
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           find . -name "*.jar" -not -path "*/.*" | grep -v "original" | while read jar; do
             echo "  📄 $jar"
-            ls -lh "$jar" | awk '{print "     Size: " $5}'
           done
 
-      - name: 🔍 Create Dynamic Matrix
-        id: create-matrix
-        run: |
-          # Find all JAR files and create a JSON array
-          jars_array=[]
-          counter=0
-          
-          while IFS= read -r jar; do
-            # Create a unique name for each JAR
-            jar_name=$(echo "$jar" | sed 's|\./||' | tr '/' '-' | sed 's/.jar//')
-            jar_path=$(realpath "$jar")
-          
-            jars_array[$counter]="{\"name\":\"$jar_name\",\"path\":\"$jar_path\"}"
-            ((counter++))
-          done < <(find . -name "*.jar" -not -path "*/.*" | grep -v "original")
-          
-          # Convert to JSON array
-          if [ $counter -gt 0 ]; then
-            json_matrix=$(printf '%s\n' "${jars_array[@]}" | jq -R -s -c 'split("\n")[:-1] | map(.)')
-            echo "jars=$json_matrix" >> $GITHUB_OUTPUT
-            echo "Found $counter JAR files to upload"
-          else
-            echo "No JAR files found!"
-            exit 1
-          fi
-          
-          # Save JARs for the matrix job
-          mkdir -p saved-jars
-          find . -name "*.jar" -not -path "*/.*" | grep -v "original" -exec cp {} saved-jars/ \;
+      # ============================================
+      # UPLOAD USING SINGLE ARCHIVE (SIMPLEST)
+      # ============================================
 
-      - name: 📦 Upload All JARs (for matrix job)
+      - name: ⬆️ Upload All JARs
         uses: actions/upload-artifact@v4
         with:
-          name: all-built-jars
-          path: saved-jars/
-          retention-days: 1
-
-  # Job 2: Upload each JAR using dynamic matrix
-  upload-jars:
-    needs: build-and-package
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        jar: ${{ fromJson(needs.build-and-discover.outputs.jar-matrix) }}
-      fail-fast: false
-
-    steps:
-      - name: 📥 Download JARs
-        uses: actions/download-artifact@v4
-        with:
-          name: all-built-jars
-          path: downloaded-jars/
-
-      - name: 🔍 Find Specific JAR
-        id: find-jar
-        run: |
-          # Extract the JAR name from matrix
-          jar_filename=$(basename "${{ matrix.jar.path }}")
-          jar_file=$(find downloaded-jars -name "$jar_filename" | head -1)
-          
-          if [ -z "$jar_file" ]; then
-            echo "❌ JAR not found: $jar_filename"
-            exit 1
-          fi
-          
-          echo "jar_file=$jar_file" >> $GITHUB_OUTPUT
-          echo "Found: $jar_file"
-
-      - name: ⬆️ Upload ${{ matrix.jar.name }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.jar.name }}
-          path: ${{ steps.find-jar.outputs.jar_file }}
+          name: all-module-jars-${{ github.run_id }}
+          path: |
+            **/target/*.jar
+            !**/target/original-*.jar
           if-no-files-found: error
           compression-level: 6
           retention-days: 7
