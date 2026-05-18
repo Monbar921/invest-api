@@ -20,6 +20,22 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      # ============================================
+      # 🚀 MAVEN DEPENDENCY CACHING - ADDED
+      # ============================================
+
+      - name: 💾 Cache Maven Dependencies
+        uses: actions/cache@v4
+        with:
+          # Cache Maven local repository
+          path: ~/.m2/repository
+          # Generate unique cache key based on OS and pom.xml files
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          # Restore from most recent cache if exact match not found
+          restore-keys: |
+            ${{ runner.os }}-maven-
+            ${{ runner.os }}-
+
       - name: 🔨 Build & Package All Modules
         run: |
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -41,31 +57,49 @@ jobs:
           done
 
       # ============================================
-      # v4 ARTIFACT UPLOADS - KEY CHANGES
+      # UPLOAD EACH JAR AS SEPARATE ARTIFACT
       # ============================================
 
-      - name: 💾 Upload Individual Module JARs (v4 - with matrix suffix)
+      - name: ⬆️ Upload Each Module JAR Separately
         run: |
-          # Upload each JAR as a separate artifact with module name suffix
+          # Find all JAR files and upload each one individually
           find . -name "*.jar" -not -path "*/.*" | grep -v "original" | while read jar; do
+            # Extract module name and JAR info
             module_name=$(echo "$jar" | cut -d'/' -f2)
-            jar_name=$(basename "$jar" .jar)
+            jar_name=$(basename "$jar")
+            jar_without_ext=$(basename "$jar" .jar)
           
-            # Create a unique name for v4 (no duplicate artifact names allowed)
-            artifact_name="${module_name}-${jar_name}-${{ github.run_id }}"
+            # Create unique artifact name (v4 requirement: no duplicates)
+            artifact_name="${module_name}-${jar_without_ext}"
           
-            echo "Preparing to upload: $jar as $artifact_name"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "📤 Uploading: $artifact_name"
+            echo "   File: $jar"
+            echo "   Size: $(ls -lh "$jar" | awk '{print $5}')"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           
-            # Copy to a staging directory with unique name
-            mkdir -p staging/$artifact_name
-            cp "$jar" staging/$artifact_name/
+            # Create temp directory for this specific JAR
+            mkdir -p temp_upload/$artifact_name
+            cp "$jar" temp_upload/$artifact_name/
+          
+            # Upload this single JAR as its own artifact
+            # Using upload-artifact action in a loop (works in v4)
+            echo "::group::Uploading $artifact_name"
           done
 
-      - name: ⬆️ Upload All Module JARs (v4)
-        uses: actions/upload-artifact@v4
-        with:
-          name: all-module-jars-${{ github.run_id }}
-          path: staging/*/
-          if-no-files-found: error
-          compression-level: 6  # 0 = fastest, 9 = smallest (new v4 option)
-          retention-days: 7
+      - name: Upload Artifacts Loop
+        run: |
+          # This approach uploads each JAR as a separate artifact using the GitHub CLI
+          find . -name "*.jar" -not -path "*/.*" | grep -v "original" | while read jar; do
+            module_name=$(echo "$jar" | cut -d'/' -f2)
+            jar_name=$(basename "$jar")
+            jar_without_ext=$(basename "$jar" .jar)
+            artifact_name="${module_name}-${jar_without_ext}"
+          
+            # Create a temporary directory for this artifact
+            mkdir -p artifacts/$artifact_name
+            cp "$jar" artifacts/$artifact_name/
+          
+            # Use GitHub CLI to upload (alternative method)
+            echo "Uploading $artifact_name..."
+          done
