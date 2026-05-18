@@ -56,37 +56,79 @@ jobs:
             ls -lh "$jar" | awk '{print "     Size: " $5}'
           done
 
-      - name: ⬆️ Upload Each JAR Separately using GitHub CLI
+      - name: 🔍 Create Dynamic Matrix
+        id: create-matrix
         run: |
-          # Find all JAR files and upload each one individually
-          find . -name "*.jar" -not -path "*/.*" | grep -v "original" | while read jar; do
-            # Extract module name (adjust based on your structure)
-            jar_name=$(basename "$jar")
-            artifact_name="${jar_name%.jar}"
+          # Find all JAR files and create a JSON array
+          jars_array=[]
+          counter=0
+          
+          while IFS= read -r jar; do
+            # Create a unique name for each JAR
+            jar_name=$(echo "$jar" | sed 's|\./||' | tr '/' '-' | sed 's/.jar//')
+            jar_path=$(realpath "$jar")
+          
+            jars_array[$counter]="{\"name\":\"$jar_name\",\"path\":\"$jar_path\"}"
+            ((counter++))
+          done < <(find . -name "*.jar" -not -path "*/.*" | grep -v "original")
+          
+          # Convert to JSON array
+          if [ $counter -gt 0 ]; then
+            json_matrix=$(printf '%s\n' "${jars_array[@]}" | jq -R -s -c 'split("\n")[:-1] | map(.)')
+            echo "jars=$json_matrix" >> $GITHUB_OUTPUT
+            echo "Found $counter JAR files to upload"
+          else
+            echo "No JAR files found!"
+            exit 1
+          fi
+          
+          # Save JARs for the matrix job
+          mkdir -p saved-jars
+          find . -name "*.jar" -not -path "*/.*" | grep -v "original" -exec cp {} saved-jars/ \;
 
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            echo "📤 Uploading: $artifact_name"
-            echo "   File: $jar"
-            echo "   Size: $(ls -lh "$jar" | awk '{print $5}')"
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      - name: 📦 Upload All JARs (for matrix job)
+        uses: actions/upload-artifact@v4
+        with:
+          name: all-built-jars
+          path: saved-jars/
+          retention-days: 1
 
-            # Upload using GitHub CLI
-            # This creates a separate artifact for each JAR
-            gh api --method POST \
-              -H "Accept: application/vnd.github+json" \
-              -H "X-GitHub-Api-Version: 2022-11-28" \
-              "/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts" \
-              -f name="$artifact_name" \
-              -f content_type="application/java-archive" \
-              -F file="@$jar" \
-              --silent
+  # Job 2: Upload each JAR using dynamic matrix
+  upload-jars:
+    needs: build-and-package
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        jar: ${{ fromJson(needs.build-and-discover.outputs.jar-matrix) }}
+      fail-fast: false
 
-            if [ $? -eq 0 ]; then
-              echo "✅ Successfully uploaded $artifact_name"
-            else
-              echo "❌ Failed to upload $artifact_name"
-              exit 1
-            fi
-          done
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: 📥 Download JARs
+        uses: actions/download-artifact@v4
+        with:
+          name: all-built-jars
+          path: downloaded-jars/
+
+      - name: 🔍 Find Specific JAR
+        id: find-jar
+        run: |
+          # Extract the JAR name from matrix
+          jar_filename=$(basename "${{ matrix.jar.path }}")
+          jar_file=$(find downloaded-jars -name "$jar_filename" | head -1)
+          
+          if [ -z "$jar_file" ]; then
+            echo "❌ JAR not found: $jar_filename"
+            exit 1
+          fi
+          
+          echo "jar_file=$jar_file" >> $GITHUB_OUTPUT
+          echo "Found: $jar_file"
+
+      - name: ⬆️ Upload ${{ matrix.jar.name }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.jar.name }}
+          path: ${{ steps.find-jar.outputs.jar_file }}
+          if-no-files-found: error
+          compression-level: 6
+          retention-days: 7
