@@ -7,69 +7,65 @@ on:
     branches: [ "main", "uat" ]
 
 jobs:
-  build-and-deploy:
+  build-and-package:
     runs-on: ubuntu-latest
-    
+
     steps:
-    # ========== PREPARATION ==========
-    - name: 📥 Checkout Code
-      uses: actions/checkout@v3
-      
-    - name: ☕ Setup Java Environment
-      uses: actions/setup-java@v3
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-    
-    # ========== BUILD PHASE ==========
-    - name: 🔨 BUILD - Compile Source
-      id: compile
-      run: |
-        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-        echo "📦 COMPILING JAVA SOURCE CODE"
-        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-        if mvn clean compile; then
-          echo "✅ COMPILE: SUCCESS"
-          echo "status=success" >> $GITHUB_OUTPUT
-        else
-          echo "❌ COMPILE: FAILED"
-          echo "status=failed" >> $GITHUB_OUTPUT
-          exit 1
-        fi
-    
-    # ========== TEST PHASE ==========
-    - name: 🧪 TEST - Run Unit Tests
-      id: test
-      run: |
-        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-        echo "🧪 RUNNING TEST SUITE"
-        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-        if mvn test; then
-          echo "✅ TESTS: SUCCESS ($(grep -c "Tests run:" target/surefire-reports/*.xml) tests passed)"
-          echo "status=success" >> $GITHUB_OUTPUT
-        else
-          echo "❌ TESTS: FAILED"
-          echo "status=failed" >> $GITHUB_OUTPUT
-          exit 1
-        fi
-    
-    # ========== PACKAGE PHASE ==========
-    - name: 📦 PACKAGE - Create JAR
-      id: package
-      run: |
-        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-        echo "📦 CREATING EXECUTABLE JAR"
-        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-        mvn package
-        JAR_NAME=$(ls target/*.jar | grep -v original | head -1)
-        echo "✅ JAR created: $JAR_NAME"
-        echo "jar_name=$JAR_NAME" >> $GITHUB_OUTPUT
-    
-    # ========== ARTIFACT PHASE ==========
-    - name: 💾 UPLOAD - Store Artifact
-      uses: actions/upload-artifact@v3
-      with:
-        name: java-app-jar
-        path: target/*.jar
-        retention-days: 7
-    
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: ☕ Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: 🔨 Build & Package All Modules
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "📦 BUILDING MULTI-MODULE PROJECT"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          mvn clean package -DskipTests
+
+      - name: 🧪 Run Tests
+        run: mvn test
+
+      - name: 📋 List All Generated JARs
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "📋 GENERATED JAR FILES"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          find . -name "*.jar" -not -path "*/.*" | grep -v "original" | while read jar; do
+            echo "  📄 $jar"
+            ls -lh "$jar" | awk '{print "     Size: " $5}'
+          done
+
+      # ============================================
+      # v4 ARTIFACT UPLOADS - KEY CHANGES
+      # ============================================
+
+      - name: 💾 Upload Individual Module JARs (v4 - with matrix suffix)
+        run: |
+          # Upload each JAR as a separate artifact with module name suffix
+          find . -name "*.jar" -not -path "*/.*" | grep -v "original" | while read jar; do
+            module_name=$(echo "$jar" | cut -d'/' -f2)
+            jar_name=$(basename "$jar" .jar)
+          
+            # Create a unique name for v4 (no duplicate artifact names allowed)
+            artifact_name="${module_name}-${jar_name}-${{ github.run_id }}"
+          
+            echo "Preparing to upload: $jar as $artifact_name"
+          
+            # Copy to a staging directory with unique name
+            mkdir -p staging/$artifact_name
+            cp "$jar" staging/$artifact_name/
+          done
+
+      - name: ⬆️ Upload All Module JARs (v4)
+        uses: actions/upload-artifact@v4
+        with:
+          name: all-module-jars-${{ github.run_id }}
+          path: staging/*/
+          if-no-files-found: error
+          compression-level: 6  # 0 = fastest, 9 = smallest (new v4 option)
+          retention-days: 7
