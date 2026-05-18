@@ -43,10 +43,6 @@ public class CurrencyProviderImpl implements CurrencyProvider {
             if (rubCurrency != null) {
                 return rubCurrency;
             }
-
-
-
-
         }
 
 
