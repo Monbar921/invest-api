@@ -3,7 +3,6 @@ package ru.invest.api.tinkoff.supplier.usecase.impl;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
 import ru.invest.api.common.exception.GeneralNotFoundEntityException;
 import ru.invest.api.common.exception.enums.ExceptionErrorCode;
@@ -11,8 +10,8 @@ import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.PriceModel;
 import ru.invest.api.tinkoff.supplier.mapper.BondMapper;
 import ru.invest.api.tinkoff.supplier.usecase.BondRetrieverUseCase;
-import ru.invest.api.tinkoff.supplier.usecase.BondUseCase;
 import ru.invest.api.tinkoff.supplier.usecase.PriceUseCase;
+import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondUseCase;
 import ru.tinkoff.piapi.contract.v1.Bond;
 import ru.tinkoff.piapi.contract.v1.MoneyValue;
 
@@ -30,14 +29,13 @@ import static ru.invest.api.tinkoff.supplier.predicates.BondPredicates.ISIN_PRED
 
 @Component
 @RequiredArgsConstructor
-public class BondUseCaseImpl implements BondUseCase {
+public class TinkoffBondUseCaseImpl implements TinkoffBondUseCase {
     private final BondMapper bondMapper;
 
     private final PriceUseCase priceUseCase;
     private final BondRetrieverUseCase bondRetrieverUseCase;
 
     @Override
-    @Cacheable
     public List<BondModel> getForeignCurrencyBonds() {
         final Map<String, Bond> foreignBonds = filterForeignBonds(bondRetrieverUseCase.getAllBonds());
 
@@ -87,7 +85,7 @@ public class BondUseCaseImpl implements BondUseCase {
     }
 
     private static Comparator<BondModel> bondComparator() {
-        return Comparator.comparingInt(BondUseCaseImpl::getRiskPriority)
+        return Comparator.comparingInt(TinkoffBondUseCaseImpl::getRiskPriority)
                 .thenComparing(bond -> {
                     if (bond.getCoupon() == null) {
                         return null;

@@ -6,6 +6,7 @@ import org.mapstruct.Mapper;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.Optional;
 
 @Mapper
@@ -18,6 +19,12 @@ public interface DateTimeMapper {
                 ))
                 .orElse(null);
 
+    }
+
+    default ZonedDateTime toZonedDateTime(final LocalDateTime localDateTime) {
+        return Optional.ofNullable(localDateTime)
+                .map(dateTime -> dateTime.atZone(ZoneOffset.UTC))
+                .orElse(null);
     }
 
     default LocalDateTime getNow() {

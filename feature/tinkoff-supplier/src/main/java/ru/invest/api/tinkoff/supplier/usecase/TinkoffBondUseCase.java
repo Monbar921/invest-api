@@ -4,6 +4,6 @@ import ru.invest.api.common.model.BondModel;
 
 import java.util.List;
 
-public interface BondUseCase {
+public interface TinkoffBondUseCase {
     List<BondModel> getForeignCurrencyBonds();
 }

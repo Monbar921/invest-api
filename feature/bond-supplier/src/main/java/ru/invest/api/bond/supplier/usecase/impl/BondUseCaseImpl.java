@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 import ru.invest.api.bond.supplier.usecase.BondUseCase;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.parameters.BondParametersModel;
+import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondUseCase;
 
 import java.util.List;
 import java.util.Objects;
@@ -14,7 +15,7 @@ import java.util.Optional;
 @Component
 @RequiredArgsConstructor
 public class BondUseCaseImpl implements BondUseCase {
-    private final ru.invest.api.tinkoff.supplier.usecase.BondUseCase tinkoffBondUseCase;
+    private final TinkoffBondUseCase tinkoffBondUseCase;
 
     @Override
     public List<BondModel> getForeignCurrencyBonds(final BondParametersModel bondParametersModel) {

@@ -7,22 +7,24 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
+import ru.invest.api.starter.annotation.EnableInvestApiBondClient;
+import ru.invest.api.starter.client.InvestApiBondClient;
 
 @Configuration
-@ConditionalOnBean(annotation = aero.s7.smi.hotels.starter.annotation.EnableInvestApiClient.class)
-public class InvestApiClientAutoConfiguration extends AbstractClientAutoConfiguration<aero.s7.smi.hotels.starter.annotation.EnableInvestApiClient> {
-    public InvestApiClientAutoConfiguration(final Environment environment,
-                                            final ApplicationContext applicationContext) {
-        super(environment, applicationContext, aero.s7.smi.hotels.starter.annotation.EnableInvestApiClient.class);
+@ConditionalOnBean(annotation = EnableInvestApiBondClient.class)
+public class InvestApiBondClientAutoConfiguration extends AbstractClientAutoConfiguration<EnableInvestApiBondClient> {
+    public InvestApiBondClientAutoConfiguration(final Environment environment,
+                                                final ApplicationContext applicationContext) {
+        super(environment, applicationContext, EnableInvestApiBondClient.class);
     }
 
     @Bean
     @ConditionalOnMissingBean
-    public aero.s7.smi.hotels.starter.client.InvestApiClient sbaHotelsClient() {
+    public InvestApiBondClient investApiBondClient() {
         final String clientName = getClientName();
         return new FeignClientBuilder(getApplicationContext())
                 .forType(
-                        aero.s7.smi.hotels.starter.client.InvestApiClient.class,
+                        InvestApiBondClient.class,
                         clientName
                 )
                 .url(getClientUrl(clientName))

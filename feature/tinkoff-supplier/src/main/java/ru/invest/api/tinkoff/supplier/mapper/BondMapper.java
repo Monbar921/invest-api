@@ -8,6 +8,7 @@ import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import ru.invest.api.common.mapper.DateTimeMapper;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.PriceModel;
 import ru.invest.api.tinkoff.supplier.usecase.CouponUseCase;
@@ -23,7 +24,7 @@ import java.util.concurrent.ExecutorService;
 
 import static ru.invest.api.tinkoff.supplier.constants.Constants.COUPON_EXECUTOR_SERVICE;
 
-@Mapper(uses = {PriceMapper.class})
+@Mapper(uses = {PriceMapper.class, DateTimeMapper.class})
 public abstract class BondMapper {
     @Setter(onMethod_ = {@Autowired})
     private CouponUseCase couponUseCase;
@@ -37,6 +38,7 @@ public abstract class BondMapper {
     @Mapping(target = "name", source = "bond.name")
     @Mapping(target = "riskLevel", source = "bond.riskLevel")
     @Mapping(target = "coupon", source = "bond")
+    @Mapping(target = "maturityDate", source = "bond.maturityDate")
     public abstract BondModel toModel(Bond bond, PriceModel price);
 
     public List<BondModel> toModel(final Map<String, Bond> bonds, final Map<String, PriceModel> bondPrices) {

@@ -1,7 +1,7 @@
 package ru.invest.api.starter.annotation;
 
 import org.springframework.context.annotation.Import;
-import ru.invest.api.starter.autoconfiguration.InvestApiClientAutoConfiguration;
+import ru.invest.api.starter.autoconfiguration.InvestApiBondClientAutoConfiguration;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -14,7 +14,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@Import(InvestApiClientAutoConfiguration.class)
-public @interface EnableInvestApiClient {
+@Import(InvestApiBondClientAutoConfiguration.class)
+public @interface EnableInvestApiBondClient {
     String value() default "invest-api-client";
 }

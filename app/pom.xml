@@ -16,6 +16,16 @@
             <artifactId>tinkoff-supplier</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>ru.invest.api</groupId>
+            <artifactId>ui-service</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>ru.invest.api</groupId>
+            <artifactId>invest-api-spring-boot-starter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
