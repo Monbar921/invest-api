@@ -36,6 +36,8 @@
         <module>app</module>
         <module>common</module>
         <module>feature</module>
+        <module>invest-api-dto</module>
+        <module>invest-api-spring-boot-starter</module>
     </modules>
 
     <dependencyManagement>

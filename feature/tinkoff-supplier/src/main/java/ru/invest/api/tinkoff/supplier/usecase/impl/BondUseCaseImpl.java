@@ -3,12 +3,12 @@ package ru.invest.api.tinkoff.supplier.usecase.impl;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
 import ru.invest.api.common.exception.GeneralNotFoundEntityException;
 import ru.invest.api.common.exception.enums.ExceptionErrorCode;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.PriceModel;
-import ru.invest.api.common.model.parameters.BondParameters;
 import ru.invest.api.tinkoff.supplier.mapper.BondMapper;
 import ru.invest.api.tinkoff.supplier.usecase.BondRetrieverUseCase;
 import ru.invest.api.tinkoff.supplier.usecase.BondUseCase;
@@ -37,7 +37,8 @@ public class BondUseCaseImpl implements BondUseCase {
     private final BondRetrieverUseCase bondRetrieverUseCase;
 
     @Override
-    public List<BondModel> getForeignCurrencyBonds(final BondParameters bondParameters) {
+    @Cacheable
+    public List<BondModel> getForeignCurrencyBonds() {
         final Map<String, Bond> foreignBonds = filterForeignBonds(bondRetrieverUseCase.getAllBonds());
 
         final List<String> uids = foreignBonds.entrySet()

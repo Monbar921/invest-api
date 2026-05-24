@@ -4,26 +4,16 @@
 
     <parent>
         <groupId>ru.invest.api</groupId>
-        <artifactId>invest-api</artifactId>
+        <artifactId>feature</artifactId>
         <version>${project.revision}</version>
     </parent>
 
-    <artifactId>feature</artifactId>
-    <packaging>pom</packaging>
-
-    <modules>
-        <module>tinkoff-supplier</module>
-        <module>cb-rf-supplier</module>
-        <module>budget-org-supplier</module>
-        <module>ui-service</module>
-        <module>currency-service</module>
-        <module>bond-supplier</module>
-    </modules>
+    <artifactId>bond-supplier</artifactId>
 
     <dependencies>
         <dependency>
             <groupId>ru.invest.api</groupId>
-            <artifactId>common</artifactId>
+            <artifactId>tinkoff-supplier</artifactId>
             <version>${project.version}</version>
         </dependency>
     </dependencies>
