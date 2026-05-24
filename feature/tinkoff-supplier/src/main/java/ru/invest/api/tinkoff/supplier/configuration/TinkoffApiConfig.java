@@ -12,7 +12,7 @@ import ru.ttech.piapi.core.connector.SyncStubWrapper;
 @Configuration
 @Slf4j
 @ConditionalOnProperty(
-        prefix = "invest.enabled",
+        prefix = "invest",
         name = "enabled",
         havingValue = "true"
 )

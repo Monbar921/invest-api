@@ -13,7 +13,7 @@ import ru.invest.api.budget.org.supplier.client.feign.BudgetOrgClient;
 @Configuration
 @RequiredArgsConstructor
 @ConditionalOnProperty(
-        prefix = "spring.cloud.openfeign.client.config.budget-org-client.enabled",
+        prefix = "spring.cloud.openfeign.client.config.budget-org-client",
         name = "enabled",
         havingValue = "true"
 )

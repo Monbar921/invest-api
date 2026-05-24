@@ -13,7 +13,7 @@ import ru.invest.api.cb.rf.supplier.client.feign.CbRfClient;
 @Configuration
 @RequiredArgsConstructor
 @ConditionalOnProperty(
-        prefix = "spring.cloud.openfeign.client.config.cb-rf-client.enabled",
+        prefix = "spring.cloud.openfeign.client.config.cb-rf-client",
         name = "enabled",
         havingValue = "true"
 )
