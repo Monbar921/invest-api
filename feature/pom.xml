@@ -17,6 +17,7 @@
         <module>budget-org-supplier</module>
         <module>ui-service</module>
         <module>currency-service</module>
+        <module>bond-supplier</module>
     </modules>
 
     <dependencies>

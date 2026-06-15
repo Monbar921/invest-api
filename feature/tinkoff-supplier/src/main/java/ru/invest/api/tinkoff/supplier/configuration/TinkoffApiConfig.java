@@ -1,6 +1,7 @@
 package ru.invest.api.tinkoff.supplier.configuration;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import ru.tinkoff.piapi.contract.v1.InstrumentsServiceGrpc;
@@ -10,6 +11,11 @@ import ru.ttech.piapi.core.connector.SyncStubWrapper;
 
 @Configuration
 @Slf4j
+@ConditionalOnProperty(
+        prefix = "invest",
+        name = "enabled",
+        havingValue = "true"
+)
 public class TinkoffApiConfig {
 
     @Bean

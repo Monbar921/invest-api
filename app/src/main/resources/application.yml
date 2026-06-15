@@ -1,3 +1,40 @@
 invest:
+  enabled: true
   connector:
-    token:
+    token: ${TOKEN}
+  rate-limiter:
+    requests-per-second: 10
+    requests-per-minute: 200
+    timeout-ms: 30000
+
+spring:
+  cache:
+    type: caffeine
+  cloud:
+    openfeign:
+      autoconfiguration:
+        jackson:
+          enabled: true
+      client:
+        config:
+          cb-rf-client:
+            enabled: true
+            url: https://www.cbr.ru/
+          budget-org-client:
+            enabled: true
+            url: https://api.budjet.org/
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html

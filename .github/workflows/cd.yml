@@ -1,0 +1,135 @@
+name: CD — Build Image & Deploy to Kubernetes
+
+# ВАЖНО: этот файл должен быть в default-ветке (master),
+# иначе триггер workflow_run не сработает — это ограничение GitHub Actions.
+#
+# Логика по веткам:
+#   develop → build-and-push (образ в ghcr.io, тег: <sha>)
+#   master  → build-and-push + deploy (деплой на K8s, тег: <sha> + latest)
+on:
+  workflow_run:
+    workflows: ["Java CI/CD Pipeline"]
+    branches: ["master"]
+    types: [completed]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # ────────────────────────────────────────────────────────
+  # Защита: запускаем только если CI завершился успешно
+  # (при workflow_dispatch условие пропускается)
+  # ────────────────────────────────────────────────────────
+  build-and-push:
+    name: 🐳 Build & Push Docker Image
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    permissions:
+      contents: read
+      packages: write
+      actions: read     # нужно для скачивания артефактов чужого workflow_run
+
+    outputs:
+      short_sha: ${{ steps.sha.outputs.short }}
+
+    steps:
+      - name: 📥 Checkout (нужен для Dockerfile и k8s-манифестов)
+        uses: actions/checkout@v4
+        with:
+          # при workflow_run берём SHA того коммита, который запустил CI
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: 🔖 Get short SHA
+        id: sha
+        run: |
+          SHA="${{ github.event.workflow_run.head_sha || github.sha }}"
+          echo "short=${SHA:0:7}" >> "$GITHUB_OUTPUT"
+
+      # Скачиваем JAR, собранный CI-пайплайном.
+      # Артефакт называется all-module-jars-<run_id> и содержит
+      # путь app/target/app-*.jar (структура каталогов сохранена).
+      - name: ⬇️ Download JAR artifact from CI
+        uses: actions/download-artifact@v4
+        with:
+          name: all-module-jars-${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+          # файлы окажутся в корне рабочей директории с сохранённой структурой:
+          # app/target/app-1.0-SNAPSHOT.jar
+
+      - name: 🔑 Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🔨 Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          # latest добавляем только для master; для develop — только SHA-тег
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.sha.outputs.short }}
+            ${{ github.event.workflow_run.head_branch == 'master' && format('{0}/{1}:latest', env.REGISTRY, env.IMAGE_NAME) || '' }}
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          cache-to: type=inline
+
+  # ────────────────────────────────────────────────────────
+  # Deploy to Kubernetes on VDS
+  # ────────────────────────────────────────────────────────
+  deploy:
+    name: 🚀 Deploy to Kubernetes
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    # Деплоим только с master
+    if: ${{ github.event.workflow_run.head_branch == 'master' || github.event_name == 'workflow_dispatch' }}
+    environment: production
+
+    steps:
+      - name: 📥 Checkout (для k8s манифестов)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: ⚙️ Setup kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: 'latest'
+
+      - name: 🔐 Configure kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: 📦 Apply namespace & config
+        run: |
+          kubectl apply -f k8s/namespace.yaml
+          kubectl apply -f k8s/configmap.yaml
+
+      - name: 🚢 Apply Service & Ingress
+        run: |
+          kubectl apply -f k8s/service.yaml
+          kubectl apply -f k8s/ingress.yaml
+
+      - name: 🔄 Deploy new image
+        env:
+          IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build-and-push.outputs.short_sha }}
+        run: |
+          kubectl apply -f k8s/deployment.yaml
+          kubectl set image deployment/invest-api \
+            invest-api=${{ env.IMAGE }} \
+            --namespace invest-api
+
+      - name: ⏳ Wait for rollout
+        run: |
+          kubectl rollout status deployment/invest-api \
+            --namespace invest-api \
+            --timeout=300s
+
+      - name: 📊 Verify pods
+        run: kubectl get pods --namespace invest-api -l app=invest-api

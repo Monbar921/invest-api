@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: invest-api
+  namespace: invest-api
+  labels:
+    app: invest-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: invest-api
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: invest-api
+    spec:
+      # не запускаем под root
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+
+      containers:
+        - name: invest-api
+          # Образ подставляется CD-пайплайном через kubectl set image
+          image: ghcr.io/OWNER/invest-api:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              name: http
+
+          # Переменные из ConfigMap
+          envFrom:
+            - configMapRef:
+                name: invest-api-config
+
+          # Секрет (TOKEN)
+          env:
+            - name: TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: invest-api-secret
+                  key: TOKEN
+
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+
+          # Startup probe — даём приложению время подняться
+          startupProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            failureThreshold: 30
+            periodSeconds: 5
+
+          # Liveness — перезапуск при зависании
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 0
+            periodSeconds: 15
+            failureThreshold: 3
+
+          # Readiness — трафик идёт только когда приложение готово
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            failureThreshold: 3
+
+      imagePullSecrets:
+        - name: ghcr-secret

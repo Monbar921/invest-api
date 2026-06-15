@@ -5,6 +5,8 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 import ru.invest.api.common.model.enums.RiskLevel;
 
+import java.time.LocalDateTime;
+
 @Data
 @Accessors(chain = true)
 @NoArgsConstructor
@@ -16,4 +18,5 @@ public class BondModel {
     private PriceModel price;
     private CouponModel coupon;
     private RiskLevel riskLevel;
+    private LocalDateTime maturityDate;
 }

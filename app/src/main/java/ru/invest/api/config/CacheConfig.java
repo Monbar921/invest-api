@@ -33,7 +33,7 @@ public class CacheConfig {
     }
 
     @Bean(BOND_CACHE_MANAGER)
-    public CacheManager usersCacheManager() {
+    public CacheManager bondsCacheManager() {
         final CaffeineCacheManager cacheManager = new CaffeineCacheManager(BOND_CACHE_NAME);
         cacheManager.setCaffeine(Caffeine.newBuilder()
                 .maximumSize(3000)
@@ -42,7 +42,7 @@ public class CacheConfig {
     }
 
     @Bean(COUPON_CACHE_MANAGER)
-    public CacheManager productsCacheManager() {
+    public CacheManager couponsCacheManager() {
         final CaffeineCacheManager cacheManager = new CaffeineCacheManager(COUPON_CACHE_NAME);
         cacheManager.setCaffeine(Caffeine.newBuilder()
                 .maximumSize(3000)
