@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import ru.invest.api.common.model.BondModel;
-import ru.invest.api.dto.dto.bond.BondDto;
+import ru.invest.api.dto.bond.BondDto;
 import ru.invest.api.starter.client.InvestApiBondClient;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondUseCase;
 

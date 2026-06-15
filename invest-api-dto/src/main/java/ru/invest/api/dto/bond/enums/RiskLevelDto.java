@@ -1,4 +1,4 @@
-package ru.invest.api.dto.dto.bond.enums;
+package ru.invest.api.dto.bond.enums;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

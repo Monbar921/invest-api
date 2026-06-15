@@ -1,11 +1,12 @@
 package ru.invest.api.tinkoff.supplier.ratelimiter.service.impl;
 
-
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.invest.api.common.exception.RateLimiterException;
+import ru.invest.api.tinkoff.supplier.ratelimiter.config.RateLimiterProperties;
 import ru.invest.api.tinkoff.supplier.ratelimiter.service.RateLimiterService;
 
 import java.util.concurrent.BlockingQueue;
@@ -19,62 +20,67 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class RateLimiterServiceImpl implements RateLimiterService {
     private static final int DEFAULT_VALUE = 0;
-
-    private static final int REQUESTS_PER_MINUTE = 200;
-    private static final int REQUESTS_PER_SECOND = 10;
-
-    private static final long DEFAULT_EXECUTED_REQUEST_TIMEOUT_MS = 30000;
-
     private static final int CORE_POOL_SIZE = 5;
     private static final int MAXIMUM_POOL_SIZE = 10;
     private static final long KEEP_ALIVE_TIME = 60L;
 
-    private final AtomicInteger secondWindowCounter;
-    private final AtomicInteger minuteWindowCounter;
+    private final RateLimiterProperties properties;
 
-    private final ScheduledExecutorService scheduler;
-    private final BlockingQueue<Runnable> requestQueue;
-    private final ExecutorService executorService;
-    private final ReentrantLock lock;
+    private final AtomicInteger secondWindowCounter = new AtomicInteger(DEFAULT_VALUE);
+    private final AtomicInteger minuteWindowCounter = new AtomicInteger(DEFAULT_VALUE);
 
-    public RateLimiterServiceImpl() {
-        this.secondWindowCounter = new AtomicInteger(DEFAULT_VALUE);
-        this.minuteWindowCounter = new AtomicInteger(DEFAULT_VALUE);
+    // Condition-based ожидание: потоки спят до сигнала от scheduler
+    private final ReentrantLock lock = new ReentrantLock();
+    private final Condition notLimited = lock.newCondition();
 
-        this.scheduler = Executors.newScheduledThreadPool(2);
-        this.requestQueue = new LinkedBlockingQueue<>(1000);
+    private ScheduledExecutorService scheduler;
+    private BlockingQueue<Runnable> requestQueue;
+    private ExecutorService executorService;
 
-        this.executorService = new ThreadPoolExecutor(
+    @PostConstruct
+    public void init() {
+        requestQueue = new LinkedBlockingQueue<>(1000);
+        executorService = new ThreadPoolExecutor(
                 CORE_POOL_SIZE, MAXIMUM_POOL_SIZE, KEEP_ALIVE_TIME, TimeUnit.SECONDS,
                 requestQueue,
                 new ThreadPoolExecutor.CallerRunsPolicy()
         );
+        scheduler = Executors.newScheduledThreadPool(2);
 
-        this.lock = new ReentrantLock();
-    }
-
-    @PostConstruct
-    public void init() {
-        // Reset second counter every second
+        // Сброс счётчика секунды — под локом, будим ожидающие потоки
         scheduler.scheduleAtFixedRate(() -> {
-            int requests = secondWindowCounter.getAndSet(DEFAULT_VALUE);
-            log.info("Rate limit - last second: {} requests", requests);
+            lock.lock();
+            try {
+                int requests = secondWindowCounter.getAndSet(DEFAULT_VALUE);
+                log.info("Rate limit - last second: {} requests", requests);
+                notLimited.signalAll();
+            } finally {
+                lock.unlock();
+            }
         }, 1, 1, TimeUnit.SECONDS);
 
-        // Reset minute counter every minute
+        // Сброс счётчика минуты — под локом
         scheduler.scheduleAtFixedRate(() -> {
-            int requests = minuteWindowCounter.getAndSet(DEFAULT_VALUE);
-            log.info("Rate limit - last minute: {} requests", requests);
+            lock.lock();
+            try {
+                int requests = minuteWindowCounter.getAndSet(DEFAULT_VALUE);
+                log.info("Rate limit - last minute: {} requests", requests);
+                notLimited.signalAll();
+            } finally {
+                lock.unlock();
+            }
         }, 60, 60, TimeUnit.SECONDS);
 
-        // Monitor queue size
+        // Мониторинг размера очереди
         scheduler.scheduleAtFixedRate(() -> {
             int queueSize = requestQueue.size();
             if (queueSize > 100) {
@@ -85,8 +91,12 @@ public class RateLimiterServiceImpl implements RateLimiterService {
 
     @PreDestroy
     public void destroy() {
-        scheduler.shutdown();
-        executorService.shutdown();
+        if (scheduler != null) {
+            scheduler.shutdown();
+        }
+        if (executorService != null) {
+            executorService.shutdown();
+        }
     }
 
     @Override
@@ -96,8 +106,7 @@ public class RateLimiterServiceImpl implements RateLimiterService {
         executorService.submit(() -> {
             try {
                 waitForRateLimit();
-                final T result = callable.call();
-                future.complete(result);
+                future.complete(callable.call());
             } catch (final Exception e) {
                 future.completeExceptionally(e);
             }
@@ -110,8 +119,11 @@ public class RateLimiterServiceImpl implements RateLimiterService {
     public <T> T executeWithRateLimitAsyncAndGet(final Callable<T> callable) {
         try {
             return executeWithRateLimitAsync(callable).get();
-        } catch (final InterruptedException | ExecutionException e) {
-            throw new RateLimiterException(e);
+        } catch (final InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RateLimiterException("Interrupted while waiting for result", e);
+        } catch (final ExecutionException e) {
+            throw new RateLimiterException("Execution failed", e);
         }
     }
 
@@ -121,48 +133,46 @@ public class RateLimiterServiceImpl implements RateLimiterService {
         return supplier.get();
     }
 
+    /**
+     * Ожидает освобождения лимита.
+     * Использует Condition.await вместо спин-луппа: поток засыпает и просыпается
+     * только когда scheduler сбрасывает счётчик и вызывает signalAll().
+     * Весь доступ к счётчикам — под одним локом, что исключает гонку данных.
+     */
     private void waitForRateLimit() {
-        waitForRateLimit(DEFAULT_EXECUTED_REQUEST_TIMEOUT_MS);
-    }
+        final long deadline = System.currentTimeMillis() + properties.getTimeoutMs();
 
-    private void waitForRateLimit(final long timeout) {
+        lock.lock();
         try {
-            while (true) {
-                if (lock.tryLock(timeout, TimeUnit.MILLISECONDS)) {
-                    try {
-                        int currentSecond = secondWindowCounter.get();
-                        int currentMinute = minuteWindowCounter.get();
+            while (secondWindowCounter.get() >= properties.getRequestsPerSecond()
+                    || minuteWindowCounter.get() >= properties.getRequestsPerMinute()) {
 
-                        if (currentSecond < REQUESTS_PER_SECOND && currentMinute < REQUESTS_PER_MINUTE) {
-                            secondWindowCounter.incrementAndGet();
-                            minuteWindowCounter.incrementAndGet();
-
-                            if (log.isDebugEnabled()) {
-                                log.debug("Request allowed. Second: {}/{}, Minute: {}/{}",
-                                        currentSecond + 1, REQUESTS_PER_SECOND,
-                                        currentMinute + 1, REQUESTS_PER_MINUTE);
-                            }
-                            return;
-                        }
-
-                        if (log.isDebugEnabled()) {
-                            log.debug("Rate limit reached. Waiting... Second: {}/{}, Minute: {}/{}",
-                                    currentSecond, REQUESTS_PER_SECOND,
-                                    currentMinute, REQUESTS_PER_MINUTE);
-                        }
-                    } finally {
-                        lock.unlock();
-                    }
-                } else {
-                    throw new RateLimiterException("Can not acquire lock after " + timeout + "ms");
+                final long remaining = deadline - System.currentTimeMillis();
+                if (remaining <= 0) {
+                    throw new RateLimiterException(
+                            "Rate limit timeout exceeded after " + properties.getTimeoutMs() + "ms");
                 }
 
-                // Небольшая пауза перед следующей попыткой
-                Thread.sleep(50);
+                log.debug("Rate limit reached. Waiting up to {}ms. Second: {}/{}, Minute: {}/{}",
+                        remaining,
+                        secondWindowCounter.get(), properties.getRequestsPerSecond(),
+                        minuteWindowCounter.get(), properties.getRequestsPerMinute());
+
+                notLimited.await(remaining, TimeUnit.MILLISECONDS);
             }
+
+            secondWindowCounter.incrementAndGet();
+            minuteWindowCounter.incrementAndGet();
+
+            log.debug("Request allowed. Second: {}/{}, Minute: {}/{}",
+                    secondWindowCounter.get(), properties.getRequestsPerSecond(),
+                    minuteWindowCounter.get(), properties.getRequestsPerMinute());
+
         } catch (final InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new RateLimiterException("Interrupted while waiting for rate limit lock");
+            throw new RateLimiterException("Interrupted while waiting for rate limit");
+        } finally {
+            lock.unlock();
         }
     }
 }

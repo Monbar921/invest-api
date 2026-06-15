@@ -3,7 +3,7 @@ package ru.invest.api.ui.service.mapper;
 import org.mapstruct.Mapper;
 import ru.invest.api.common.mapper.DateTimeMapper;
 import ru.invest.api.common.model.BondModel;
-import ru.invest.api.dto.dto.bond.BondDto;
+import ru.invest.api.dto.bond.BondDto;
 
 import java.util.List;
 

@@ -1,7 +1,10 @@
+server:
+  port: 8099
+
 invest:
-  enabled: false
+  enabled: true
   connector:
-    token: token
+    token: ${TOKEN}
 
 ru:
   invest:
@@ -21,9 +24,11 @@ spring:
           enabled: true
       client:
         config:
+          invest-api-client:
+            url: http://localhost:8099
           cb-rf-client:
-            enabled: false
-            url: localhost:8082
+            enabled: true
+            url: https://www.cbr.ru/
           budget-org-client:
-            enabled: false
-            url: localhost:8082
+            enabled: true
+            url: https://api.budjet.org/

@@ -1,10 +1,10 @@
-package ru.invest.api.dto.dto.bond;
+package ru.invest.api.dto.bond;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 import org.springframework.format.annotation.DateTimeFormat;
-import ru.invest.api.dto.dto.bond.enums.RiskLevelDto;
+import ru.invest.api.dto.bond.enums.RiskLevelDto;
 
 import java.time.ZonedDateTime;
 

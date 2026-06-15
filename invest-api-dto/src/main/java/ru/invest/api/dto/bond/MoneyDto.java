@@ -1,4 +1,4 @@
-package ru.invest.api.dto.dto.bond;
+package ru.invest.api.dto.bond;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
