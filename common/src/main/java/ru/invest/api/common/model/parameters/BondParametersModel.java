@@ -2,11 +2,12 @@ package ru.invest.api.common.model.parameters;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.experimental.Accessors;
+
+import java.util.List;
 
 @Data
 @NoArgsConstructor
-@Accessors(chain = true)
 public class BondParametersModel {
+    private List<BondSortModel> bondSorts;
     private Integer batchLimit;
 }

@@ -17,7 +17,6 @@ import ru.tinkoff.piapi.contract.v1.Bond;
 import ru.tinkoff.piapi.contract.v1.MoneyValue;
 
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -60,9 +59,7 @@ public class TinkoffBondUseCaseImpl implements TinkoffBondUseCase {
 
         enrichWithCouponsAsync(bondModels, foreignBonds);
 
-        return bondModels.stream()
-                .sorted(bondComparator())
-                .toList();
+        return bondModels;
     }
 
     private void enrichWithCouponsAsync(final List<BondModel> bondModels, final Map<String, Bond> bondsById) {
@@ -105,21 +102,4 @@ public class TinkoffBondUseCaseImpl implements TinkoffBondUseCase {
         };
     }
 
-    private static Comparator<BondModel> bondComparator() {
-        return Comparator.comparingInt(TinkoffBondUseCaseImpl::getRiskPriority)
-                .thenComparing(
-                        bond -> bond.getCoupon() != null ? bond.getCoupon().getInterest() : null,
-                        Comparator.nullsLast(Comparator.reverseOrder())
-                );
-    }
-
-    private static int getRiskPriority(final BondModel bond) {
-        if (bond.getRiskLevel() == null) {
-            return 2;
-        }
-        return switch (bond.getRiskLevel()) {
-            case RISK_LEVEL_LOW, RISK_LEVEL_MODERATE -> 0;
-            default -> 1;
-        };
-    }
 }

@@ -13,20 +13,21 @@ import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondUseCase;
 import ru.tinkoff.piapi.contract.v1.InstrumentsServiceGrpc;
 import ru.tinkoff.piapi.contract.v1.MarketDataServiceGrpc;
 
+import java.util.Collections;
 import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
 public class InvestApplicationTest extends AbstractInvestApplicationTest {
-    @MockitoBean
-    private BudgetOrgClient budgetOrgClient;
-    @MockitoBean
-    private CbRfClient cbRfClient;
-    @MockitoBean
-    private InstrumentsServiceGrpc.InstrumentsServiceBlockingStub instrumentsServiceBlockingStub;
-    @MockitoBean
-    private MarketDataServiceGrpc.MarketDataServiceBlockingStub marketDataServiceBlockingStub;
+//    @MockitoBean
+//    private BudgetOrgClient budgetOrgClient;
+//    @MockitoBean
+//    private CbRfClient cbRfClient;
+//    @MockitoBean
+//    private InstrumentsServiceGrpc.InstrumentsServiceBlockingStub instrumentsServiceBlockingStub;
+//    @MockitoBean
+//    private MarketDataServiceGrpc.MarketDataServiceBlockingStub marketDataServiceBlockingStub;
 
     @Autowired
     private TinkoffBondUseCase tinkoffBondUseCase;
@@ -47,7 +48,7 @@ public class InvestApplicationTest extends AbstractInvestApplicationTest {
     @Test
     @Disabled
     public void clientCall() {
-        final List<BondDto> bonds = investApiBondClient.getAllForeignBonds(null);
+        final List<BondDto> bonds = investApiBondClient.getAllForeignBonds(null, Collections.emptyList());
         assertThat(!bonds.isEmpty(), is(true));
     }
 }

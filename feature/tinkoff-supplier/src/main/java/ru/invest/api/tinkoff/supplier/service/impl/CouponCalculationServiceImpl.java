@@ -94,7 +94,8 @@ public class CouponCalculationServiceImpl implements CouponCalculationService {
     private BigDecimal calculateInterestPercentage(final BigDecimal paymentSum, final PriceModel currentPrice) {
         if (ObjectUtils.anyNull(paymentSum, currentPrice)
                 || currentPrice.getCurrent() == null
-                || currentPrice.getCurrent().getQuantity() == null) {
+                || currentPrice.getCurrent().getQuantity() == null
+         || currentPrice.getCurrent().getQuantity().compareTo(BigDecimal.ZERO) == 0) {
             return null;
         }
 
