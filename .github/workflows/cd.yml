@@ -1,13 +1,16 @@
 name: CD — Build Image & Deploy to Kubernetes
 
-# Запускается автоматически после успешного CI на master
+# ВАЖНО: этот файл должен быть в default-ветке (master),
+# иначе триггер workflow_run не сработает — это ограничение GitHub Actions.
+#
+# Логика по веткам:
+#   develop → build-and-push (образ в ghcr.io, тег: <sha>)
+#   master  → build-and-push + deploy (деплой на K8s, тег: <sha> + latest)
 on:
   workflow_run:
     workflows: ["Java CI/CD Pipeline"]
-    branches: ["develop", "master"]
+    branches: ["master"]
     types: [completed]
-  # Ручной запуск (указать run_id CI-пайплайна вручную не нужно —
-  # workflow_dispatch используем только для повторного деплоя последнего образа)
   workflow_dispatch:
 
 env:
@@ -68,9 +71,10 @@ jobs:
         with:
           context: .
           push: true
+          # latest добавляем только для master; для develop — только SHA-тег
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.sha.outputs.short }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ github.event.workflow_run.head_branch == 'master' && format('{0}/{1}:latest', env.REGISTRY, env.IMAGE_NAME) || '' }}
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
           cache-to: type=inline
 
@@ -81,6 +85,8 @@ jobs:
     name: 🚀 Deploy to Kubernetes
     runs-on: ubuntu-latest
     needs: build-and-push
+    # Деплоим только с master
+    if: ${{ github.event.workflow_run.head_branch == 'master' || github.event_name == 'workflow_dispatch' }}
     environment: production
 
     steps:
