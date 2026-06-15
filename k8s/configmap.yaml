@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: invest-api-config
+  namespace: invest-api
+data:
+  SPRING_CACHE_TYPE: "caffeine"
+  INVEST_ENABLED: "true"
+  INVEST_RATE_LIMITER_REQUESTS_PER_SECOND: "10"
+  INVEST_RATE_LIMITER_REQUESTS_PER_MINUTE: "200"
+  INVEST_RATE_LIMITER_TIMEOUT_MS: "30000"
+  SPRING_CLOUD_OPENFEIGN_CLIENT_CONFIG_CB_RF_CLIENT_URL: "https://www.cbr.ru/"
+  SPRING_CLOUD_OPENFEIGN_CLIENT_CONFIG_BUDGET_ORG_CLIENT_URL: "https://api.budjet.org/"
+  MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "health,info,metrics"
+  MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: "when-authorized"
