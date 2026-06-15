@@ -41,11 +41,13 @@ jobs:
           # при workflow_run берём SHA того коммита, который запустил CI
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
-      - name: 🔖 Get short SHA
+      - name: 🔖 Get short SHA and lowercase image name
         id: sha
         run: |
           SHA="${{ github.event.workflow_run.head_sha || github.sha }}"
           echo "short=${SHA:0:7}" >> "$GITHUB_OUTPUT"
+          # ghcr.io требует lowercase — приводим сразу
+          echo "IMAGE_NAME=$(echo '${{ env.IMAGE_NAME }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
 
       # Скачиваем JAR, собранный CI-пайплайном.
       # Артефакт называется all-module-jars-<run_id> и содержит
