@@ -4,7 +4,7 @@ name: CD — Build Image & Deploy to Kubernetes
 on:
   workflow_run:
     workflows: ["Java CI/CD Pipeline"]
-    branches: ["master"]
+    branches: ["develop", "master"]
     types: [completed]
   # Ручной запуск (указать run_id CI-пайплайна вручную не нужно —
   # workflow_dispatch используем только для повторного деплоя последнего образа)
