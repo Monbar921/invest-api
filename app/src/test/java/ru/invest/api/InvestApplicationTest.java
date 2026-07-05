@@ -4,9 +4,11 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import ru.invest.api.bond.supplier.usecase.BondUseCase;
 import ru.invest.api.budget.org.supplier.client.feign.BudgetOrgClient;
 import ru.invest.api.cb.rf.supplier.client.feign.CbRfClient;
 import ru.invest.api.common.model.BondModel;
+import ru.invest.api.common.model.parameters.BondParametersModel;
 import ru.invest.api.dto.bond.BondDto;
 import ru.invest.api.starter.client.InvestApiBondClient;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondUseCase;
@@ -32,6 +34,8 @@ public class InvestApplicationTest extends AbstractInvestApplicationTest {
     @Autowired
     private TinkoffBondUseCase tinkoffBondUseCase;
     @Autowired
+    private BondUseCase bondUseCase;
+    @Autowired
     private InvestApiBondClient investApiBondClient;
 
     @Test
@@ -41,7 +45,8 @@ public class InvestApplicationTest extends AbstractInvestApplicationTest {
     @Test
     @Disabled
     public void realCall() {
-        final List<BondModel> bonds = tinkoffBondUseCase.getForeignCurrencyBonds();
+//        final List<BondModel> bonds = tinkoffBondUseCase.getForeignCurrencyBonds();
+        final List<BondModel> bonds = bondUseCase.getRubbleCurrencyBonds(new BondParametersModel());
         assertThat(!bonds.isEmpty(), is(true));
     }
 

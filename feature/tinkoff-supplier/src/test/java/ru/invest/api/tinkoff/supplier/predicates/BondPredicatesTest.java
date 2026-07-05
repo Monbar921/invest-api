@@ -9,7 +9,7 @@ import ru.tinkoff.piapi.contract.v1.MoneyValue;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static ru.invest.api.tinkoff.supplier.predicates.BondPredicates.FOREIGN_CURRENCY_PREDICATE;
-import static ru.invest.api.tinkoff.supplier.predicates.BondPredicates.ISIN_PREDICATE;
+import static ru.invest.api.tinkoff.supplier.predicates.BondPredicates.RU_COUNTRY_PREDICATE;
 
 class BondPredicatesTest {
 
@@ -53,18 +53,18 @@ class BondPredicatesTest {
     @Test
     void isinPredicate_shouldAccept_whenIsinStartsWithRU() {
         final Bond bond = Bond.newBuilder().setIsin("RU000A0ZZE15").build();
-        assertTrue(ISIN_PREDICATE.test(bond));
+        assertTrue(RU_COUNTRY_PREDICATE.test(bond));
     }
 
     @Test
     void isinPredicate_shouldReject_whenIsinStartsWithOtherPrefix() {
         final Bond bond = Bond.newBuilder().setIsin("US0378331005").build();
-        assertFalse(ISIN_PREDICATE.test(bond));
+        assertFalse(RU_COUNTRY_PREDICATE.test(bond));
     }
 
     @Test
     void isinPredicate_shouldReject_whenIsinIsEmpty() {
         final Bond bond = Bond.newBuilder().build();
-        assertFalse(ISIN_PREDICATE.test(bond));
+        assertFalse(RU_COUNTRY_PREDICATE.test(bond));
     }
 }

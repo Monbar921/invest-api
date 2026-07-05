@@ -6,4 +6,6 @@ import java.util.List;
 
 public interface TinkoffBondUseCase {
     List<BondModel> getForeignCurrencyBonds();
+
+    List<BondModel> getRubbleCurrencyBonds();
 }

@@ -7,4 +7,6 @@ import java.util.List;
 
 public interface BondUseCase {
     List<BondModel> getForeignCurrencyBonds(BondParametersModel bondParametersModel);
+
+    List<BondModel> getRubbleCurrencyBonds(BondParametersModel bondParametersModel);
 }

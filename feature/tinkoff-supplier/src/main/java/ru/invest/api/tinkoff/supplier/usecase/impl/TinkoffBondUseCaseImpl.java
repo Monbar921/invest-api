@@ -24,11 +24,13 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static ru.invest.api.tinkoff.supplier.constants.Constants.COUPON_EXECUTOR_SERVICE;
 import static ru.invest.api.tinkoff.supplier.predicates.BondPredicates.FOREIGN_CURRENCY_PREDICATE;
-import static ru.invest.api.tinkoff.supplier.predicates.BondPredicates.ISIN_PREDICATE;
+import static ru.invest.api.tinkoff.supplier.predicates.BondPredicates.RUBBLE_CURRENCY_PREDICATE;
+import static ru.invest.api.tinkoff.supplier.predicates.BondPredicates.RU_COUNTRY_PREDICATE;
 
 @Component
 @RequiredArgsConstructor
@@ -42,22 +44,34 @@ public class TinkoffBondUseCaseImpl implements TinkoffBondUseCase {
 
     @Override
     public List<BondModel> getForeignCurrencyBonds() {
-        final Map<String, Bond> foreignBonds = filterForeignBonds(bondRetrieverUseCase.getAllBonds());
+        return getBonds(this::filterForeignBonds);
+    }
 
-        if (MapUtils.isEmpty(foreignBonds)) {
+    @Override
+    public List<BondModel> getRubbleCurrencyBonds() {
+        return getBonds(this::filterRubbleBonds);
+    }
+
+    public List<BondModel> getBonds(final Function<Map<String, Bond>, Map<String, Bond>> filterCurrencyFunction) {
+        final Map<String, Bond> allBonds = bondRetrieverUseCase.getAllBonds();
+        final Map<String, Bond> ruCountryBonds = filterRuCountryBonds(allBonds);
+
+        final Map<String, Bond> currencyBonds = filterCurrencyFunction.apply(ruCountryBonds);
+
+        if (MapUtils.isEmpty(currencyBonds)) {
             return Collections.emptyList();
         }
 
-        final List<String> uids = foreignBonds.values()
+        final List<String> uids = currencyBonds.values()
                 .stream()
                 .filter(Objects::nonNull)
                 .map(Bond::getUid)
                 .toList();
 
-        final Map<String, PriceModel> bondPrices = priceUseCase.getLastPrices(uids, foreignBonds, getNominalPrice());
-        final List<BondModel> bondModels = bondMapper.toModel(foreignBonds, bondPrices);
+        final Map<String, PriceModel> bondPrices = priceUseCase.getLastPrices(uids, currencyBonds, getNominalPrice());
+        final List<BondModel> bondModels = bondMapper.toModel(currencyBonds, bondPrices);
 
-        enrichWithCouponsAsync(bondModels, foreignBonds);
+        enrichWithCouponsAsync(bondModels, currencyBonds);
 
         return bondModels;
     }
@@ -83,7 +97,30 @@ public class TinkoffBondUseCaseImpl implements TinkoffBondUseCase {
                 .stream()
                 .filter(Objects::nonNull)
                 .filter(entry -> FOREIGN_CURRENCY_PREDICATE.test(entry.getValue()))
-                .filter(entry -> ISIN_PREDICATE.test(entry.getValue()))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    }
+
+    private Map<String, Bond> filterRubbleBonds(final Map<String, Bond> allBonds) {
+        if (MapUtils.isEmpty(allBonds)) {
+            return Collections.emptyMap();
+        }
+
+        return allBonds.entrySet()
+                .stream()
+                .filter(Objects::nonNull)
+                .filter(entry -> RUBBLE_CURRENCY_PREDICATE.test(entry.getValue()))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    }
+
+    private Map<String, Bond> filterRuCountryBonds(final Map<String, Bond> allBonds) {
+        if (MapUtils.isEmpty(allBonds)) {
+            return Collections.emptyMap();
+        }
+
+        return allBonds.entrySet()
+                .stream()
+                .filter(Objects::nonNull)
+                .filter(entry -> RU_COUNTRY_PREDICATE.test(entry.getValue()))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 

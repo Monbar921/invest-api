@@ -17,6 +17,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 @Component
 @RequiredArgsConstructor
@@ -30,7 +31,16 @@ public class BondUseCaseImpl implements BondUseCase {
 
     @Override
     public List<BondModel> getForeignCurrencyBonds(final BondParametersModel bondParametersModel) {
-        final List<BondModel> bonds = tinkoffBondUseCase.getForeignCurrencyBonds();
+        return getBonds(bondParametersModel, tinkoffBondUseCase::getForeignCurrencyBonds);
+    }
+
+    @Override
+    public List<BondModel> getRubbleCurrencyBonds(final BondParametersModel bondParametersModel) {
+        return getBonds(bondParametersModel, tinkoffBondUseCase::getRubbleCurrencyBonds);
+    }
+
+    private List<BondModel> getBonds(final BondParametersModel bondParametersModel, final Supplier<List<BondModel>> bondsSupplier) {
+        final List<BondModel> bonds = bondsSupplier.get();
 
         if (CollectionUtils.isEmpty(bonds)) {
             return bonds;
