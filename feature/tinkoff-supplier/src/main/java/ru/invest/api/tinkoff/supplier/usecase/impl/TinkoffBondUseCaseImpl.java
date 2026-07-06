@@ -10,7 +10,7 @@ import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.PriceModel;
 import ru.invest.api.tinkoff.supplier.mapper.BondMapper;
 import ru.invest.api.tinkoff.supplier.usecase.BondRetrieverUseCase;
-import ru.invest.api.tinkoff.supplier.usecase.CouponUseCase;
+import ru.invest.api.tinkoff.supplier.usecase.CouponExternalDataProviderUseCase;
 import ru.invest.api.tinkoff.supplier.usecase.PriceUseCase;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondUseCase;
 import ru.tinkoff.piapi.contract.v1.Bond;
@@ -38,7 +38,7 @@ public class TinkoffBondUseCaseImpl implements TinkoffBondUseCase {
     private final BondMapper bondMapper;
     private final PriceUseCase priceUseCase;
     private final BondRetrieverUseCase bondRetrieverUseCase;
-    private final CouponUseCase couponUseCase;
+    private final CouponExternalDataProviderUseCase couponExternalDataProviderUseCase;
     @Qualifier(COUPON_EXECUTOR_SERVICE)
     private final ExecutorService couponExecutorService;
 
@@ -81,7 +81,7 @@ public class TinkoffBondUseCaseImpl implements TinkoffBondUseCase {
                 .filter(Objects::nonNull)
                 .map(bondModel -> CompletableFuture.runAsync(() -> {
                     final Bond bond = bondsById.get(bondModel.getUid());
-                    bondModel.setCoupon(couponUseCase.getCoupons(bondModel, bond));
+                    bondModel.setCoupon(couponExternalDataProviderUseCase.getCoupons(bondModel, bond));
                 }, couponExecutorService))
                 .toList();
 
