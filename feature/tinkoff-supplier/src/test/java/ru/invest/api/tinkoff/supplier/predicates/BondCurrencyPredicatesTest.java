@@ -8,10 +8,10 @@ import ru.tinkoff.piapi.contract.v1.MoneyValue;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static ru.invest.api.tinkoff.supplier.predicates.BondPredicates.FOREIGN_CURRENCY_PREDICATE;
-import static ru.invest.api.tinkoff.supplier.predicates.BondPredicates.RU_COUNTRY_PREDICATE;
+import static ru.invest.api.tinkoff.supplier.predicates.BondCurrencyPredicates.FOREIGN_CURRENCY_PREDICATE;
+import static ru.invest.api.tinkoff.supplier.predicates.BondCurrencyPredicates.RU_COUNTRY_PREDICATE;
 
-class BondPredicatesTest {
+class BondCurrencyPredicatesTest {
 
     // ─── FOREIGN_CURRENCY_PREDICATE ───────────────────────────────────────────
 

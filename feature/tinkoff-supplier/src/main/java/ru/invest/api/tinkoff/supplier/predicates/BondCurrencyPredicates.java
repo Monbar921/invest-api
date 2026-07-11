@@ -7,7 +7,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
 
-public interface BondPredicates {
+public interface BondCurrencyPredicates {
     Set<String> FOREIGN_CURRENCIES = Set.of("EUR", "USD", "CNY");
     Set<String> RU_CURRENCIES = Set.of("RUB", "RUR");
     String RU_PREFIX = "RU";

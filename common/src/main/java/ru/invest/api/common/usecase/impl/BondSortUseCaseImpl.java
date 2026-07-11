@@ -2,6 +2,7 @@ package ru.invest.api.common.usecase.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.springframework.stereotype.Component;
 import ru.invest.api.common.mapper.BondParametersMapper;
@@ -17,6 +18,8 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+
+import static ru.invest.api.common.predicates.BondModelPredicates.OFZ_PREDICATE;
 
 @Component
 @RequiredArgsConstructor
@@ -36,9 +39,19 @@ public class BondSortUseCaseImpl implements BondSortUseCase {
                 .filter(bond -> filterByValueRange(bondParameters.getCurrentPrice(), getCurrentPrice(bond)))
                 .filter(bond -> filterByValueRange(bondParameters.getPercentagePrice(), getPercentagePrice(bond)))
                 .filter(bond -> filterByRiskLevel(bondParameters.getRiskLevels(), bond.getRiskLevel()))
+                .filter(bond -> filterByOfz(bondParameters.getIsOfz(), bond))
                 .sorted(actualizedParameters.getComparator())
                 .limit(actualizedParameters.getBatchLimit())
                 .toList();
+    }
+
+    private boolean filterByOfz(final Boolean isOfz, final BondModel bond) {
+        if (isOfz == null) {
+            return true;
+        }
+
+        return BooleanUtils.isTrue(isOfz) && OFZ_PREDICATE.test(bond)
+                || !BooleanUtils.isTrue(isOfz) && !OFZ_PREDICATE.test(bond);
     }
 
     private boolean filterByRiskLevel(final List<RiskLevel> riskLevels, final RiskLevel riskLevel) {

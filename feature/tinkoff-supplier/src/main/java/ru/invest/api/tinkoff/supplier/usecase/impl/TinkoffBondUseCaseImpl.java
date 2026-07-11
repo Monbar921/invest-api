@@ -35,9 +35,9 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static ru.invest.api.tinkoff.supplier.constants.Constants.COUPON_EXECUTOR_SERVICE;
-import static ru.invest.api.tinkoff.supplier.predicates.BondPredicates.FOREIGN_CURRENCY_PREDICATE;
-import static ru.invest.api.tinkoff.supplier.predicates.BondPredicates.RUBBLE_CURRENCY_PREDICATE;
-import static ru.invest.api.tinkoff.supplier.predicates.BondPredicates.RU_COUNTRY_PREDICATE;
+import static ru.invest.api.tinkoff.supplier.predicates.BondCurrencyPredicates.FOREIGN_CURRENCY_PREDICATE;
+import static ru.invest.api.tinkoff.supplier.predicates.BondCurrencyPredicates.RUBBLE_CURRENCY_PREDICATE;
+import static ru.invest.api.tinkoff.supplier.predicates.BondCurrencyPredicates.RU_COUNTRY_PREDICATE;
 
 @Component
 @RequiredArgsConstructor

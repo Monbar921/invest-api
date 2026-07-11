@@ -49,6 +49,13 @@ public class InvestApplicationTest extends AbstractInvestApplicationTest {
 //        final List<BondModel> bonds = tinkoffBondUseCase.getForeignCurrencyBonds();
         final List<BondModel> bonds = bondUseCase.getRubbleCurrencyBonds(getBondParameters());
         assertThat(!bonds.isEmpty(), is(true));
+
+        bonds
+                .forEach(bond -> {
+                    System.out.println("name=%40s, ticker=%20s, coupon=%6s%%, price=%6s%%"
+                                    .formatted(bond.getName(), bond.getTicker(), bond.getCoupon().getInterest(), bond.getPrice().getPercentagePrice())
+                    );
+                });
     }
 
     @Test
@@ -80,6 +87,7 @@ public class InvestApplicationTest extends AbstractInvestApplicationTest {
                 .setCurrentPrice(currentPriceRange)
                 .setPercentagePrice(percentagePriceRange)
                 .setBondSorts(sorts)
-                .setRiskLevels(riskLevels);
+                .setRiskLevels(riskLevels)
+                .setIsOfz(false);
     }
 }

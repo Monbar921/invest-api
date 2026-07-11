@@ -22,6 +22,7 @@ public interface BondMapper {
     @Mapping(target = "uid", source = "bond.uid")
     @Mapping(target = "isin", source = "bond.isin")
     @Mapping(target = "name", source = "bond.name")
+    @Mapping(target = "sector", source = "bond.sector")
     @Mapping(target = "riskLevel", source = "bond.riskLevel")
     @Mapping(target = "coupon", ignore = true)
     @Mapping(target = "maturityDate", source = "bond.maturityDate")
