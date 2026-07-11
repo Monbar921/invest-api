@@ -2,16 +2,13 @@ package ru.invest.api.common.model.parameters;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import ru.invest.api.common.model.BondModel;
 
-import java.util.Comparator;
 import java.util.List;
 
 @Data
 @NoArgsConstructor
-public class BondParametersModel {
+public class BondParametersRequestModel {
     private List<BondSortModel> bondSorts;
-    private Comparator<BondModel> comparator;
     private PriceRequestModel price;
     private Integer batchLimit;
 }

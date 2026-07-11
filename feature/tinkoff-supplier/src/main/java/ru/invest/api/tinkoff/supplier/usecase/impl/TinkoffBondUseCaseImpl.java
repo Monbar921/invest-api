@@ -1,15 +1,19 @@
 package ru.invest.api.tinkoff.supplier.usecase.impl;
 
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import ru.invest.api.common.exception.GeneralNotFoundEntityException;
 import ru.invest.api.common.exception.enums.ExceptionErrorCode;
+import ru.invest.api.common.mapper.BondParametersMapper;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.PriceModel;
 import ru.invest.api.common.model.parameters.BondParametersModel;
 import ru.invest.api.common.model.parameters.BondSortField;
+import ru.invest.api.common.model.parameters.BondSortModel;
+import ru.invest.api.common.usecase.BondSortUseCase;
 import ru.invest.api.tinkoff.supplier.mapper.BondMapper;
 import ru.invest.api.tinkoff.supplier.usecase.BondRetrieverUseCase;
 import ru.invest.api.tinkoff.supplier.usecase.CouponExternalDataProviderUseCase;
@@ -38,12 +42,16 @@ import static ru.invest.api.tinkoff.supplier.predicates.BondPredicates.RU_COUNTR
 @Component
 @RequiredArgsConstructor
 public class TinkoffBondUseCaseImpl implements TinkoffBondUseCase {
-    private static final Set<BondSortField> EXCLUDED_SORTED_FIELD = Set.of(BondSortField.COUPON_INTEREST);
+    private static final Set<BondSortField> EXCLUDED_SORT_FIELDS = Set.of(BondSortField.COUPON_INTEREST);
 
     private final BondMapper bondMapper;
+    private final BondParametersMapper bondParametersMapper;
+
     private final PriceUseCase priceUseCase;
     private final BondRetrieverUseCase bondRetrieverUseCase;
     private final CouponExternalDataProviderUseCase couponExternalDataProviderUseCase;
+    private final BondSortUseCase bondSortUseCase;
+
     @Qualifier(COUPON_EXECUTOR_SERVICE)
     private final ExecutorService couponExecutorService;
 
@@ -57,7 +65,8 @@ public class TinkoffBondUseCaseImpl implements TinkoffBondUseCase {
         return getBonds(this::filterRubbleBonds, bondParameters);
     }
 
-    public List<BondModel> getBonds(final Function<Map<String, Bond>, Map<String, Bond>> filterCurrencyFunction, final BondParametersModel bondParameters) {
+    public List<BondModel> getBonds(final Function<Map<String, Bond>, Map<String, Bond>> filterCurrencyFunction
+            , final BondParametersModel bondParameters) {
         final Map<String, Bond> allBonds = bondRetrieverUseCase.getAllBonds();
         final Map<String, Bond> ruCountryBonds = filterRuCountryBonds(allBonds);
 
@@ -76,9 +85,11 @@ public class TinkoffBondUseCaseImpl implements TinkoffBondUseCase {
         final Map<String, PriceModel> bondPrices = priceUseCase.getLastPrices(uids, currencyBonds, getNominalPrice());
         final List<BondModel> bondModels = bondMapper.toModel(currencyBonds, bondPrices);
 
-        enrichWithCouponsAsync(bondModels, currencyBonds);
+        final List<BondModel> filteredBonds = getFilteredBonds(bondParameters, bondModels);
 
-        return bondModels;
+        enrichWithCouponsAsync(filteredBonds, currencyBonds);
+
+        return filteredBonds;
     }
 
     private void enrichWithCouponsAsync(final List<BondModel> bondModels, final Map<String, Bond> bondsById) {
@@ -142,6 +153,25 @@ public class TinkoffBondUseCaseImpl implements TinkoffBondUseCase {
 
             return bond.getNominal();
         };
+    }
+
+    private List<BondModel> getFilteredBonds(final BondParametersModel bondParameters, final List<BondModel> bonds) {
+        if (CollectionUtils.isEmpty(bonds)) {
+            return bonds;
+        }
+
+        final List<BondSortModel> sorts = Optional.ofNullable(bondParameters)
+                .map(BondParametersModel::getBondSorts)
+                .orElse(Collections.emptyList())
+                .stream()
+                .filter(Objects::nonNull)
+                .filter(sort -> sort.getSortField() != null
+                        && !EXCLUDED_SORT_FIELDS.contains(sort.getSortField()))
+                .toList();
+
+        final BondParametersModel actualizedParameters = bondParametersMapper.toModel(bondParameters, sorts);
+
+        return bondSortUseCase.getFilteredBonds(actualizedParameters, bonds);
     }
 
 }
