@@ -31,16 +31,15 @@ public class BondUseCaseImpl implements BondUseCase {
 
     @Override
     public List<BondModel> getForeignCurrencyBonds(final BondParametersModel bondParametersModel) {
-        return getBonds(bondParametersModel, tinkoffBondUseCase::getForeignCurrencyBonds);
+        return getBonds(bondParametersModel, tinkoffBondUseCase.getForeignCurrencyBonds(bondParametersModel));
     }
 
     @Override
     public List<BondModel> getRubbleCurrencyBonds(final BondParametersModel bondParametersModel) {
-        return getBonds(bondParametersModel, tinkoffBondUseCase::getRubbleCurrencyBonds);
+        return getBonds(bondParametersModel, tinkoffBondUseCase.getRubbleCurrencyBonds(bondParametersModel));
     }
 
-    private List<BondModel> getBonds(final BondParametersModel bondParametersModel, final Supplier<List<BondModel>> bondsSupplier) {
-        final List<BondModel> bonds = bondsSupplier.get();
+    private List<BondModel> getBonds(final BondParametersModel bondParametersModel, final List<BondModel> bonds) {
 
         if (CollectionUtils.isEmpty(bonds)) {
             return bonds;

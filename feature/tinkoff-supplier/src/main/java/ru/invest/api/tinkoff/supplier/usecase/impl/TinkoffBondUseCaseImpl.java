@@ -8,6 +8,8 @@ import ru.invest.api.common.exception.GeneralNotFoundEntityException;
 import ru.invest.api.common.exception.enums.ExceptionErrorCode;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.PriceModel;
+import ru.invest.api.common.model.parameters.BondParametersModel;
+import ru.invest.api.common.model.parameters.BondSortField;
 import ru.invest.api.tinkoff.supplier.mapper.BondMapper;
 import ru.invest.api.tinkoff.supplier.usecase.BondRetrieverUseCase;
 import ru.invest.api.tinkoff.supplier.usecase.CouponExternalDataProviderUseCase;
@@ -21,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.function.BiFunction;
@@ -35,6 +38,8 @@ import static ru.invest.api.tinkoff.supplier.predicates.BondPredicates.RU_COUNTR
 @Component
 @RequiredArgsConstructor
 public class TinkoffBondUseCaseImpl implements TinkoffBondUseCase {
+    private static final Set<BondSortField> EXCLUDED_SORTED_FIELD = Set.of(BondSortField.COUPON_INTEREST);
+
     private final BondMapper bondMapper;
     private final PriceUseCase priceUseCase;
     private final BondRetrieverUseCase bondRetrieverUseCase;
@@ -43,16 +48,16 @@ public class TinkoffBondUseCaseImpl implements TinkoffBondUseCase {
     private final ExecutorService couponExecutorService;
 
     @Override
-    public List<BondModel> getForeignCurrencyBonds() {
-        return getBonds(this::filterForeignBonds);
+    public List<BondModel> getForeignCurrencyBonds(final BondParametersModel bondParameters) {
+        return getBonds(this::filterForeignBonds, bondParameters);
     }
 
     @Override
-    public List<BondModel> getRubbleCurrencyBonds() {
-        return getBonds(this::filterRubbleBonds);
+    public List<BondModel> getRubbleCurrencyBonds(final BondParametersModel bondParameters) {
+        return getBonds(this::filterRubbleBonds, bondParameters);
     }
 
-    public List<BondModel> getBonds(final Function<Map<String, Bond>, Map<String, Bond>> filterCurrencyFunction) {
+    public List<BondModel> getBonds(final Function<Map<String, Bond>, Map<String, Bond>> filterCurrencyFunction, final BondParametersModel bondParameters) {
         final Map<String, Bond> allBonds = bondRetrieverUseCase.getAllBonds();
         final Map<String, Bond> ruCountryBonds = filterRuCountryBonds(allBonds);
 
