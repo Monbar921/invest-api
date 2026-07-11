@@ -3,18 +3,19 @@ package ru.invest.api;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import ru.invest.api.bond.supplier.usecase.BondUseCase;
-import ru.invest.api.budget.org.supplier.client.feign.BudgetOrgClient;
-import ru.invest.api.cb.rf.supplier.client.feign.CbRfClient;
 import ru.invest.api.common.model.BondModel;
+import ru.invest.api.common.model.enums.RiskLevel;
 import ru.invest.api.common.model.parameters.BondParametersModel;
+import ru.invest.api.common.model.parameters.BondSortField;
+import ru.invest.api.common.model.parameters.BondSortModel;
+import ru.invest.api.common.model.parameters.BondSortOrder;
+import ru.invest.api.common.model.parameters.ValueRangeModel;
 import ru.invest.api.dto.bond.BondDto;
 import ru.invest.api.starter.client.InvestApiBondClient;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondUseCase;
-import ru.tinkoff.piapi.contract.v1.InstrumentsServiceGrpc;
-import ru.tinkoff.piapi.contract.v1.MarketDataServiceGrpc;
 
+import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
 
@@ -46,7 +47,7 @@ public class InvestApplicationTest extends AbstractInvestApplicationTest {
     @Disabled
     public void realCall() {
 //        final List<BondModel> bonds = tinkoffBondUseCase.getForeignCurrencyBonds();
-        final List<BondModel> bonds = bondUseCase.getRubbleCurrencyBonds(new BondParametersModel());
+        final List<BondModel> bonds = bondUseCase.getRubbleCurrencyBonds(getBondParameters());
         assertThat(!bonds.isEmpty(), is(true));
     }
 
@@ -55,5 +56,30 @@ public class InvestApplicationTest extends AbstractInvestApplicationTest {
     public void clientCall() {
         final List<BondDto> bonds = investApiBondClient.getAllForeignBonds(null, Collections.emptyList());
         assertThat(!bonds.isEmpty(), is(true));
+    }
+
+    private BondParametersModel getBondParameters() {
+        final ValueRangeModel currentPriceRange = new ValueRangeModel()
+                .setMax(BigDecimal.valueOf(100000L));
+        final ValueRangeModel percentagePriceRange = new ValueRangeModel()
+                .setMax(BigDecimal.valueOf(102L));
+
+        final BondSortModel couponSort = new BondSortModel()
+                .setSortField(BondSortField.COUPON_INTEREST)
+                .setSortOrder(BondSortOrder.DESC);
+
+        final BondSortModel riscLevelSort = new BondSortModel()
+                .setSortField(BondSortField.RISK_LEVEL)
+                .setSortOrder(BondSortOrder.ASC);
+
+        final List<RiskLevel> riskLevels = List.of(RiskLevel.RISK_LEVEL_MODERATE, RiskLevel.RISK_LEVEL_LOW);
+
+        final List<BondSortModel> sorts = List.of(couponSort, riscLevelSort);
+
+        return new BondParametersModel()
+                .setCurrentPrice(currentPriceRange)
+                .setPercentagePrice(percentagePriceRange)
+                .setBondSorts(sorts)
+                .setRiskLevels(riskLevels);
     }
 }

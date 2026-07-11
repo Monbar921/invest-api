@@ -54,4 +54,12 @@ public interface BondPredicates {
             .map(Bond::getIsin)
             .filter(isin -> isin.startsWith(RU_PREFIX))
             .isPresent();
+
+    Predicate<Bond> OFZ_PREDICATE = bond -> Optional.ofNullable(bond)
+            .filter(b -> bond.getSector().equalsIgnoreCase("GOVERNMENT"))
+            .filter(b -> bond.getName().toUpperCase().startsWith("ОФЗ")
+                    || bond.getName().toUpperCase().startsWith("RUSSIA")
+                    || bond.getName().toUpperCase().startsWith("ОВОЗ")
+            )
+            .isPresent();
 }

@@ -8,8 +8,9 @@ import ru.invest.api.common.mapper.BondParametersMapper;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.MoneyModel;
 import ru.invest.api.common.model.PriceModel;
+import ru.invest.api.common.model.enums.RiskLevel;
 import ru.invest.api.common.model.parameters.BondParametersModel;
-import ru.invest.api.common.model.parameters.PriceRequestModel;
+import ru.invest.api.common.model.parameters.ValueRangeModel;
 import ru.invest.api.common.usecase.BondSortUseCase;
 
 import java.math.BigDecimal;
@@ -32,28 +33,46 @@ public class BondSortUseCaseImpl implements BondSortUseCase {
 
         return bonds.stream()
                 .filter(Objects::nonNull)
-                .filter(bond -> filterByPrice(bondParameters.getPrice(), bond))
+                .filter(bond -> filterByValueRange(bondParameters.getCurrentPrice(), getCurrentPrice(bond)))
+                .filter(bond -> filterByValueRange(bondParameters.getPercentagePrice(), getPercentagePrice(bond)))
+                .filter(bond -> filterByRiskLevel(bondParameters.getRiskLevels(), bond.getRiskLevel()))
                 .sorted(actualizedParameters.getComparator())
                 .limit(actualizedParameters.getBatchLimit())
                 .toList();
     }
 
-    private boolean filterByPrice(final PriceRequestModel price, final BondModel bond) {
+    private boolean filterByRiskLevel(final List<RiskLevel> riskLevels, final RiskLevel riskLevel) {
+        if (riskLevel == null || CollectionUtils.isEmpty(riskLevels)) {
+            return true;
+        }
+
+        return riskLevels.contains(riskLevel);
+    }
+
+    private boolean filterByValueRange(final ValueRangeModel price, final BigDecimal comparedValue) {
         if (price == null || ObjectUtils.allNull(price.getMin(), price.getMax())) {
             return true;
         }
 
-        final BigDecimal currentPrice = Optional.ofNullable(bond.getPrice())
-                .map(PriceModel::getCurrent)
-                .map(MoneyModel::getQuantity)
-                .orElse(null);
-
-        if (currentPrice == null) {
+        if (comparedValue == null) {
             return true;
         }
 
-        return comparePrices(currentPrice, price.getMin(), 1)
-                && comparePrices(currentPrice, price.getMax(), -1);
+        return comparePrices(comparedValue, price.getMin(), 1)
+                && comparePrices(comparedValue, price.getMax(), -1);
+    }
+
+    private BigDecimal getCurrentPrice(final BondModel bondModel) {
+        return Optional.ofNullable(bondModel.getPrice())
+                .map(PriceModel::getCurrent)
+                .map(MoneyModel::getQuantity)
+                .orElse(null);
+    }
+
+    private BigDecimal getPercentagePrice(final BondModel bondModel) {
+        return Optional.ofNullable(bondModel.getPrice())
+                .map(PriceModel::getPercentagePrice)
+                .orElse(null);
     }
 
     private boolean comparePrices(final BigDecimal realPrice, final BigDecimal requestedPrice

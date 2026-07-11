@@ -68,9 +68,9 @@ public class TinkoffBondUseCaseImpl implements TinkoffBondUseCase {
     public List<BondModel> getBonds(final Function<Map<String, Bond>, Map<String, Bond>> filterCurrencyFunction
             , final BondParametersModel bondParameters) {
         final Map<String, Bond> allBonds = bondRetrieverUseCase.getAllBonds();
-        final Map<String, Bond> ruCountryBonds = filterRuCountryBonds(allBonds);
+//        final Map<String, Bond> ruCountryBonds = filterRuCountryBonds(allBonds);
 
-        final Map<String, Bond> currencyBonds = filterCurrencyFunction.apply(ruCountryBonds);
+        final Map<String, Bond> currencyBonds = filterCurrencyFunction.apply(allBonds);
 
         if (MapUtils.isEmpty(currencyBonds)) {
             return Collections.emptyList();

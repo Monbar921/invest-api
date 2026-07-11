@@ -6,9 +6,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import ru.invest.api.common.mapper.BondParametersMapper;
 import ru.invest.api.common.model.parameters.BondParametersModel;
 import ru.invest.api.common.model.parameters.BondParametersRequestModel;
-import ru.invest.api.common.model.parameters.PriceRequestModel;
+import ru.invest.api.common.model.parameters.ValueRangeModel;
 import ru.invest.api.dto.request.bond.BondParametersRequest;
-import ru.invest.api.dto.request.bond.PriceRequest;
+import ru.invest.api.dto.request.bond.ValueRangeRequest;
 
 @Mapper
 public abstract class BondParametersRequestMapper {
@@ -27,5 +27,5 @@ public abstract class BondParametersRequestMapper {
         return bondParametersMapper.toModel(bondParametersRequestModel);
     }
 
-    protected abstract PriceRequestModel toPriceRequestModel(PriceRequest priceRequest);
+    protected abstract ValueRangeModel toPriceRequestModel(ValueRangeRequest valueRangeRequest);
 }

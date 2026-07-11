@@ -13,5 +13,7 @@ public enum BondSortField {
     /** Тикер */
     TICKER,
     /** Название */
-    NAME
+    NAME,
+
+    PRICE
 }

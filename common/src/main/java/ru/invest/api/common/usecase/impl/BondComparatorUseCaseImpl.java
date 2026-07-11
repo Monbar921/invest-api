@@ -8,6 +8,7 @@ import ru.invest.api.common.model.parameters.BondSortModel;
 import ru.invest.api.common.model.parameters.BondSortOrder;
 import ru.invest.api.common.usecase.BondComparatorUseCase;
 
+import java.math.BigDecimal;
 import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
@@ -15,12 +16,6 @@ import java.util.Objects;
 
 @Component
 public class BondComparatorUseCaseImpl implements BondComparatorUseCase {
-    private static final Comparator<BondModel> DEFAULT_COMPARATOR = Comparator.comparing(
-            bond -> bond.getPrice() != null && bond.getPrice().getCurrent() != null
-                    && bond.getPrice().getCurrent().getQuantity() != null
-                    ? bond.getPrice().getCurrent().getQuantity() : null,
-            Comparator.nullsLast(Comparator.reverseOrder()));
-
     @Override
     public Comparator<BondModel> createComparator(final List<BondSortModel> bondSorts) {
         final List<Comparator<BondModel>> comparators = new LinkedList<>();
@@ -30,17 +25,9 @@ public class BondComparatorUseCaseImpl implements BondComparatorUseCase {
                     .stream()
                     .filter(Objects::nonNull)
                     .filter(bondSort -> bondSort.getSortField() != null)
-                    .forEach(bondSort -> {
-                        Comparator<BondModel> comparator = buildComparator(bondSort.getSortField());
-                        if (bondSort.getSortOrder() == BondSortOrder.DESC) {
-                            comparator = comparator.reversed();
-                        }
-                        comparators.add(comparator);
-                    });
-        }
-
-        if (CollectionUtils.isEmpty(comparators)) {
-            comparators.add(DEFAULT_COMPARATOR);
+                    .forEach(bondSort -> comparators.add(
+                            buildComparator(bondSort.getSortField(), bondSort.getSortOrder())
+                    ));
         }
 
         return comparators.stream()
@@ -48,21 +35,31 @@ public class BondComparatorUseCaseImpl implements BondComparatorUseCase {
                 .orElse((o1, o2) -> 0);
     }
 
-    private Comparator<BondModel> buildComparator(final BondSortField sortField) {
+    private <T extends Comparable<? super T>> Comparator<T> getOrder(final BondSortOrder bondSortOrder) {
+        return bondSortOrder == BondSortOrder.DESC
+                ? Comparator.reverseOrder()
+                : Comparator.naturalOrder();
+    }
+
+    private Comparator<BondModel> buildComparator(final BondSortField sortField, final BondSortOrder bondSortOrder) {
         return switch (sortField) {
             case RISK_LEVEL -> Comparator.comparingInt(this::riskPriority);
             case COUPON_INTEREST -> Comparator.comparing(
                     bond -> bond.getCoupon() != null ? bond.getCoupon().getInterest() : null,
-                    Comparator.nullsLast(Comparator.naturalOrder()));
+                    Comparator.<BigDecimal>nullsLast(getOrder(bondSortOrder)));
             case MATURITY_DATE -> Comparator.comparing(
                     BondModel::getMaturityDate,
-                    Comparator.nullsLast(Comparator.naturalOrder()));
+                    Comparator.nullsLast(getOrder(bondSortOrder)));
             case TICKER -> Comparator.comparing(
                     BondModel::getTicker,
-                    Comparator.nullsLast(Comparator.naturalOrder()));
+                    Comparator.nullsLast(getOrder(bondSortOrder)));
             case NAME -> Comparator.comparing(
                     BondModel::getName,
-                    Comparator.nullsLast(Comparator.naturalOrder()));
+                    Comparator.nullsLast(getOrder(bondSortOrder)));
+            case PRICE -> Comparator.comparing(
+                    bond -> bond.getPrice() != null && bond.getPrice().getCurrent() != null
+                            ? bond.getPrice().getCurrent().getQuantity() : null,
+                    Comparator.nullsLast(getOrder(bondSortOrder)));
         };
     }
 
