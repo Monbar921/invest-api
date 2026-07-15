@@ -8,10 +8,8 @@ import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.CouponDataModel;
 import ru.invest.api.common.model.CouponModel;
 import ru.invest.api.tinkoff.supplier.mapper.CouponMapper;
-import ru.invest.api.tinkoff.supplier.service.CouponCalculationService;
-import ru.invest.api.tinkoff.supplier.usecase.CouponExternalDataProviderUseCase;
+import ru.invest.api.tinkoff.supplier.usecase.TinkoffCouponApiUseCase;
 import ru.invest.api.tinkoff.supplier.wrapper.InstrumentsGrpcRateLimitedWrapper;
-import ru.tinkoff.piapi.contract.v1.Bond;
 import ru.tinkoff.piapi.contract.v1.GetBondCouponsRequest;
 import ru.tinkoff.piapi.contract.v1.GetBondCouponsResponse;
 
@@ -22,21 +20,19 @@ import static ru.invest.api.common.exception.enums.ExceptionErrorCode.EMPTY_UID;
 
 @Component
 @RequiredArgsConstructor
-public class CouponExternalDataProviderUseCaseImpl implements CouponExternalDataProviderUseCase {
+public class TinkoffCouponApiUseCaseImpl implements TinkoffCouponApiUseCase {
     private final CouponMapper couponMapper;
     private final InstrumentsGrpcRateLimitedWrapper instrumentsGrpcRateLimitedWrapper;
-    private final CouponCalculationService couponCalculationService;
 
     @Override
-    public CouponModel getCoupons(final BondModel bondModel, final Bond bond) {
-        if (bond == null) {
+    public CouponModel getCoupon(final BondModel bondModel, final Integer quantityPerYear) {
+        if (bondModel == null) {
             return null;
         }
 
-        final List<CouponDataModel> couponDataList = fetchCouponData(bond.getUid());
-        final CouponModel couponModel = couponMapper.toModel(bond, couponDataList);
-        couponModel.setInterest(couponCalculationService.calculateInterest(couponModel, bondModel));
-        return couponModel;
+        final List<CouponDataModel> couponsData = fetchCouponData(bondModel.getUid());
+
+        return couponMapper.toModel(bondModel, couponsData, quantityPerYear);
     }
 
     private List<CouponDataModel> fetchCouponData(final String uid) {

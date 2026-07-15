@@ -1,4 +1,4 @@
-package ru.invest.api.tinkoff.supplier.usecase.impl;
+package ru.invest.api.tinkoff.supplier.dispatcher.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.collections4.CollectionUtils;
@@ -14,11 +14,11 @@ import ru.invest.api.common.model.parameters.BondParametersModel;
 import ru.invest.api.common.model.parameters.BondSortField;
 import ru.invest.api.common.model.parameters.BondSortModel;
 import ru.invest.api.common.usecase.BondSortUseCase;
+import ru.invest.api.tinkoff.supplier.dispatcher.TinkoffBondDispatcher;
+import ru.invest.api.tinkoff.supplier.dispatcher.TinkoffCouponDispatcher;
 import ru.invest.api.tinkoff.supplier.mapper.BondMapper;
-import ru.invest.api.tinkoff.supplier.usecase.BondRetrieverUseCase;
-import ru.invest.api.tinkoff.supplier.usecase.CouponExternalDataProviderUseCase;
-import ru.invest.api.tinkoff.supplier.usecase.PriceUseCase;
-import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondUseCase;
+import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondApiUseCase;
+import ru.invest.api.tinkoff.supplier.usecase.TinkoffPriceUseCase;
 import ru.tinkoff.piapi.contract.v1.Bond;
 import ru.tinkoff.piapi.contract.v1.MoneyValue;
 
@@ -41,15 +41,15 @@ import static ru.invest.api.tinkoff.supplier.predicates.BondCurrencyPredicates.R
 
 @Component
 @RequiredArgsConstructor
-public class TinkoffBondUseCaseImpl implements TinkoffBondUseCase {
+public class TinkoffBondDispatcherImpl implements TinkoffBondDispatcher {
     private static final Set<BondSortField> EXCLUDED_SORT_FIELDS = Set.of(BondSortField.COUPON_INTEREST);
 
     private final BondMapper bondMapper;
     private final BondParametersMapper bondParametersMapper;
 
-    private final PriceUseCase priceUseCase;
-    private final BondRetrieverUseCase bondRetrieverUseCase;
-    private final CouponExternalDataProviderUseCase couponExternalDataProviderUseCase;
+    private final TinkoffPriceUseCase tinkoffPriceUseCase;
+    private final TinkoffBondApiUseCase tinkoffBondApiUseCase;
+    private final TinkoffCouponDispatcher tinkoffCouponDispatcher;
     private final BondSortUseCase bondSortUseCase;
 
     @Qualifier(COUPON_EXECUTOR_SERVICE)
@@ -67,7 +67,7 @@ public class TinkoffBondUseCaseImpl implements TinkoffBondUseCase {
 
     public List<BondModel> getBonds(final Function<Map<String, Bond>, Map<String, Bond>> filterCurrencyFunction
             , final BondParametersModel bondParameters) {
-        final Map<String, Bond> allBonds = bondRetrieverUseCase.getAllBonds();
+        final Map<String, Bond> allBonds = tinkoffBondApiUseCase.getAllBonds();
 //        final Map<String, Bond> ruCountryBonds = filterRuCountryBonds(allBonds);
 
         final Map<String, Bond> currencyBonds = filterCurrencyFunction.apply(allBonds);
@@ -82,7 +82,7 @@ public class TinkoffBondUseCaseImpl implements TinkoffBondUseCase {
                 .map(Bond::getUid)
                 .toList();
 
-        final Map<String, PriceModel> bondPrices = priceUseCase.getLastPrices(uids, currencyBonds, getNominalPrice());
+        final Map<String, PriceModel> bondPrices = tinkoffPriceUseCase.getLastPrices(uids, currencyBonds, getNominalPrice());
         final List<BondModel> bondModels = bondMapper.toModel(currencyBonds, bondPrices);
 
         final List<BondModel> filteredBonds = getFilteredBonds(bondParameters, bondModels);
@@ -97,7 +97,7 @@ public class TinkoffBondUseCaseImpl implements TinkoffBondUseCase {
                 .filter(Objects::nonNull)
                 .map(bondModel -> CompletableFuture.runAsync(() -> {
                     final Bond bond = bondsById.get(bondModel.getUid());
-                    bondModel.setCoupon(couponExternalDataProviderUseCase.getCoupons(bondModel, bond));
+                    bondModel.setCoupon(tinkoffCouponDispatcher.getCoupon(bondModel, bond.getCouponQuantityPerYear()));
                 }, couponExecutorService))
                 .toList();
 

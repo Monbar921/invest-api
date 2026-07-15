@@ -20,4 +20,5 @@ public class BondModel {
     private CouponModel coupon;
     private RiskLevel riskLevel;
     private LocalDateTime maturityDate;
+    private Boolean isFixedCoupon;
 }

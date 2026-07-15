@@ -13,7 +13,7 @@ import ru.invest.api.common.model.parameters.BondSortOrder;
 import ru.invest.api.common.model.parameters.ValueRangeModel;
 import ru.invest.api.dto.bond.BondDto;
 import ru.invest.api.starter.client.InvestApiBondClient;
-import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondUseCase;
+import ru.invest.api.tinkoff.supplier.dispatcher.TinkoffBondDispatcher;
 
 import java.math.BigDecimal;
 import java.util.Collections;
@@ -33,7 +33,7 @@ public class InvestApplicationTest extends AbstractInvestApplicationTest {
 //    private MarketDataServiceGrpc.MarketDataServiceBlockingStub marketDataServiceBlockingStub;
 
     @Autowired
-    private TinkoffBondUseCase tinkoffBondUseCase;
+    private TinkoffBondDispatcher tinkoffBondDispatcher;
     @Autowired
     private BondUseCase bondUseCase;
     @Autowired
@@ -47,7 +47,7 @@ public class InvestApplicationTest extends AbstractInvestApplicationTest {
     @Disabled
     public void realCall() {
 //        final List<BondModel> bonds = tinkoffBondUseCase.getForeignCurrencyBonds();
-        final List<BondModel> bonds = bondUseCase.getRubbleCurrencyBonds(getBondParameters());
+        final List<BondModel> bonds = bondUseCase.getForeignCurrencyBonds(getBondParameters());
         assertThat(!bonds.isEmpty(), is(true));
 
         bonds

@@ -7,44 +7,46 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
 @Setter
-@Entity(name = "coupon")
-public class Coupon {
+@Entity(name = "bond")
+public class Bond {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
-    @JoinColumn(name = "bond_id")
-    private Bond bond;
+    @Column(name = "ticker")
+    private String ticker;
 
-    @Column(name = "quantity_per_year")
-    private Integer quantityPerYear;
+    @Column(name = "uid")
+    private String uid;
 
-    @Column(name = "price")
-    private BigDecimal price;
+    @Column(name = "isin")
+    private String isin;
 
-    @Column(name = "currency")
-    private String currency;
+    @Column(name = "name")
+    private String name;
 
-    @Column(name = "fix_date")
-    private LocalDateTime fixDate;
+    @Column(name = "sector")
+    private String sector;
 
-    @Column(name = "payment_date")
-    private LocalDateTime paymentDate;
+    @Column(name = "nominal_price")
+    private BigDecimal nominalPrice;
+
+    @Column(name = "nominal_currency")
+    private String nominalCurrency;
+
+    @Column(name = "is_fixed_coupon")
+    private Boolean isFixedCoupon;
 
     @Embedded
     @AttributeOverride(name = "committedBy", column = @Column(name = "created_by"))

@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import ru.invest.api.common.model.PriceModel;
 import ru.invest.api.tinkoff.supplier.mapper.PriceMapper;
-import ru.invest.api.tinkoff.supplier.usecase.PriceUseCase;
+import ru.invest.api.tinkoff.supplier.usecase.TinkoffPriceUseCase;
 import ru.invest.api.tinkoff.supplier.wrapper.MarketDataGrpcRateLimitedWrapper;
 import ru.tinkoff.piapi.contract.v1.GetLastPricesRequest;
 import ru.tinkoff.piapi.contract.v1.GetLastPricesResponse;
@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
-public class PriceUseCaseImpl implements PriceUseCase {
+public class TinkoffPriceUseCaseImpl implements TinkoffPriceUseCase {
     private final MarketDataGrpcRateLimitedWrapper marketDataServiceBlockingStub;
 
     private final PriceMapper priceMapper;

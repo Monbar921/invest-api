@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
 
-public interface PriceUseCase {
+public interface TinkoffPriceUseCase {
     <T> Map<String, PriceModel> getLastPrices(List<String> uids, Map<String, T> specificModels,
                                               BiFunction<Map<String, T>, String, MoneyValue> nominalGetter);
 }

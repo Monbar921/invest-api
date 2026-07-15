@@ -6,25 +6,25 @@ import ru.invest.api.bond.supplier.usecase.BondUseCase;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.parameters.BondParametersModel;
 import ru.invest.api.common.usecase.BondSortUseCase;
-import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondUseCase;
+import ru.invest.api.tinkoff.supplier.dispatcher.TinkoffBondDispatcher;
 
 import java.util.List;
 
 @Component
 @RequiredArgsConstructor
 public class BondUseCaseImpl implements BondUseCase {
-    private final TinkoffBondUseCase tinkoffBondUseCase;
+    private final TinkoffBondDispatcher tinkoffBondDispatcher;
     private final BondSortUseCase bondSortUseCase;
 
     @Override
     public List<BondModel> getForeignCurrencyBonds(final BondParametersModel bondParametersModel) {
-        return bondSortUseCase.getFilteredBonds(bondParametersModel, tinkoffBondUseCase.getForeignCurrencyBonds(
+        return bondSortUseCase.getFilteredBonds(bondParametersModel, tinkoffBondDispatcher.getForeignCurrencyBonds(
                 bondParametersModel));
     }
 
     @Override
     public List<BondModel> getRubbleCurrencyBonds(final BondParametersModel bondParametersModel) {
-        return bondSortUseCase.getFilteredBonds(bondParametersModel, tinkoffBondUseCase.getRubbleCurrencyBonds(
+        return bondSortUseCase.getFilteredBonds(bondParametersModel, tinkoffBondDispatcher.getRubbleCurrencyBonds(
                 bondParametersModel));
     }
 }

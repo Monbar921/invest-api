@@ -4,6 +4,6 @@ import ru.tinkoff.piapi.contract.v1.Bond;
 
 import java.util.Map;
 
-public interface BondRetrieverUseCase {
+public interface TinkoffBondApiUseCase {
     Map<String, Bond> getAllBonds();
 }

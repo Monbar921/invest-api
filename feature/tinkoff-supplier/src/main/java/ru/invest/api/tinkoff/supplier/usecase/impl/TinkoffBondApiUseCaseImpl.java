@@ -3,7 +3,7 @@ package ru.invest.api.tinkoff.supplier.usecase.impl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
-import ru.invest.api.tinkoff.supplier.usecase.BondRetrieverUseCase;
+import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondApiUseCase;
 import ru.invest.api.tinkoff.supplier.wrapper.InstrumentsGrpcRateLimitedWrapper;
 import ru.tinkoff.piapi.contract.v1.Bond;
 import ru.tinkoff.piapi.contract.v1.BondsResponse;
@@ -21,7 +21,7 @@ import static ru.invest.api.common.constants.CacheConstants.BOND_CACHE_NAME;
 
 @Component
 @RequiredArgsConstructor
-public class BondRetrieverUseCaseImpl implements BondRetrieverUseCase {
+public class TinkoffBondApiUseCaseImpl implements TinkoffBondApiUseCase {
     private final InstrumentsGrpcRateLimitedWrapper instrumentsGrpcRateLimitedWrapper;
 
     @Override
