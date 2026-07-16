@@ -25,14 +25,14 @@ public class TinkoffCouponApiUseCaseImpl implements TinkoffCouponApiUseCase {
     private final InstrumentsGrpcRateLimitedWrapper instrumentsGrpcRateLimitedWrapper;
 
     @Override
-    public CouponModel getCoupon(final BondModel bondModel, final Integer quantityPerYear) {
+    public CouponModel getCoupon(final BondModel bondModel) {
         if (bondModel == null) {
             return null;
         }
 
         final List<CouponDataModel> couponsData = fetchCouponData(bondModel.getUid());
 
-        return couponMapper.toModel(bondModel, couponsData, quantityPerYear);
+        return couponMapper.toModel(bondModel, couponsData);
     }
 
     private List<CouponDataModel> fetchCouponData(final String uid) {

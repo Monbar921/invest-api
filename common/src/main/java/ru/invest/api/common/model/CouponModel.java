@@ -13,7 +13,8 @@ import java.util.List;
 @NoArgsConstructor
 public class CouponModel {
     private String uid;
-    private int quantityPerYear;
     private BigDecimal interest;
+    private Boolean isFixed;
+    private int quantityPerYear;
     private List<CouponDataModel> couponData;
 }

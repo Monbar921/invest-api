@@ -20,37 +20,39 @@ public class TinkoffCouponDispatcherImpl implements TinkoffCouponDispatcher {
 
     //    TODO не забыть исправить кэш
     @Override
-    public CouponModel getCoupon(final BondModel bondModel, final Integer quantityPerYear) {
+    public CouponModel getCoupon(final BondModel bondModel) {
         if (bondModel == null) {
             return null;
         }
 
-        final CouponModel coupon = dispatchCoupon(bondModel, quantityPerYear);
+        final CouponModel coupon = dispatchCoupon(bondModel);
 
         return coupon.setInterest(
                 couponCalculationService.calculateInterest(coupon, bondModel)
         );
     }
 
-    public CouponModel dispatchCoupon(final BondModel bondModel, final Integer quantityPerYear) {
+    public CouponModel dispatchCoupon(final BondModel bondModel) {
         if (!needTryFetchFromDatabase(bondModel)) {
-            return fetchCouponsFromTinkoffApi(bondModel, quantityPerYear);
+            return fetchCouponsFromTinkoffApi(bondModel);
         }
 
-        return Optional.ofNullable(fetchCouponsFromDatabase(bondModel, quantityPerYear))
+        return Optional.ofNullable(fetchCouponsFromDatabase(bondModel))
                 .filter(databaseCoupon -> CollectionUtils.isNotEmpty(databaseCoupon.getCouponData()))
-                .orElse(fetchCouponsFromTinkoffApi(bondModel, quantityPerYear));
+                .orElse(fetchCouponsFromTinkoffApi(bondModel));
     }
 
-    private CouponModel fetchCouponsFromDatabase(final BondModel bondModel, final Integer quantityPerYear) {
-        return tinkoffCouponApiUseCase.getCoupon(bondModel, quantityPerYear);
+    private CouponModel fetchCouponsFromDatabase(final BondModel bondModel) {
+        return tinkoffCouponApiUseCase.getCoupon(bondModel);
     }
 
-    private CouponModel fetchCouponsFromTinkoffApi(final BondModel bondModel, final Integer quantityPerYear) {
-        return tinkoffCouponApiUseCase.getCoupon(bondModel, quantityPerYear);
+    private CouponModel fetchCouponsFromTinkoffApi(final BondModel bondModel) {
+        return tinkoffCouponApiUseCase.getCoupon(bondModel);
     }
 
     private boolean needTryFetchFromDatabase(final BondModel bondModel) {
-        return BooleanUtils.isTrue(bondModel.getIsFixedCoupon());
+        return Optional.ofNullable(bondModel.getCoupon())
+                .map(CouponModel::getIsFixed)
+                .orElse(false);
     }
 }

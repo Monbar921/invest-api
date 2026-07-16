@@ -4,5 +4,5 @@ import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.CouponModel;
 
 public interface TinkoffCouponDispatcher {
-    CouponModel getCoupon(BondModel bondModel, Integer quantityPerYear);
+    CouponModel getCoupon(BondModel bondModel);
 }

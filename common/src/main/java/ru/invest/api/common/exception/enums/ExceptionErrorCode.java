@@ -6,6 +6,7 @@ public enum ExceptionErrorCode {
 
     UNPROCESSABLE,
     EMPTY_UID,
+    EMPTY_TICKER,
     EMPTY_CURRENCY,
     EMPTY_DATE
 }

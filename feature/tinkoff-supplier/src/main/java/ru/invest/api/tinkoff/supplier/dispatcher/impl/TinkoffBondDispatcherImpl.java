@@ -87,18 +87,15 @@ public class TinkoffBondDispatcherImpl implements TinkoffBondDispatcher {
 
         final List<BondModel> filteredBonds = getFilteredBonds(bondParameters, bondModels);
 
-        enrichWithCouponsAsync(filteredBonds, currencyBonds);
+        enrichWithCouponsAsync(filteredBonds);
 
         return filteredBonds;
     }
 
-    private void enrichWithCouponsAsync(final List<BondModel> bondModels, final Map<String, Bond> bondsById) {
+    private void enrichWithCouponsAsync(final List<BondModel> bondModels) {
         final List<CompletableFuture<Void>> futures = bondModels.stream()
                 .filter(Objects::nonNull)
-                .map(bondModel -> CompletableFuture.runAsync(() -> {
-                    final Bond bond = bondsById.get(bondModel.getUid());
-                    bondModel.setCoupon(tinkoffCouponDispatcher.getCoupon(bondModel, bond.getCouponQuantityPerYear()));
-                }, couponExecutorService))
+                .map(bondModel -> CompletableFuture.runAsync(() -> bondModel.setCoupon(tinkoffCouponDispatcher.getCoupon(bondModel)), couponExecutorService))
                 .toList();
 
         CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
