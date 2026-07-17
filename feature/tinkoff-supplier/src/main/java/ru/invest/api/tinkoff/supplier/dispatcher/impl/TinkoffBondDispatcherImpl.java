@@ -31,7 +31,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.function.BiFunction;
-import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static ru.invest.api.tinkoff.supplier.constants.Constants.COUPON_EXECUTOR_SERVICE;
@@ -57,25 +57,17 @@ public class TinkoffBondDispatcherImpl implements TinkoffBondDispatcher {
 
     @Override
     public List<BondModel> getForeignCurrencyBonds(final BondParametersModel bondParameters) {
-        return getBonds(this::filterForeignBonds, bondParameters);
+        return getBonds(FOREIGN_CURRENCY_PREDICATE, bondParameters);
     }
 
     @Override
     public List<BondModel> getRubbleCurrencyBonds(final BondParametersModel bondParameters) {
-        return getBonds(this::filterRubbleBonds, bondParameters);
+        return getBonds(RUBBLE_CURRENCY_PREDICATE, bondParameters);
     }
 
-    public List<BondModel> getBonds(final Function<Map<String, Bond>, Map<String, Bond>> filterCurrencyFunction
-            , final BondParametersModel bondParameters) {
+    private List<BondModel> getBonds(final Predicate<Bond> currencyPredicate, final BondParametersModel bondParameters) {
         final Map<String, Bond> allBonds = tinkoffBondApiUseCase.getAllBonds();
-//        final Map<String, Bond> ruCountryBonds = filterRuCountryBonds(allBonds);
-
-        final Map<String, Bond> currencyBonds = filterCurrencyFunction.apply(allBonds);
-
-        if (MapUtils.isEmpty(currencyBonds)) {
-            return Collections.emptyList();
-        }
-
+        final Map<String, Bond> currencyBonds = filterBondsByCurrency(allBonds, currencyPredicate);
         final List<String> uids = currencyBonds.values()
                 .stream()
                 .filter(Objects::nonNull)
@@ -83,13 +75,18 @@ public class TinkoffBondDispatcherImpl implements TinkoffBondDispatcher {
                 .toList();
 
         final Map<String, PriceModel> bondPrices = tinkoffPriceUseCase.getLastPrices(uids, currencyBonds, getNominalPrice());
-        final List<BondModel> bondModels = bondMapper.toModel(currencyBonds, bondPrices);
+        return getBonds(allBonds, bondPrices, bondParameters);
+    }
 
-        final List<BondModel> filteredBonds = getFilteredBonds(bondParameters, bondModels);
+    private List<BondModel> getBonds(final Map<String, Bond> bonds, final Map<String, PriceModel> bondPrices,
+                                     final BondParametersModel bondParameters) {
+        if (MapUtils.isEmpty(bonds)) {
+            return Collections.emptyList();
+        }
 
-        enrichWithCouponsAsync(filteredBonds);
+        final List<BondModel> bondModels = bondMapper.toModel(bonds, bondPrices);
 
-        return filteredBonds;
+        return getFilteredBonds(bondParameters, bondModels);
     }
 
     private void enrichWithCouponsAsync(final List<BondModel> bondModels) {
@@ -101,7 +98,7 @@ public class TinkoffBondDispatcherImpl implements TinkoffBondDispatcher {
         CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
     }
 
-    private Map<String, Bond> filterForeignBonds(final Map<String, Bond> allBonds) {
+    private Map<String, Bond> filterBondsByCurrency(final Map<String, Bond> allBonds, final Predicate<Bond> currencyPredicate) {
         if (MapUtils.isEmpty(allBonds)) {
             return Collections.emptyMap();
         }
@@ -109,19 +106,7 @@ public class TinkoffBondDispatcherImpl implements TinkoffBondDispatcher {
         return allBonds.entrySet()
                 .stream()
                 .filter(Objects::nonNull)
-                .filter(entry -> FOREIGN_CURRENCY_PREDICATE.test(entry.getValue()))
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-    }
-
-    private Map<String, Bond> filterRubbleBonds(final Map<String, Bond> allBonds) {
-        if (MapUtils.isEmpty(allBonds)) {
-            return Collections.emptyMap();
-        }
-
-        return allBonds.entrySet()
-                .stream()
-                .filter(Objects::nonNull)
-                .filter(entry -> RUBBLE_CURRENCY_PREDICATE.test(entry.getValue()))
+                .filter(entry -> currencyPredicate.test(entry.getValue()))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
