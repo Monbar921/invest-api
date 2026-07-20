@@ -14,4 +14,6 @@ public interface CouponRepository extends JpaRepository<Coupon, Long> {
                 where b.ticker = :ticker
             """)
     List<Coupon> findByTicker(@Param("ticker") String ticker);
+
+    void deleteByBond_Uid(String uid);
 }

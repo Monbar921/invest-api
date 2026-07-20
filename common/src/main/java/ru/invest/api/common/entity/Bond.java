@@ -3,6 +3,8 @@ package ru.invest.api.common.entity;
 import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -11,8 +13,10 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import ru.invest.api.common.model.enums.RiskLevel;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -47,6 +51,19 @@ public class Bond {
 
     @Column(name = "is_fixed_coupon")
     private Boolean isFixedCoupon;
+
+    @Column(name = "currency")
+    private String currency;
+
+    @Column(name = "maturity_date")
+    private LocalDateTime maturityDate;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "risk_level")
+    private RiskLevel riskLevel;
+
+    @Column(name = "coupon_quantity_per_year")
+    private Integer couponQuantityPerYear;
 
     @Embedded
     @AttributeOverride(name = "committedBy", column = @Column(name = "created_by"))

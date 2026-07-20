@@ -2,24 +2,29 @@ package ru.invest.api.tinkoff.supplier.dispatcher.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.BooleanUtils;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.CouponModel;
 import ru.invest.api.tinkoff.supplier.dispatcher.TinkoffCouponDispatcher;
 import ru.invest.api.tinkoff.supplier.service.CouponCalculationService;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffCouponApiUseCase;
+import ru.invest.api.tinkoff.supplier.usecase.TinkoffCouponDatabaseUseCase;
 
 import java.util.Optional;
+
+import static ru.invest.api.common.constants.CacheConstants.COUPON_CACHE_MANAGER;
+import static ru.invest.api.common.constants.CacheConstants.COUPON_CACHE_NAME;
 
 @Component
 @RequiredArgsConstructor
 public class TinkoffCouponDispatcherImpl implements TinkoffCouponDispatcher {
     private final TinkoffCouponApiUseCase tinkoffCouponApiUseCase;
+    private final TinkoffCouponDatabaseUseCase tinkoffCouponDatabaseUseCase;
     private final CouponCalculationService couponCalculationService;
 
-    //    TODO не забыть исправить кэш
     @Override
+    @Cacheable(value = COUPON_CACHE_NAME, cacheManager = COUPON_CACHE_MANAGER, key = "#bondModel.uid", condition = "#bondModel != null")
     public CouponModel getCoupon(final BondModel bondModel) {
         if (bondModel == null) {
             return null;
@@ -39,11 +44,11 @@ public class TinkoffCouponDispatcherImpl implements TinkoffCouponDispatcher {
 
         return Optional.ofNullable(fetchCouponsFromDatabase(bondModel))
                 .filter(databaseCoupon -> CollectionUtils.isNotEmpty(databaseCoupon.getCouponData()))
-                .orElse(fetchCouponsFromTinkoffApi(bondModel));
+                .orElseGet(() -> fetchCouponsFromTinkoffApi(bondModel));
     }
 
     private CouponModel fetchCouponsFromDatabase(final BondModel bondModel) {
-        return tinkoffCouponApiUseCase.getCoupon(bondModel);
+        return tinkoffCouponDatabaseUseCase.getCoupon(bondModel);
     }
 
     private CouponModel fetchCouponsFromTinkoffApi(final BondModel bondModel) {

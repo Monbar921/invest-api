@@ -7,6 +7,19 @@ invest:
     requests-per-minute: 200
     timeout-ms: 30000
 
+ru:
+  invest:
+    api:
+      stock:
+        supplier:
+          scheduler:
+            bond:
+              enabled: true
+              cron: "0 0 3 * * *"
+            coupon:
+              enabled: true
+              cron: "0 30 3 * * *"
+
 spring:
   cache:
     type: caffeine

@@ -1,8 +1,9 @@
 package ru.invest.api.tinkoff.supplier.usecase.impl;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
+import ru.invest.api.common.model.BondModel;
+import ru.invest.api.tinkoff.supplier.mapper.BondMapper;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondApiUseCase;
 import ru.invest.api.tinkoff.supplier.wrapper.InstrumentsGrpcRateLimitedWrapper;
 import ru.tinkoff.piapi.contract.v1.Bond;
@@ -13,24 +14,20 @@ import ru.tinkoff.piapi.contract.v1.InstrumentsRequest;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Function;
 import java.util.stream.Collectors;
-
-import static ru.invest.api.common.constants.CacheConstants.BOND_CACHE_MANAGER;
-import static ru.invest.api.common.constants.CacheConstants.BOND_CACHE_NAME;
 
 @Component
 @RequiredArgsConstructor
 public class TinkoffBondApiUseCaseImpl implements TinkoffBondApiUseCase {
     private final InstrumentsGrpcRateLimitedWrapper instrumentsGrpcRateLimitedWrapper;
+    private final BondMapper bondMapper;
 
     @Override
-    @Cacheable(value = BOND_CACHE_NAME, cacheManager = BOND_CACHE_MANAGER)
-    public Map<String, Bond> getAllBonds() {
+    public Map<String, BondModel> getAllBonds() {
         return getAllBondsDto()
                 .stream()
                 .filter(Objects::nonNull)
-                .collect(Collectors.toMap(Bond::getUid, Function.identity()));
+                .collect(Collectors.toMap(Bond::getUid, bondMapper::toModel));
     }
 
     private List<Bond> getAllBondsDto() {

@@ -41,6 +41,14 @@
             <column name="is_fixed_coupon" type="boolean">
                 <constraints nullable="false"/>
             </column>
+            <column name="currency" type="varchar2(3)" defaultValue="RUB">
+                <constraints nullable="false"/>
+            </column>
+            <column name="maturity_date" type="timestamp"/>
+            <column name="risk_level" type="varchar(50)"/>
+            <column name="coupon_quantity_per_year" type="integer" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
             <column name="created_at" type="timestamp"/>
             <column name="created_by" type="varchar(200)"/>
             <column name="updated_at" type="timestamp"/>

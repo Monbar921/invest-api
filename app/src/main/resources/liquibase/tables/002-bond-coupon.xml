@@ -9,16 +9,16 @@
     <changeSet id="INVEST-XXX-create-bond-coupon-table" author="d.v.kornilovich">
         <preConditions onFail="MARK_RAN">
             <not>
-                <tableExists tableName="bond_coupon"/>
+                <tableExists tableName="coupon"/>
             </not>
         </preConditions>
 
-        <createTable tableName="bond">
+        <createTable tableName="coupon">
             <column autoIncrement="true" name="id" type="bigserial">
                 <constraints primaryKey="true"/>
             </column>
             <column name="bond_id" type="bigint">
-                <constraints nullable="false" foreignKeyName="fk_bond_coupon_bond_id" references="bond(id)"/>
+                <constraints nullable="false" foreignKeyName="fk_coupon_bond_id" references="bond(id)"/>
             </column>
             <column name="quantity_per_year" type="integer">
                 <constraints nullable="false"/>

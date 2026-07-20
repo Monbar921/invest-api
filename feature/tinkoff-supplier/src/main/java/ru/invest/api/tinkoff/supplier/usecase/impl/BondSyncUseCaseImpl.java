@@ -1,0 +1,45 @@
+package ru.invest.api.tinkoff.supplier.usecase.impl;
+
+import lombok.RequiredArgsConstructor;
+import org.apache.commons.collections4.MapUtils;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+import ru.invest.api.common.entity.Bond;
+import ru.invest.api.common.repository.BondRepository;
+import ru.invest.api.tinkoff.supplier.mapper.BondPersistenceMapper;
+import ru.invest.api.tinkoff.supplier.usecase.BondSyncUseCase;
+import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondApiUseCase;
+
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+@Component
+@RequiredArgsConstructor
+public class BondSyncUseCaseImpl implements BondSyncUseCase {
+    private final TinkoffBondApiUseCase tinkoffBondApiUseCase;
+    private final BondRepository bondRepository;
+    private final BondPersistenceMapper bondPersistenceMapper;
+
+    @Override
+    @Transactional
+    public void syncAllBonds() {
+        final Map<String, ru.tinkoff.piapi.contract.v1.Bond> tinkoffBonds = tinkoffBondApiUseCase.getAllBonds();
+
+        if (MapUtils.isEmpty(tinkoffBonds)) {
+            return;
+        }
+
+        final Map<String, Bond> existingByUid = bondRepository.findAll()
+                .stream()
+                .collect(Collectors.toMap(Bond::getUid, Function.identity()));
+
+        final List<Bond> toSave = tinkoffBonds.values()
+                .stream()
+                .map(protoBond -> bondPersistenceMapper.toEntity(protoBond, existingByUid.get(protoBond.getUid())))
+                .toList();
+
+        bondRepository.saveAll(toSave);
+    }
+}
