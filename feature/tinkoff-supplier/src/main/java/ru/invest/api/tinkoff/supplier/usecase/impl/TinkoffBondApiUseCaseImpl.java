@@ -3,7 +3,7 @@ package ru.invest.api.tinkoff.supplier.usecase.impl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import ru.invest.api.common.model.BondModel;
-import ru.invest.api.tinkoff.supplier.mapper.BondMapper;
+import ru.invest.api.tinkoff.supplier.mapper.TinkoffBondApiMapper;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondApiUseCase;
 import ru.invest.api.tinkoff.supplier.wrapper.InstrumentsGrpcRateLimitedWrapper;
 import ru.tinkoff.piapi.contract.v1.Bond;
@@ -20,14 +20,14 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class TinkoffBondApiUseCaseImpl implements TinkoffBondApiUseCase {
     private final InstrumentsGrpcRateLimitedWrapper instrumentsGrpcRateLimitedWrapper;
-    private final BondMapper bondMapper;
+    private final TinkoffBondApiMapper tinkoffBondApiMapper;
 
     @Override
     public Map<String, BondModel> getAllBonds() {
         return getAllBondsDto()
                 .stream()
                 .filter(Objects::nonNull)
-                .collect(Collectors.toMap(Bond::getUid, bondMapper::toModel));
+                .collect(Collectors.toMap(Bond::getUid, tinkoffBondApiMapper::toModel));
     }
 
     private List<Bond> getAllBondsDto() {

@@ -7,30 +7,10 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
 
+import static ru.invest.api.tinkoff.supplier.constants.Constants.RU_CURRENCIES;
+import static ru.invest.api.tinkoff.supplier.constants.Constants.RU_PREFIX;
+
 public interface BondCurrencyPredicates {
-    Set<String> FOREIGN_CURRENCIES = Set.of("EUR", "USD", "CNY");
-    Set<String> RU_CURRENCIES = Set.of("RUB", "RUR");
-    String RU_PREFIX = "RU";
-
-    Predicate<Bond> FOREIGN_CURRENCY_PREDICATE = bond -> {
-        final String currency = Optional.ofNullable(bond)
-                .map(Bond::getCurrency)
-                .map(String::toUpperCase)
-                .orElse(null);
-
-        if (FOREIGN_CURRENCIES.contains(currency)) {
-            return true;
-        }
-
-        final String nominalCurrency = Optional.ofNullable(bond)
-                .map(Bond::getNominal)
-                .map(MoneyValue::getCurrency)
-                .map(String::toUpperCase)
-                .orElse(null);
-
-        return FOREIGN_CURRENCIES.contains(nominalCurrency);
-    };
-
     Predicate<Bond> RUBBLE_CURRENCY_PREDICATE = bond -> {
         final String currency = Optional.ofNullable(bond)
                 .map(Bond::getCurrency)
@@ -49,6 +29,8 @@ public interface BondCurrencyPredicates {
 
         return RU_CURRENCIES.contains(nominalCurrency);
     };
+
+    Predicate<Bond> FOREIGN_CURRENCY_PREDICATE = bond -> !RUBBLE_CURRENCY_PREDICATE.test(bond);
 
     Predicate<Bond> RU_COUNTRY_PREDICATE = bond -> Optional.ofNullable(bond)
             .map(Bond::getIsin)

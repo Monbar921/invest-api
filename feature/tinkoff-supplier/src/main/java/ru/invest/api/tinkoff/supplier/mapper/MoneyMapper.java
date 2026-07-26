@@ -23,6 +23,7 @@ public abstract class MoneyMapper {
 
     public abstract MoneyModel toModel(String currency, BigDecimal quantity);
 
+
     public MoneyValue toMoneyValue(final BigDecimal quantity, final String currency) {
         if (quantity == null) {
             return null;

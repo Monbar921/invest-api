@@ -4,7 +4,7 @@ server:
 invest:
   enabled: true
   connector:
-    token: token
+    token: t.z6hPPZhPR6oBmMsOLKodIIYdI5EKobOKzSYaKhan-m_DWM7Oj-GIExaIbio2EnK4KDMluBo7r1QIg4SgqAaTbA
 
 ru:
   invest:
@@ -12,8 +12,12 @@ ru:
       stock:
         supplier:
           scheduler:
-            enabled: false
-            cron: "0 0 0 * * ?"
+            bond:
+              enabled: false
+              cron: "0 0 0 * * ?"
+            coupon:
+              enabled: false
+              cron: "0 0 0 * * ?"
 spring:
   cache:
     type: caffeine

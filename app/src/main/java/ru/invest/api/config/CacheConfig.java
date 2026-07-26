@@ -20,6 +20,8 @@ import static ru.invest.api.common.constants.CacheConstants.COUPON_CACHE_MANAGER
 import static ru.invest.api.common.constants.CacheConstants.COUPON_CACHE_NAME;
 import static ru.invest.api.common.constants.CacheConstants.CURRENCY_PROVIDER_CACHE_MANAGER;
 import static ru.invest.api.common.constants.CacheConstants.CURRENCY_PROVIDER_CACHE_NAME;
+import static ru.invest.api.common.constants.CacheConstants.PRICE_CACHE_MANAGER;
+import static ru.invest.api.common.constants.CacheConstants.PRICE_CACHE_NAME;
 
 @Configuration
 @EnableCaching
@@ -35,6 +37,15 @@ public class CacheConfig {
     @Bean(BOND_CACHE_MANAGER)
     public CacheManager bondsCacheManager() {
         final CaffeineCacheManager cacheManager = new CaffeineCacheManager(BOND_CACHE_NAME);
+        cacheManager.setCaffeine(Caffeine.newBuilder()
+                .maximumSize(3000)
+                .expireAfterWrite(24, TimeUnit.HOURS));
+        return cacheManager;
+    }
+
+    @Bean(PRICE_CACHE_MANAGER)
+    public CacheManager priceCacheManager() {
+        final CaffeineCacheManager cacheManager = new CaffeineCacheManager(PRICE_CACHE_NAME);
         cacheManager.setCaffeine(Caffeine.newBuilder()
                 .maximumSize(3000)
                 .expireAfterWrite(24, TimeUnit.HOURS));

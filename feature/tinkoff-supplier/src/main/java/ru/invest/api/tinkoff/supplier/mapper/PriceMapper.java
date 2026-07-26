@@ -32,6 +32,12 @@ public abstract class PriceMapper {
     @Mapping(target = "percentagePrice", ignore = true)
     public abstract PriceModel toBondPriceModel(LastPrice lastPrice, MoneyValue nominal);
 
+    @Mapping(target = "uid", source = "lastPrice.instrumentUid")
+    @Mapping(target = "nominal", source = "nominal")
+    @Mapping(target = "current", ignore = true)
+    @Mapping(target = "percentagePrice", ignore = true)
+    public abstract PriceModel toBondPriceModel(LastPrice lastPrice, MoneyModel nominal);
+
     @AfterMapping
     protected void afterMapping(@MappingTarget final PriceModel priceModel, final LastPrice lastPrice) {
 

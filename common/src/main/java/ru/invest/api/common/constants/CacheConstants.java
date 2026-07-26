@@ -4,6 +4,9 @@ public interface CacheConstants {
     String BOND_CACHE_MANAGER = "bondCacheManager";
     String BOND_CACHE_NAME = "bondsCache";
 
+    String PRICE_CACHE_MANAGER = "priceCacheManager";
+    String PRICE_CACHE_NAME = "priceCache";
+
     String COUPON_CACHE_MANAGER = "couponCacheManager";
     String COUPON_CACHE_NAME = "couponsCache";
 

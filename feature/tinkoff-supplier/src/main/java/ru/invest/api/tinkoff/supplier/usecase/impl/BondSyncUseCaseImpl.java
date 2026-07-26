@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import ru.invest.api.common.entity.Bond;
 import ru.invest.api.common.repository.BondRepository;
-import ru.invest.api.tinkoff.supplier.mapper.BondPersistenceMapper;
+import ru.invest.api.tinkoff.supplier.mapper.TinkoffBondEntityMapper;
 import ru.invest.api.tinkoff.supplier.usecase.BondSyncUseCase;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondApiUseCase;
 
@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 public class BondSyncUseCaseImpl implements BondSyncUseCase {
     private final TinkoffBondApiUseCase tinkoffBondApiUseCase;
     private final BondRepository bondRepository;
-    private final BondPersistenceMapper bondPersistenceMapper;
+    private final TinkoffBondEntityMapper tinkoffBondEntityMapper;
 
     @Override
     @Transactional
@@ -37,7 +37,7 @@ public class BondSyncUseCaseImpl implements BondSyncUseCase {
 
         final List<Bond> toSave = tinkoffBonds.values()
                 .stream()
-                .map(protoBond -> bondPersistenceMapper.toEntity(protoBond, existingByUid.get(protoBond.getUid())))
+                .map(protoBond -> tinkoffBondEntityMapper.toEntity(protoBond, existingByUid.get(protoBond.getUid())))
                 .toList();
 
         bondRepository.saveAll(toSave);
