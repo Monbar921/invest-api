@@ -14,7 +14,6 @@ import ru.invest.api.common.model.parameters.BondSortModel;
 import ru.invest.api.common.usecase.BondSortUseCase;
 import ru.invest.api.tinkoff.supplier.dispatcher.TinkoffBondDispatcher;
 import ru.invest.api.tinkoff.supplier.dispatcher.TinkoffCouponDispatcher;
-import ru.invest.api.tinkoff.supplier.mapper.MoneyMapper;
 import ru.invest.api.tinkoff.supplier.mapper.TinkoffBondEntityMapper;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondCacheUseCase;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffPriceUseCase;
@@ -36,7 +35,6 @@ import static ru.invest.api.tinkoff.supplier.constants.Constants.COUPON_EXECUTOR
 public class TinkoffBondDispatcherImpl implements TinkoffBondDispatcher {
     private static final Set<BondSortField> EXCLUDED_SORT_FIELDS = Set.of(BondSortField.COUPON_INTEREST);
 
-    private final MoneyMapper moneyMapper;
     private final BondParametersMapper bondParametersMapper;
     private final TinkoffBondEntityMapper bondEntityMapper;
 
@@ -58,7 +56,8 @@ public class TinkoffBondDispatcherImpl implements TinkoffBondDispatcher {
         return getBonds(tinkoffBondCacheUseCase::getRubbleCurrencyBonds, bondParameters);
     }
 
-    private List<BondModel> getBonds(final Supplier<Map<String, BondModel>> bondModelMapSupplier, final BondParametersModel bondParameters) {
+    private List<BondModel> getBonds(final Supplier<Map<String, BondModel>> bondModelMapSupplier,
+                                     final BondParametersModel bondParameters) {
         final Map<String, BondModel> bondModelMap = bondModelMapSupplier.get();
 
         if (MapUtils.isEmpty(bondModelMap)) {
@@ -66,7 +65,7 @@ public class TinkoffBondDispatcherImpl implements TinkoffBondDispatcher {
         }
 
         final Map<String, PriceModel> bondPrices = tinkoffPriceUseCase.getLastPrices(bondModelMap);
-        final List<BondModel> bondModels = bondEntityMapper.toModelFromEntities(bondsByUid, bondPrices);
+        final List<BondModel> bondModels = bondEntityMapper.enrichBonds(bondModelMap, bondPrices);
 
         enrichWithCouponsAsync(bondModels);
 
@@ -76,7 +75,8 @@ public class TinkoffBondDispatcherImpl implements TinkoffBondDispatcher {
     private void enrichWithCouponsAsync(final List<BondModel> bondModels) {
         final List<CompletableFuture<Void>> futures = bondModels.stream()
                 .filter(Objects::nonNull)
-                .map(bondModel -> CompletableFuture.runAsync(() -> bondModel.setCoupon(tinkoffCouponDispatcher.getCoupon(bondModel)), couponExecutorService))
+                .map(bondModel -> CompletableFuture.runAsync(() ->
+                        bondModel.setCoupon(tinkoffCouponDispatcher.getCoupon(bondModel)), couponExecutorService))
                 .toList();
 
         CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();

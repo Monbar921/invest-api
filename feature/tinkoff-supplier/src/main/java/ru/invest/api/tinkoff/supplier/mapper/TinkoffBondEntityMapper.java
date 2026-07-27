@@ -64,8 +64,8 @@ public abstract class TinkoffBondEntityMapper {
     @Mapping(target = "maturityDate", source = "bond.maturityDate")
     public abstract BondModel toModel(Bond bond);
 
-    public List<BondModel> toModelFromEntities(final Map<String, Bond> bonds,
-                                               final Map<String, PriceModel> bondPrices) {
+    public List<BondModel> enrichBonds(final Map<String, BondModel> bonds,
+                                       final Map<String, PriceModel> bondPrices) {
         if (MapUtils.isEmpty(bonds)) {
             return Collections.emptyList();
         }
@@ -76,7 +76,9 @@ public abstract class TinkoffBondEntityMapper {
         return bonds.entrySet()
                 .stream()
                 .filter(Objects::nonNull)
-                .map(entry -> toModel(entry.getValue(), prices.get(entry.getKey())))
+                .filter(entry -> entry.getValue() != null)
+                .peek(entry -> entry.getValue().setPrice(prices.get(entry.getKey())))
+                .map(Map.Entry::getValue)
                 .toList();
     }
 

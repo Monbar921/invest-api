@@ -5,6 +5,7 @@ import org.apache.commons.collections4.MapUtils;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import ru.invest.api.common.entity.Bond;
+import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.repository.BondRepository;
 import ru.invest.api.tinkoff.supplier.mapper.TinkoffBondEntityMapper;
 import ru.invest.api.tinkoff.supplier.usecase.BondSyncUseCase;
@@ -25,21 +26,26 @@ public class BondSyncUseCaseImpl implements BondSyncUseCase {
     @Override
     @Transactional
     public void syncAllBonds() {
-        final Map<String, ru.tinkoff.piapi.contract.v1.Bond> tinkoffBonds = tinkoffBondApiUseCase.getAllBonds();
+        final Map<String, BondModel> tinkoffBonds = tinkoffBondApiUseCase.getAllBonds();
 
         if (MapUtils.isEmpty(tinkoffBonds)) {
             return;
         }
 
-        final Map<String, Bond> existingByUid = bondRepository.findAll()
+        final Map<String, Bond> existingBonds = bondRepository.findAll()
                 .stream()
                 .collect(Collectors.toMap(Bond::getUid, Function.identity()));
 
         final List<Bond> toSave = tinkoffBonds.values()
                 .stream()
-                .map(protoBond -> tinkoffBondEntityMapper.toEntity(protoBond, existingByUid.get(protoBond.getUid())))
+                .map(protoBond -> tinkoffBondEntityMapper.toEntity(protoBond, existingBonds.get(protoBond.getUid())))
                 .toList();
 
         bondRepository.saveAll(toSave);
+
+        final List<Bond> toDelete = existingBonds
+                .stream()
+                .map(protoBond -> tinkoffBondEntityMapper.toEntity(protoBond, existingBonds.get(protoBond.getUid())))
+                .toList();
     }
 }
