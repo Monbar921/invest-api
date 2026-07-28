@@ -11,7 +11,7 @@ import static ru.invest.api.tinkoff.supplier.constants.Constants.COUPON_EXECUTOR
 @Configuration
 public class ExecutorServiceConfig {
     @Bean(COUPON_EXECUTOR_SERVICE)
-    public ExecutorService couponExecutorService(){
+    public ExecutorService couponExecutorService() {
         return Executors.newFixedThreadPool(10);
     }
 }

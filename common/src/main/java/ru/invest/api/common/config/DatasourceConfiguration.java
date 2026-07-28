@@ -2,6 +2,7 @@ package ru.invest.api.common.config;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -21,5 +22,15 @@ public class DatasourceConfiguration {
     @Bean
     public DataSource dataSource(final HikariConfig hikariConfig) {
         return new HikariDataSource(hikariConfig);
+    }
+
+    @Bean
+    CommandLineRunner logDbUrl(DataSource dataSource) {
+        return args -> {
+            try (var conn = dataSource.getConnection()) {
+                System.out.println("=== ACTUAL JDBC URL: " + conn.getMetaData().getURL());
+                System.out.println("=== ACTUAL SCHEMA: " + conn.getSchema());
+            }
+        };
     }
 }

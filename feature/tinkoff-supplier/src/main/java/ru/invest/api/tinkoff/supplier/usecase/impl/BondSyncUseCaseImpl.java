@@ -13,6 +13,7 @@ import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondApiUseCase;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -25,7 +26,7 @@ public class BondSyncUseCaseImpl implements BondSyncUseCase {
 
     @Override
     @Transactional
-    public void syncAllBonds() {
+    public void syncAll() {
         final Map<String, BondModel> tinkoffBonds = tinkoffBondApiUseCase.getAllBonds();
 
         if (MapUtils.isEmpty(tinkoffBonds)) {
@@ -43,9 +44,15 @@ public class BondSyncUseCaseImpl implements BondSyncUseCase {
 
         bondRepository.saveAll(toSave);
 
-        final List<Bond> toDelete = existingBonds
+        final Map<String, Bond> toSaveMap = toSave
                 .stream()
-                .map(protoBond -> tinkoffBondEntityMapper.toEntity(protoBond, existingBonds.get(protoBond.getUid())))
+                .collect(Collectors.toMap(Bond::getUid, Function.identity()));
+
+        final List<Bond> toDelete = existingBonds
+                .values()
+                .stream()
+                .filter(Objects::nonNull)
+                .filter(bond -> toSaveMap.get(bond.getUid()) == null)
                 .toList();
     }
 }

@@ -1,5 +1,5 @@
 package ru.invest.api.tinkoff.supplier.usecase;
 
-public interface BondSyncUseCase {
+public interface CouponSyncUseCase {
     void syncAll();
 }

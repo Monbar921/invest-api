@@ -1,7 +1,7 @@
 invest:
   enabled: true
   connector:
-    token: ${TOKEN}
+    token: {TOKEN}
   rate-limiter:
     requests-per-second: 10
     requests-per-minute: 200
@@ -36,6 +36,28 @@ spring:
           budget-org-client:
             enabled: true
             url: https://api.budjet.org/
+  datasource:
+    hikari:
+      connection-test-query: select 1
+      connection-init-sql: SET search_path TO invest_api_test
+      connection-timeout: 30000
+      driver-class-name: org.postgresql.Driver
+      idle-timeout: 30000
+      max-lifetime: 40000
+      maximum-pool-size: 15
+      minimum-idle: 15
+      pool-name: postgres
+      password: password
+      jdbc-url: jdbc:postgresql://localhost:5432/postgres
+      username: postgres
+  liquibase:
+    change-log: classpath:liquibase/db.changelog-master.xml
+    parameters:
+      appUsername: ${spring.datasource.hikari.username}
+      schema: invest_api_test
+      sql_schema: invest_api_test
+    enabled: true
+    default-schema: invest_api_test
 
 management:
   endpoints:

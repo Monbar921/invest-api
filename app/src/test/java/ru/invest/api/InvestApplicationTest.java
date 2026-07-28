@@ -14,6 +14,8 @@ import ru.invest.api.common.model.parameters.ValueRangeModel;
 import ru.invest.api.dto.bond.BondDto;
 import ru.invest.api.starter.client.InvestApiBondClient;
 import ru.invest.api.tinkoff.supplier.dispatcher.TinkoffBondDispatcher;
+import ru.invest.api.tinkoff.supplier.usecase.BondSyncUseCase;
+import ru.invest.api.tinkoff.supplier.usecase.CouponSyncUseCase;
 
 import java.math.BigDecimal;
 import java.util.Collections;
@@ -38,6 +40,10 @@ public class InvestApplicationTest extends AbstractInvestApplicationTest {
     private BondUseCase bondUseCase;
     @Autowired
     private InvestApiBondClient investApiBondClient;
+    @Autowired
+    private BondSyncUseCase bondSyncUseCase;
+    @Autowired
+    private CouponSyncUseCase couponSyncUseCase;
 
     @Test
     public void runApplicationTest() {
@@ -56,6 +62,13 @@ public class InvestApplicationTest extends AbstractInvestApplicationTest {
                                     .formatted(bond.getName(), bond.getTicker(), bond.getCoupon().getInterest(), bond.getPrice().getPercentagePrice())
                     );
                 });
+    }
+
+    @Test
+    @Disabled
+    public void sync() {
+        bondSyncUseCase.syncAll();
+        couponSyncUseCase.syncAll();
     }
 
     @Test

@@ -9,6 +9,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -17,12 +19,14 @@ import ru.invest.api.common.model.enums.RiskLevel;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
 @Setter
-@Entity(name = "bond")
+@Entity
+@Table(name = "bond")
 public class Bond {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -64,6 +68,9 @@ public class Bond {
 
     @Column(name = "coupon_quantity_per_year")
     private Integer couponQuantityPerYear;
+
+    @OneToMany(mappedBy = "bond")
+    private List<Coupon> coupons;
 
     @Embedded
     @AttributeOverride(name = "committedBy", column = @Column(name = "created_by"))
