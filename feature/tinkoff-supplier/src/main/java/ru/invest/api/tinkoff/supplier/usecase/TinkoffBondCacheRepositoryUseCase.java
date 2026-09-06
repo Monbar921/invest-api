@@ -4,7 +4,7 @@ import ru.invest.api.common.model.BondModel;
 
 import java.util.Map;
 
-public interface TinkoffBondCacheUseCase {
+public interface TinkoffBondCacheRepositoryUseCase {
     Map<String, BondModel> getForeignCurrencyBonds();
 
     Map<String, BondModel> getRubbleCurrencyBonds();

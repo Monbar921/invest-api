@@ -10,8 +10,10 @@ import org.springframework.context.annotation.Primary;
 
 import java.util.concurrent.TimeUnit;
 
-import static ru.invest.api.common.constants.CacheConstants.BOND_CACHE_MANAGER;
-import static ru.invest.api.common.constants.CacheConstants.BOND_CACHE_NAME;
+import static ru.invest.api.common.constants.CacheConstants.BOND_REPOSITORY_CACHE_MANAGER;
+import static ru.invest.api.common.constants.CacheConstants.BOND_REPOSITORY_CACHE_NAME;
+import static ru.invest.api.common.constants.CacheConstants.BOND_TINKOFF_API_CACHE_MANAGER;
+import static ru.invest.api.common.constants.CacheConstants.BOND_TINKOFF_API_CACHE_NAME;
 import static ru.invest.api.common.constants.CacheConstants.BUDGET_ORG_CACHE_MANAGER;
 import static ru.invest.api.common.constants.CacheConstants.BUDGET_ORG_CACHE_NAME;
 import static ru.invest.api.common.constants.CacheConstants.CB_RF_ALL_CACHE_MANAGER;
@@ -34,9 +36,18 @@ public class CacheConfig {
         return cacheManager;
     }
 
-    @Bean(BOND_CACHE_MANAGER)
-    public CacheManager bondsCacheManager() {
-        final CaffeineCacheManager cacheManager = new CaffeineCacheManager(BOND_CACHE_NAME);
+    @Bean(BOND_REPOSITORY_CACHE_MANAGER)
+    public CacheManager bondRepositoryCacheManager() {
+        final CaffeineCacheManager cacheManager = new CaffeineCacheManager(BOND_REPOSITORY_CACHE_NAME);
+        cacheManager.setCaffeine(Caffeine.newBuilder()
+                .maximumSize(3000)
+                .expireAfterWrite(24, TimeUnit.HOURS));
+        return cacheManager;
+    }
+
+    @Bean(BOND_TINKOFF_API_CACHE_MANAGER)
+    public CacheManager bondTinkoffApiCacheManager() {
+        final CaffeineCacheManager cacheManager = new CaffeineCacheManager(BOND_TINKOFF_API_CACHE_NAME);
         cacheManager.setCaffeine(Caffeine.newBuilder()
                 .maximumSize(3000)
                 .expireAfterWrite(24, TimeUnit.HOURS));

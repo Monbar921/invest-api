@@ -9,7 +9,7 @@ import ru.invest.api.common.model.CouponModel;
 import ru.invest.api.tinkoff.supplier.dispatcher.TinkoffCouponDispatcher;
 import ru.invest.api.tinkoff.supplier.service.CouponCalculationService;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffCouponApiUseCase;
-import ru.invest.api.tinkoff.supplier.usecase.TinkoffCouponDatabaseUseCase;
+import ru.invest.api.tinkoff.supplier.usecase.TinkoffCouponRepositoryUseCase;
 
 import java.util.Optional;
 
@@ -20,7 +20,7 @@ import static ru.invest.api.common.constants.CacheConstants.COUPON_CACHE_NAME;
 @RequiredArgsConstructor
 public class TinkoffCouponDispatcherImpl implements TinkoffCouponDispatcher {
     private final TinkoffCouponApiUseCase tinkoffCouponApiUseCase;
-    private final TinkoffCouponDatabaseUseCase tinkoffCouponDatabaseUseCase;
+    private final TinkoffCouponRepositoryUseCase tinkoffCouponRepositoryUseCase;
     private final CouponCalculationService couponCalculationService;
 
     @Override
@@ -48,7 +48,7 @@ public class TinkoffCouponDispatcherImpl implements TinkoffCouponDispatcher {
     }
 
     private CouponModel fetchCouponsFromDatabase(final BondModel bondModel) {
-        return tinkoffCouponDatabaseUseCase.getCoupon(bondModel);
+        return tinkoffCouponRepositoryUseCase.getCoupon(bondModel);
     }
 
     private CouponModel fetchCouponsFromTinkoffApi(final BondModel bondModel) {

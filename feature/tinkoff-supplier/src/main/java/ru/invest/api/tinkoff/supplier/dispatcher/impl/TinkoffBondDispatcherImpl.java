@@ -14,7 +14,7 @@ import ru.invest.api.common.usecase.BondSortUseCase;
 import ru.invest.api.tinkoff.supplier.dispatcher.TinkoffBondDispatcher;
 import ru.invest.api.tinkoff.supplier.dispatcher.TinkoffCouponDispatcher;
 import ru.invest.api.tinkoff.supplier.mapper.TinkoffBondEntityMapper;
-import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondCacheUseCase;
+import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondCacheRepositoryUseCase;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffPriceUseCase;
 
 import java.util.Collections;
@@ -35,7 +35,7 @@ public class TinkoffBondDispatcherImpl implements TinkoffBondDispatcher {
     private final TinkoffBondEntityMapper bondEntityMapper;
 
     private final TinkoffPriceUseCase tinkoffPriceUseCase;
-    private final TinkoffBondCacheUseCase tinkoffBondCacheUseCase;
+    private final TinkoffBondCacheRepositoryUseCase tinkoffBondCacheUseCase;
     private final TinkoffCouponDispatcher tinkoffCouponDispatcher;
     private final BondSortUseCase bondSortUseCase;
 

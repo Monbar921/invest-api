@@ -12,7 +12,7 @@ import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.repository.BondRepository;
 import ru.invest.api.tinkoff.supplier.mapper.TinkoffBondEntityMapper;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondApiUseCase;
-import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondCacheUseCase;
+import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondCacheRepositoryUseCase;
 
 import java.util.Collections;
 import java.util.List;
@@ -22,18 +22,18 @@ import java.util.concurrent.Callable;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-import static ru.invest.api.common.constants.CacheConstants.BOND_CACHE_MANAGER;
-import static ru.invest.api.common.constants.CacheConstants.BOND_CACHE_NAME;
+import static ru.invest.api.common.constants.CacheConstants.BOND_REPOSITORY_CACHE_MANAGER;
+import static ru.invest.api.common.constants.CacheConstants.BOND_REPOSITORY_CACHE_NAME;
 import static ru.invest.api.tinkoff.supplier.predicates.BondModelCurrencyPredicates.FOREIGN_CURRENCY_PREDICATE;
 import static ru.invest.api.tinkoff.supplier.predicates.BondModelCurrencyPredicates.RUBBLE_CURRENCY_PREDICATE;
 
 @Component
 @RequiredArgsConstructor
-public class TinkoffBondCacheUseCaseImpl implements TinkoffBondCacheUseCase {
+public class TinkoffBondCacheRepositoryUseCaseImpl implements TinkoffBondCacheRepositoryUseCase {
 
     private static final String ALL_BONDS_KEY = "allBonds";
 
-    @Qualifier(BOND_CACHE_MANAGER)
+    @Qualifier(BOND_REPOSITORY_CACHE_MANAGER)
     private final CacheManager bondCacheManager;
 
     private final BondRepository bondRepository;
@@ -62,7 +62,7 @@ public class TinkoffBondCacheUseCaseImpl implements TinkoffBondCacheUseCase {
     }
 
     private Map<String, BondModel> getCachedAll() {
-        final Cache cache = bondCacheManager.getCache(BOND_CACHE_NAME);
+        final Cache cache = bondCacheManager.getCache(BOND_REPOSITORY_CACHE_NAME);
         if (cache == null) {
             return load(this::loadAllBonds);
         }

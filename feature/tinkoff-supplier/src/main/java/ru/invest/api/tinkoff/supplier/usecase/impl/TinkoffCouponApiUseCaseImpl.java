@@ -7,7 +7,7 @@ import ru.invest.api.common.exception.GeneralUnprocessableEntityException;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.CouponDataModel;
 import ru.invest.api.common.model.CouponModel;
-import ru.invest.api.tinkoff.supplier.mapper.CouponMapper;
+import ru.invest.api.tinkoff.supplier.mapper.TinkoffCouponMapper;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffCouponApiUseCase;
 import ru.invest.api.tinkoff.supplier.wrapper.InstrumentsGrpcRateLimitedWrapper;
 import ru.tinkoff.piapi.contract.v1.GetBondCouponsRequest;
@@ -21,7 +21,7 @@ import static ru.invest.api.common.exception.enums.ExceptionErrorCode.EMPTY_UID;
 @Component
 @RequiredArgsConstructor
 public class TinkoffCouponApiUseCaseImpl implements TinkoffCouponApiUseCase {
-    private final CouponMapper couponMapper;
+    private final TinkoffCouponMapper tinkoffCouponMapper;
     private final InstrumentsGrpcRateLimitedWrapper instrumentsGrpcRateLimitedWrapper;
 
     @Override
@@ -32,7 +32,7 @@ public class TinkoffCouponApiUseCaseImpl implements TinkoffCouponApiUseCase {
 
         final List<CouponDataModel> couponsData = fetchCouponData(bondModel.getUid());
 
-        return couponMapper.toModel(bondModel, couponsData);
+        return tinkoffCouponMapper.toModel(bondModel, couponsData);
     }
 
     private List<CouponDataModel> fetchCouponData(final String uid) {
@@ -49,7 +49,7 @@ public class TinkoffCouponApiUseCaseImpl implements TinkoffCouponApiUseCase {
         return response.getEventsList()
                 .stream()
                 .filter(Objects::nonNull)
-                .map(couponMapper::toCouponDataModel)
+                .map(tinkoffCouponMapper::toCouponDataModel)
                 .toList();
     }
 }

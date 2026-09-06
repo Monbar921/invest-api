@@ -1,8 +1,11 @@
 package ru.invest.api.common.constants;
 
 public interface CacheConstants {
-    String BOND_CACHE_MANAGER = "bondCacheManager";
-    String BOND_CACHE_NAME = "bondsCache";
+    String BOND_REPOSITORY_CACHE_MANAGER = "bondRepositoryCacheManager";
+    String BOND_REPOSITORY_CACHE_NAME = "bondRepositoryCache";
+
+    String BOND_TINKOFF_API_CACHE_MANAGER = "bondTinkoffApiCacheManager";
+    String BOND_TINKOFF_API_CACHE_NAME = "bondTinkoffApiCache";
 
     String PRICE_CACHE_MANAGER = "priceCacheManager";
     String PRICE_CACHE_NAME = "priceCache";

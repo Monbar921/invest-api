@@ -13,12 +13,12 @@ import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
+@Active
 public class TinkoffBondSyncUseCaseImpl implements BondSyncUseCase {
     private final TinkoffBondApiUseCase tinkoffBondApiUseCase;
     private final TinkoffBondSyncRepositoryUseCase tinkoffBondSyncRepositoryUseCase;
 
     @Override
-    @Active
     public void syncAll() {
         final Map<String, BondModel> tinkoffBonds = tinkoffBondApiUseCase.getAllBonds();
 

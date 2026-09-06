@@ -1,6 +1,7 @@
 package ru.invest.api.tinkoff.supplier.usecase.impl;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.tinkoff.supplier.mapper.TinkoffBondApiMapper;
@@ -16,6 +17,9 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import static ru.invest.api.common.constants.CacheConstants.BOND_TINKOFF_API_CACHE_MANAGER;
+import static ru.invest.api.common.constants.CacheConstants.BOND_TINKOFF_API_CACHE_NAME;
+
 @Component
 @RequiredArgsConstructor
 public class TinkoffBondApiUseCaseImpl implements TinkoffBondApiUseCase {
@@ -23,6 +27,7 @@ public class TinkoffBondApiUseCaseImpl implements TinkoffBondApiUseCase {
     private final TinkoffBondApiMapper tinkoffBondApiMapper;
 
     @Override
+    @Cacheable(cacheNames = BOND_TINKOFF_API_CACHE_NAME, cacheManager = BOND_TINKOFF_API_CACHE_MANAGER)
     public Map<String, BondModel> getAllBonds() {
         return getAllBondsDto()
                 .stream()
