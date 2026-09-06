@@ -1,6 +1,7 @@
 package ru.invest.api.tinkoff.supplier.usecase.impl;
 
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -8,8 +9,7 @@ import ru.invest.api.common.entity.Bond;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.repository.BondRepository;
 import ru.invest.api.tinkoff.supplier.mapper.TinkoffBondEntityMapper;
-import ru.invest.api.tinkoff.supplier.usecase.BondSyncUseCase;
-import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondApiUseCase;
+import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondSyncRepositoryUseCase;
 
 import java.util.List;
 import java.util.Map;
@@ -19,40 +19,47 @@ import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
-public class BondSyncUseCaseImpl implements BondSyncUseCase {
-    private final TinkoffBondApiUseCase tinkoffBondApiUseCase;
+public class TinkoffBondSyncRepositoryUseCaseImpl implements TinkoffBondSyncRepositoryUseCase {
     private final BondRepository bondRepository;
     private final TinkoffBondEntityMapper tinkoffBondEntityMapper;
 
     @Override
     @Transactional
-    public void syncAll() {
-        final Map<String, BondModel> tinkoffBonds = tinkoffBondApiUseCase.getAllBonds();
-
+    public void sync(final Map<String, BondModel> tinkoffBonds) {
         if (MapUtils.isEmpty(tinkoffBonds)) {
             return;
         }
 
-        final Map<String, Bond> existingBonds = bondRepository.findAll()
+        final List<Bond> existingBonds = bondRepository.findAll();
+
+        final Map<String, Bond> existingBondsMap = existingBonds
                 .stream()
                 .collect(Collectors.toMap(Bond::getUid, Function.identity()));
 
         final List<Bond> toSave = tinkoffBonds.values()
                 .stream()
-                .map(protoBond -> tinkoffBondEntityMapper.toEntity(protoBond, existingBonds.get(protoBond.getUid())))
+                .filter(bondModel -> existingBondsMap.get(bondModel.getUid()) == null)
+                .map(bondModel -> tinkoffBondEntityMapper.toEntity(bondModel, existingBondsMap.get(bondModel.getUid())))
                 .toList();
 
-        bondRepository.saveAll(toSave);
-
-        final Map<String, Bond> toSaveMap = toSave
+        tinkoffBonds.values()
                 .stream()
-                .collect(Collectors.toMap(Bond::getUid, Function.identity()));
+                .filter(bondModel -> existingBondsMap.get(bondModel.getUid()) != null)
+                .forEach(bondModel -> tinkoffBondEntityMapper.toEntity(bondModel, existingBondsMap.get(bondModel.getUid())));
 
         final List<Bond> toDelete = existingBonds
-                .values()
                 .stream()
                 .filter(Objects::nonNull)
-                .filter(bond -> toSaveMap.get(bond.getUid()) == null)
+                .filter(bond -> tinkoffBonds.get(bond.getUid()) == null)
                 .toList();
+
+        if (CollectionUtils.isNotEmpty(existingBonds) && CollectionUtils.isNotEmpty(toDelete)) {
+            existingBonds.removeAll(toDelete);
+        }
+        if (CollectionUtils.isNotEmpty(toSave)) {
+            existingBonds.addAll(toSave);
+        }
+
+        bondRepository.saveAll(existingBonds);
     }
 }

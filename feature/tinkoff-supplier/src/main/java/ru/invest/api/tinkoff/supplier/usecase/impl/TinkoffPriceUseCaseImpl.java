@@ -8,7 +8,6 @@ import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.MoneyModel;
 import ru.invest.api.common.model.PriceModel;
 import ru.invest.api.tinkoff.supplier.mapper.PriceMapper;
-import ru.invest.api.tinkoff.supplier.usecase.CacheKeyGenerator;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffPriceUseCase;
 import ru.invest.api.tinkoff.supplier.wrapper.MarketDataGrpcRateLimitedWrapper;
 import ru.tinkoff.piapi.contract.v1.GetLastPricesRequest;
@@ -31,10 +30,9 @@ public class TinkoffPriceUseCaseImpl implements TinkoffPriceUseCase {
     private final MarketDataGrpcRateLimitedWrapper marketDataServiceBlockingStub;
 
     private final PriceMapper priceMapper;
-    private final CacheKeyGenerator cacheKeyGenerator;
 
     @Override
-    @Cacheable(cacheManager = PRICE_CACHE_MANAGER, cacheNames = PRICE_CACHE_NAME, key = "@cacheKeyGenerator.generate(#bonds?.keySet())")
+    @Cacheable(cacheManager = PRICE_CACHE_MANAGER, cacheNames = PRICE_CACHE_NAME)
     public Map<String, PriceModel> getLastPrices(final Map<String, BondModel> bonds) {
         if (MapUtils.isEmpty(bonds)) {
             return Collections.emptyMap();

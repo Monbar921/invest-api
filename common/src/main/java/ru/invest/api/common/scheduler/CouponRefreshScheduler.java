@@ -1,4 +1,4 @@
-package ru.invest.api.tinkoff.supplier.scheduler;
+package ru.invest.api.common.scheduler;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

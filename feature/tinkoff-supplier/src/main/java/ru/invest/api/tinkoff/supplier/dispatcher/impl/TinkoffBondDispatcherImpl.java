@@ -9,7 +9,6 @@ import ru.invest.api.common.mapper.BondParametersMapper;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.PriceModel;
 import ru.invest.api.common.model.parameters.BondParametersModel;
-import ru.invest.api.common.model.parameters.BondSortField;
 import ru.invest.api.common.model.parameters.BondSortModel;
 import ru.invest.api.common.usecase.BondSortUseCase;
 import ru.invest.api.tinkoff.supplier.dispatcher.TinkoffBondDispatcher;
@@ -23,7 +22,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Supplier;
@@ -33,8 +31,6 @@ import static ru.invest.api.tinkoff.supplier.constants.Constants.COUPON_EXECUTOR
 @Component
 @RequiredArgsConstructor
 public class TinkoffBondDispatcherImpl implements TinkoffBondDispatcher {
-    private static final Set<BondSortField> EXCLUDED_SORT_FIELDS = Set.of(BondSortField.COUPON_INTEREST);
-
     private final BondParametersMapper bondParametersMapper;
     private final TinkoffBondEntityMapper bondEntityMapper;
 
@@ -92,8 +88,6 @@ public class TinkoffBondDispatcherImpl implements TinkoffBondDispatcher {
                 .orElse(Collections.emptyList())
                 .stream()
                 .filter(Objects::nonNull)
-                .filter(sort -> sort.getSortField() != null
-                        && !EXCLUDED_SORT_FIELDS.contains(sort.getSortField()))
                 .toList();
 
         final BondParametersModel actualizedParameters = bondParametersMapper.toModel(bondParameters, sorts);

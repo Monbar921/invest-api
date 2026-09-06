@@ -14,7 +14,7 @@ import ru.invest.api.common.model.parameters.ValueRangeModel;
 import ru.invest.api.dto.bond.BondDto;
 import ru.invest.api.starter.client.InvestApiBondClient;
 import ru.invest.api.tinkoff.supplier.dispatcher.TinkoffBondDispatcher;
-import ru.invest.api.tinkoff.supplier.usecase.BondSyncUseCase;
+import ru.invest.api.common.usecase.BondSyncUseCase;
 import ru.invest.api.tinkoff.supplier.usecase.CouponSyncUseCase;
 
 import java.math.BigDecimal;
