@@ -3,13 +3,13 @@ package ru.invest.api.common.entity;
 import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
+import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -19,7 +19,6 @@ import ru.invest.api.common.model.enums.RiskLevel;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -31,6 +30,9 @@ public class Bond {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @OneToOne(mappedBy = "bond")
+    private Coupon coupon;
 
     @Column(name = "ticker")
     private String ticker;
@@ -65,12 +67,6 @@ public class Bond {
     @Enumerated(EnumType.STRING)
     @Column(name = "risk_level")
     private RiskLevel riskLevel;
-
-    @Column(name = "coupon_quantity_per_year")
-    private Integer couponQuantityPerYear;
-
-    @OneToMany(mappedBy = "bond")
-    private List<CouponData> couponData;
 
     @Embedded
     @AttributeOverride(name = "committedBy", column = @Column(name = "created_by"))

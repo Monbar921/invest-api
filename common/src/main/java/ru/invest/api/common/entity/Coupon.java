@@ -4,49 +4,57 @@ import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import ru.invest.api.common.model.enums.RiskLevel;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
 @Setter
 @Entity
-@Table(name = "coupon_data")
-public class CouponData {
+@Table(name = "bond")
+public class Coupon {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
-    @JoinColumn(name = "coupon_id", referencedColumnName = "id")
-    private Coupon coupon;
+    @OneToOne
+    @JoinColumn(name = "bond_id", referencedColumnName = "id")
+    private Bond bond;
 
     @Column(name = "ticker")
-    private String ticker;
+    private Integer ticker;
 
-    @Column(name = "price")
-    private BigDecimal price;
+    @Column(name = "quantity_per_year")
+    private Integer quantityPerYear;
 
-    @Column(name = "currency")
-    private String currency;
+    @Column(name = "quantity_per_year")
+    private Boolean isFixedCoupon;
 
-    @Column(name = "fix_date")
-    private LocalDateTime fixDate;
+    @Column(name = "nominal_interest")
+    private BigDecimal nominalInterest;
 
-    @Column(name = "payment_date")
-    private LocalDateTime paymentDate;
+    @Column(name = "current_interest")
+    private BigDecimal currentInterest;
+
+    @OneToMany(mappedBy = "coupon")
+    private List<CouponData> couponData;
 
     @Embedded
     @AttributeOverride(name = "committedBy", column = @Column(name = "created_by"))

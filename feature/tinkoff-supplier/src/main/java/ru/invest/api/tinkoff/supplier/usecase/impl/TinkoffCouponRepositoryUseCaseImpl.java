@@ -12,7 +12,7 @@ import ru.invest.api.common.model.CouponDataModel;
 import ru.invest.api.common.model.CouponModel;
 import ru.invest.api.common.repository.CouponRepository;
 import ru.invest.api.tinkoff.supplier.mapper.CouponDataMapper;
-import ru.invest.api.tinkoff.supplier.mapper.CouponModelMapper;
+import ru.invest.api.tinkoff.supplier.mapper.CouponMapper;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffCouponRepositoryUseCase;
 
 import java.util.Collections;
@@ -29,7 +29,7 @@ public class TinkoffCouponRepositoryUseCaseImpl implements TinkoffCouponReposito
 
     private final CouponRepository couponRepository;
 
-    private final CouponModelMapper couponModelMapper;
+    private final CouponMapper couponMapper;
     private final CouponDataMapper couponDataMapper;
 
     @Override
@@ -41,7 +41,7 @@ public class TinkoffCouponRepositoryUseCaseImpl implements TinkoffCouponReposito
 
         final List<CouponData> couponData = couponRepository.findByTicker(ticker);
 
-        return couponModelMapper.toModel(bondModel, couponData);
+        return couponMapper.toModel(bondModel, couponData);
     }
 
     @Override

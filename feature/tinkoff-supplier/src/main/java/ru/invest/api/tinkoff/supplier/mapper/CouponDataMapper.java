@@ -9,6 +9,7 @@ import org.mapstruct.Mapping;
 import org.mapstruct.Named;
 import org.springframework.beans.factory.annotation.Autowired;
 import ru.invest.api.common.entity.Bond;
+import ru.invest.api.common.entity.Coupon;
 import ru.invest.api.common.entity.CouponData;
 import ru.invest.api.common.exception.GeneralNotFoundEntityException;
 import ru.invest.api.common.exception.enums.ExceptionErrorCode;
@@ -80,6 +81,9 @@ public abstract class CouponDataMapper {
                 .map(couponDataModel -> {
                     final Bond bond = Optional.ofNullable(bonds.get(ticker))
                             .orElseThrow(() -> new GeneralNotFoundEntityException(ExceptionErrorCode.BOND_NOT_FOUND, BOND_NOT_FOUND_MESSAGE));
+                    if(bond.getCoupon() == null) {
+                        bond.setCoupon(couponMapper.toEntity(bond));
+                    }
                     return toEntity(couponDataModel, bond);
                 })
                 .collect(Collectors.toList());
