@@ -6,33 +6,33 @@
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
             http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.4.xsd">
 
-    <changeSet id="INVEST-XXX-create-bond-couponData-table" author="d.v.kornilovich">
+    <changeSet id="INVEST-001-create-coupon-table" author="d.v.kornilovich">
         <preConditions onFail="MARK_RAN">
             <not>
-                <tableExists tableName="couponData"/>
+                <tableExists tableName="coupon"/>
             </not>
         </preConditions>
 
-        <createTable tableName="couponData">
+        <createTable tableName="coupon">
             <column autoIncrement="true" name="id" type="bigserial">
                 <constraints primaryKey="true"/>
             </column>
             <column name="bond_id" type="bigint">
                 <constraints nullable="false" foreignKeyName="fk_coupon_bond_id" references="bond(id)"/>
             </column>
+            <column name="ticker" type="text">
+                <constraints nullable="false"/>
+            </column>
             <column name="quantity_per_year" type="integer">
                 <constraints nullable="false"/>
             </column>
-            <column name="price" type="numeric(10,2)">
+            <column name="is_fixed_coupon" type="boolean">
                 <constraints nullable="false"/>
             </column>
-            <column name="currency" type="varchar2(3)">
+            <column name="nominal_interest" type="numeric(10,2)">
                 <constraints nullable="false"/>
             </column>
-            <column name="fix_date" type="timestamp">
-                <constraints nullable="false"/>
-            </column>
-            <column name="payment_date" type="timestamp">
+            <column name="current_interest" type="numeric(10,2)">
                 <constraints nullable="false"/>
             </column>
             <column name="created_at" type="timestamp"/>
@@ -40,5 +40,25 @@
             <column name="updated_at" type="timestamp"/>
             <column name="updated_by" type="varchar(200)"/>
         </createTable>
+    </changeSet>
+
+    <changeSet id="INVEST-001-create-coupon-indexes" author="d.v.kornilovich">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <not>
+                    <indexExists tableName="coupon" indexName="coupon_bond_id_uq_idx"/>
+                </not>
+                <not>
+                    <indexExists tableName="coupon" indexName="coupon_ticker_uq_idx"/>
+                </not>
+            </and>
+        </preConditions>
+
+        <createIndex tableName="coupon" indexName="coupon_bond_id_uq_idx" unique="true">
+            <column>bond_id</column>
+        </createIndex>
+        <createIndex tableName="coupon" indexName="coupon_ticker_uq_idx" unique="true">
+            <column>ticker</column>
+        </createIndex>
     </changeSet>
 </databaseChangeLog>

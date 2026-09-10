@@ -6,43 +6,35 @@
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
             http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.4.xsd">
 
-    <changeSet id="INVEST-001-create-bond-table" author="d.v.kornilovich">
+    <changeSet id="INVEST-001-create-bond-coupon-data-table" author="d.v.kornilovich">
         <preConditions onFail="MARK_RAN">
             <not>
-                <tableExists tableName="bond"/>
+                <tableExists tableName="coupon_data"/>
             </not>
         </preConditions>
 
-        <createTable tableName="bond">
+        <createTable tableName="coupon_data">
             <column autoIncrement="true" name="id" type="bigserial">
                 <constraints primaryKey="true"/>
             </column>
-            <column name="ticker" type="varchar2(100)">
-                <constraints nullable="false" unique="true"/>
+            <column name="coupon_id" type="bigint">
+                <constraints nullable="false" foreignKeyName="fk_coupon_data_coupon_id" references="coupon(id)"/>
             </column>
-            <column name="uid" type="varchar2(100)">
-                <constraints nullable="false" unique="true"/>
-            </column>
-            <column name="isin" type="varchar2(100)">
-                <constraints nullable="false" unique="true"/>
-            </column>
-            <column name="name" type="varchar2(100)">
-                <constraints nullable="false" unique="true"/>
-            </column>
-            <column name="sector" type="varchar2(100)">
+            <column name="ticker" type="text">
                 <constraints nullable="false"/>
             </column>
-            <column name="nominal_price" type="numeric(10,2)">
+            <column name="price" type="numeric(10,2)">
                 <constraints nullable="false"/>
             </column>
-            <column name="nominal_currency" type="varchar2(3)">
+            <column name="currency" type="varchar2(3)">
                 <constraints nullable="false"/>
             </column>
-            <column name="currency" type="varchar2(3)" defaultValue="RUB">
+            <column name="fix_date" type="timestamp">
                 <constraints nullable="false"/>
             </column>
-            <column name="maturity_date" type="timestamp"/>
-            <column name="risk_level" type="varchar(50)"/>
+            <column name="payment_date" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
             <column name="created_at" type="timestamp"/>
             <column name="created_by" type="varchar(200)"/>
             <column name="updated_at" type="timestamp"/>
@@ -50,22 +42,22 @@
         </createTable>
     </changeSet>
 
-    <changeSet id="INVEST-001-create-bond-indexes" author="d.v.kornilovich">
+    <changeSet id="INVEST-001-create-coupon-data-indexes" author="d.v.kornilovich">
         <preConditions onFail="MARK_RAN">
             <and>
                 <not>
-                    <indexExists tableName="bond" indexName="bond_uid_uq_idx"/>
+                    <indexExists tableName="coupon_data" indexName="coupon_data_coupon_id_idx"/>
                 </not>
                 <not>
-                    <indexExists tableName="bond" indexName="bond_ticker_uq_idx"/>
+                    <indexExists tableName="coupon_data" indexName="coupon_data_ticker_uq_idx"/>
                 </not>
             </and>
         </preConditions>
 
-        <createIndex tableName="bond" indexName="bond_uid_uq_idx" unique="true">
-            <column>uid</column>
+        <createIndex tableName="coupon_data" indexName="coupon_data_coupon_id_idx">
+            <column>coupon_id</column>
         </createIndex>
-        <createIndex tableName="bond" indexName="bond_ticker_uq_idx" unique="true">
+        <createIndex tableName="coupon_data" indexName="coupon_data_ticker_uq_idx" unique="true">
             <column>ticker</column>
         </createIndex>
     </changeSet>

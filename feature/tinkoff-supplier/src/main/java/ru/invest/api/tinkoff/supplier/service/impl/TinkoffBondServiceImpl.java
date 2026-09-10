@@ -1,4 +1,4 @@
-package ru.invest.api.tinkoff.supplier.dispatcher.impl;
+package ru.invest.api.tinkoff.supplier.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.collections4.CollectionUtils;
@@ -11,7 +11,6 @@ import ru.invest.api.common.model.PriceModel;
 import ru.invest.api.common.model.parameters.BondParametersModel;
 import ru.invest.api.common.model.parameters.BondSortModel;
 import ru.invest.api.common.usecase.BondSortUseCase;
-import ru.invest.api.tinkoff.supplier.dispatcher.TinkoffBondDispatcher;
 import ru.invest.api.tinkoff.supplier.dispatcher.TinkoffCouponDispatcher;
 import ru.invest.api.tinkoff.supplier.mapper.TinkoffBondEntityMapper;
 import ru.invest.api.tinkoff.supplier.service.TinkoffBondService;
@@ -29,7 +28,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class TinkoffBondDispatcherImpl implements TinkoffBondDispatcher {
+public class TinkoffBondServiceImpl implements TinkoffBondService {
     private final BondParametersMapper bondParametersMapper;
     private final TinkoffBondEntityMapper bondEntityMapper;
 

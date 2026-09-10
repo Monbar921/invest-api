@@ -10,7 +10,7 @@ import ru.invest.api.common.annotation.Active;
 import ru.invest.api.common.model.CouponDataModel;
 import ru.invest.api.tinkoff.supplier.usecase.CouponSyncUseCase;
 import ru.invest.api.tinkoff.supplier.usecase.GetNeedToUpdateCouponsTickersUseCase;
-import ru.invest.api.tinkoff.supplier.usecase.TinkoffCouponApiUseCase;
+import ru.invest.api.tinkoff.supplier.provider.TinkoffCouponProvider;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffCouponRepositoryUseCase;
 
 import java.util.HashMap;
@@ -26,7 +26,7 @@ import java.util.Set;
 public class TinkoffCouponSyncUseCaseImpl implements CouponSyncUseCase {
     private static final int BATCH_SIZE = 100;
 
-    private final TinkoffCouponApiUseCase tinkoffCouponApiUseCase;
+    private final TinkoffCouponProvider tinkoffCouponProvider;
     private final TinkoffCouponRepositoryUseCase tinkoffCouponRepositoryUseCase;
     private final GetNeedToUpdateCouponsTickersUseCase getNeedToUpdateCouponsTickersUseCase;
 
@@ -46,7 +46,7 @@ public class TinkoffCouponSyncUseCaseImpl implements CouponSyncUseCase {
 
         while (iterator.hasNext()) {
             String ticker = iterator.next();
-            couponBatch.put(ticker, tinkoffCouponApiUseCase.getCouponData(ticker));
+            couponBatch.put(ticker, tinkoffCouponProvider.getCouponData(ticker));
 
             if (couponBatch.size() == BATCH_SIZE || !iterator.hasNext()) {
                 updateEntity(couponBatch);

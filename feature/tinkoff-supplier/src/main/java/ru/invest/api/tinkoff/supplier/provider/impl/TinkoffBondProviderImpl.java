@@ -1,12 +1,11 @@
-package ru.invest.api.tinkoff.supplier.usecase.impl;
+package ru.invest.api.tinkoff.supplier.provider.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.tinkoff.supplier.mapper.TinkoffBondApiMapper;
-import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondApiUseCase;
+import ru.invest.api.tinkoff.supplier.provider.TinkoffBondProvider;
 import ru.invest.api.tinkoff.supplier.wrapper.InstrumentsGrpcRateLimitedWrapper;
 import ru.tinkoff.piapi.contract.v1.Bond;
 import ru.tinkoff.piapi.contract.v1.BondsResponse;
@@ -23,7 +22,7 @@ import static ru.invest.api.common.constants.CacheConstants.BOND_TINKOFF_API_CAC
 
 @Service
 @RequiredArgsConstructor
-public class TinkoffBondApiUseCaseImpl implements TinkoffBondApiUseCase {
+public class TinkoffBondProviderImpl implements TinkoffBondProvider {
     private final InstrumentsGrpcRateLimitedWrapper instrumentsGrpcRateLimitedWrapper;
 
     private final TinkoffBondApiMapper tinkoffBondApiMapper;

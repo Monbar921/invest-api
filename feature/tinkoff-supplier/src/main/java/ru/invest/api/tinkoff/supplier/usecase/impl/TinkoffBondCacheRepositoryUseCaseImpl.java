@@ -11,7 +11,7 @@ import ru.invest.api.common.entity.Bond;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.repository.BondRepository;
 import ru.invest.api.tinkoff.supplier.mapper.TinkoffBondEntityMapper;
-import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondApiUseCase;
+import ru.invest.api.tinkoff.supplier.provider.TinkoffBondProvider;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondCacheRepositoryUseCase;
 
 import java.util.Collections;
@@ -40,7 +40,7 @@ public class TinkoffBondCacheRepositoryUseCaseImpl implements TinkoffBondCacheRe
 
     private final TinkoffBondEntityMapper tinkoffBondEntityMapper;
 
-    private final TinkoffBondApiUseCase tinkoffBondApiUseCase;
+    private final TinkoffBondProvider tinkoffBondProvider;
 
     @Override
     public Map<String, BondModel> getForeignCurrencyBonds() {
@@ -82,7 +82,7 @@ public class TinkoffBondCacheRepositoryUseCaseImpl implements TinkoffBondCacheRe
     private Map<String, BondModel> loadAllBonds() {
         final List<Bond> entities = bondRepository.findAll();
         if (CollectionUtils.isEmpty(entities)) {
-            return tinkoffBondApiUseCase.getAllBonds();
+            return tinkoffBondProvider.getAllBonds();
         }
 
         return toBondModels(entities);

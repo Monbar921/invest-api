@@ -2,32 +2,38 @@ package ru.invest.api.tinkoff.supplier.dispatcher.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.collections4.CollectionUtils;
-import org.springframework.cache.annotation.Cacheable;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.CouponModel;
 import ru.invest.api.tinkoff.supplier.dispatcher.TinkoffCouponDispatcher;
 import ru.invest.api.tinkoff.supplier.service.CouponCalculationService;
-import ru.invest.api.tinkoff.supplier.usecase.TinkoffCouponApiUseCase;
+import ru.invest.api.tinkoff.supplier.provider.TinkoffCouponProvider;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffCouponRepositoryUseCase;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 
-import static ru.invest.api.common.constants.CacheConstants.COUPON_CACHE_MANAGER;
-import static ru.invest.api.common.constants.CacheConstants.COUPON_CACHE_NAME;
+import static ru.invest.api.tinkoff.supplier.constants.Constants.COUPON_EXECUTOR_SERVICE;
 
 @Service
 @RequiredArgsConstructor
 public class TinkoffCouponDispatcherImpl implements TinkoffCouponDispatcher {
-    private final TinkoffCouponApiUseCase tinkoffCouponApiUseCase;
+    private final TinkoffCouponProvider tinkoffCouponProvider;
     private final TinkoffCouponRepositoryUseCase tinkoffCouponRepositoryUseCase;
     private final CouponCalculationService couponCalculationService;
 
+    @Qualifier(COUPON_EXECUTOR_SERVICE)
+    private final ExecutorService couponExecutorService;
+
     @Override
-    @Cacheable(value = COUPON_CACHE_NAME, cacheManager = COUPON_CACHE_MANAGER, key = "#bondModel.uid", condition = "#bondModel != null")
-    public CouponModel getCoupon(final BondModel bondModel) {
-        if (bondModel == null) {
-            return null;
+    public List<CouponModel> getCoupons(final List<BondModel> bonds) {
+        if (CollectionUtils.isEmpty(bonds)) {
+            return Collections.emptyList();
         }
 
         final CouponModel coupon = dispatchCoupon(bondModel);
@@ -35,6 +41,16 @@ public class TinkoffCouponDispatcherImpl implements TinkoffCouponDispatcher {
         return coupon.setInterest(
                 couponCalculationService.calculateInterest(coupon, bondModel)
         );
+    }
+
+    private void enrichWithCouponsAsync(final List<BondModel> bondModels) {
+        final List<CompletableFuture<Void>> futures = bondModels.stream()
+                .filter(Objects::nonNull)
+                .map(bondModel -> CompletableFuture.runAsync(() ->
+                        bondModel.setCoupon(tinkoffCouponDispatcher.getCoupons(bondModel)), couponExecutorService))
+                .toList();
+
+        CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
     }
 
     public CouponModel dispatchCoupon(final BondModel bondModel) {
@@ -52,7 +68,7 @@ public class TinkoffCouponDispatcherImpl implements TinkoffCouponDispatcher {
     }
 
     private CouponModel fetchCouponsFromTinkoffApi(final BondModel bondModel) {
-        return tinkoffCouponApiUseCase.getCoupon(bondModel);
+        return tinkoffCouponProvider.getCoupon(bondModel);
     }
 
     private boolean needTryFetchFromDatabase(final BondModel bondModel) {

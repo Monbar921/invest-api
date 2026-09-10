@@ -1,4 +1,4 @@
-package ru.invest.api.tinkoff.supplier.usecase.impl;
+package ru.invest.api.tinkoff.supplier.provider.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
@@ -6,7 +6,7 @@ import org.springframework.stereotype.Service;
 import ru.invest.api.common.exception.GeneralUnprocessableEntityException;
 import ru.invest.api.common.model.CouponDataModel;
 import ru.invest.api.tinkoff.supplier.mapper.TinkoffCouponApiMapper;
-import ru.invest.api.tinkoff.supplier.usecase.TinkoffCouponApiUseCase;
+import ru.invest.api.tinkoff.supplier.provider.TinkoffCouponProvider;
 import ru.invest.api.tinkoff.supplier.wrapper.InstrumentsGrpcRateLimitedWrapper;
 import ru.tinkoff.piapi.contract.v1.GetBondCouponsRequest;
 import ru.tinkoff.piapi.contract.v1.GetBondCouponsResponse;
@@ -18,7 +18,7 @@ import static ru.invest.api.common.exception.enums.ExceptionErrorCode.EMPTY_UID;
 
 @Service
 @RequiredArgsConstructor
-public class TinkoffCouponApiUseCaseImpl implements TinkoffCouponApiUseCase {
+public class TinkoffCouponProviderImpl implements TinkoffCouponProvider {
     private final TinkoffCouponApiMapper tinkoffCouponApiMapper;
 
     private final InstrumentsGrpcRateLimitedWrapper instrumentsGrpcRateLimitedWrapper;
