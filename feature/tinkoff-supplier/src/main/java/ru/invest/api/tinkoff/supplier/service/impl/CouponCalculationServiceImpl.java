@@ -12,7 +12,7 @@ import ru.invest.api.common.model.CouponModel;
 import ru.invest.api.common.model.CurrencyModel;
 import ru.invest.api.common.model.MoneyModel;
 import ru.invest.api.common.model.PriceModel;
-import ru.invest.api.currency.service.usecase.CurrencyUseCase;
+import ru.invest.api.currency.service.usecase.CurrencyPriceUseCase;
 import ru.invest.api.tinkoff.supplier.service.CouponCalculationService;
 
 import java.math.BigDecimal;
@@ -29,7 +29,7 @@ public class CouponCalculationServiceImpl implements CouponCalculationService {
     private static final int SCALE = 10;
     private static final BigDecimal PERCENT = BigDecimal.valueOf(100.0);
 
-    private final CurrencyUseCase currencyUseCase;
+    private final CurrencyPriceUseCase currencyPriceUseCase;
     private final DateTimeMapper dateTimeMapper;
 
     @Override
@@ -83,7 +83,7 @@ public class CouponCalculationServiceImpl implements CouponCalculationService {
             return coupon;
         }
 
-        final CurrencyModel converted = currencyUseCase.calculateAmount(
+        final CurrencyModel converted = currencyPriceUseCase.calculateAmount(
                 coupon.getCurrency(), targetCurrency, coupon.getQuantity());
 
         return new MoneyModel()

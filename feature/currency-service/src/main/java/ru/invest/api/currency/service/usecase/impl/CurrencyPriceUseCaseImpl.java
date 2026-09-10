@@ -1,18 +1,18 @@
 package ru.invest.api.currency.service.usecase.impl;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import ru.invest.api.common.mapper.CurrencyMapper;
 import ru.invest.api.common.model.CurrencyModel;
 import ru.invest.api.currency.service.provider.CurrencyProvider;
-import ru.invest.api.currency.service.usecase.CurrencyUseCase;
+import ru.invest.api.currency.service.usecase.CurrencyPriceUseCase;
 
 import java.math.BigDecimal;
 import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
-public class CurrencyUseCaseImpl implements CurrencyUseCase {
+public class CurrencyPriceUseCaseImpl implements CurrencyPriceUseCase {
     private final CurrencyMapper currencyMapper;
     private final CurrencyProvider currencyProvider;
 

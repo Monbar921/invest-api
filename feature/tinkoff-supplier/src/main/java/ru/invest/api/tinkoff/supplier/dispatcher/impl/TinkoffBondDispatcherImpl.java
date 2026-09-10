@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import ru.invest.api.common.mapper.BondParametersMapper;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.PriceModel;
@@ -60,6 +60,7 @@ public class TinkoffBondDispatcherImpl implements TinkoffBondDispatcher {
             return Collections.emptyList();
         }
 
+        //TODO Нужно пытаться получить цену и если не получили, то сходить в базу и вытащить оттуда
         final Map<String, PriceModel> bondPrices = tinkoffPriceUseCase.getLastPrices(bondModelMap);
         final List<BondModel> bondModels = bondEntityMapper.enrichBonds(bondModelMap, bondPrices);
 

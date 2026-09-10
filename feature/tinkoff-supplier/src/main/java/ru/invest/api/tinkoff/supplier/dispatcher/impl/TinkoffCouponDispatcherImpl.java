@@ -3,7 +3,7 @@ package ru.invest.api.tinkoff.supplier.dispatcher.impl;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.CouponModel;
 import ru.invest.api.tinkoff.supplier.dispatcher.TinkoffCouponDispatcher;

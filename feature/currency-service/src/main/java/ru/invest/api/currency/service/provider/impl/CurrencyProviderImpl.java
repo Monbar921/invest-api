@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import ru.invest.api.budget.org.supplier.usecase.BudgetOrgCurrencyUseCase;
 import ru.invest.api.cb.rf.supplier.usecase.CbRfCurrencyUseCase;
 import ru.invest.api.common.exception.GeneralUnprocessableEntityException;

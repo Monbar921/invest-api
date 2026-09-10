@@ -2,7 +2,7 @@ package ru.invest.api.cb.rf.supplier.usecase.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import ru.invest.api.cb.rf.supplier.client.feign.CbRfClient;
 import ru.invest.api.cb.rf.supplier.mapper.CbRfCurrencyMapper;
 import ru.invest.api.cb.rf.supplier.usecase.CbRfCurrencyUseCase;

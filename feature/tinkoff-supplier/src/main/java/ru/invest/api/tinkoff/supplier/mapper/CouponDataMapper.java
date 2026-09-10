@@ -86,6 +86,9 @@ public abstract class CouponDataMapper {
     }
 
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "ticker", source = "couponData.ticker")
+    @Mapping(target = "price", source = "couponData.price.quantity")
+    @Mapping(target = "currency", source = "couponData.price.currency")
     protected abstract CouponData toEntity(CouponDataModel couponData, Bond bond);
 
     @Named("toMoneyModel")
