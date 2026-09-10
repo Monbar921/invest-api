@@ -6,14 +6,10 @@ import org.springframework.data.repository.query.Param;
 import ru.invest.api.common.entity.CouponData;
 
 import java.util.List;
+import java.util.Set;
 
 public interface CouponRepository extends JpaRepository<CouponData, Long> {
-    @Query("""
-                select c from CouponData c
-                join fetch c.bond b
-                where b.ticker = :ticker
-            """)
-    List<CouponData> findByTicker(@Param("ticker") String ticker);
+    List<CouponData> findByTicker(String ticker);
 
-    void deleteByBond_Uid(String uid);
+    List<CouponData> findByTickerIn(Set<String> tickers);
 }

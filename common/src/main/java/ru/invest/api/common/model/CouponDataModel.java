@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 public class CouponDataModel {
     private Long id;
+    private String ticker;
     private MoneyModel price;
     private LocalDateTime fixDate;
     private LocalDateTime paymentDate;

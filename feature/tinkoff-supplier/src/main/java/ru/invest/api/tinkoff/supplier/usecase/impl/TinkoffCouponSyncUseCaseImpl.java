@@ -60,6 +60,6 @@ public class TinkoffCouponSyncUseCaseImpl implements CouponSyncUseCase {
             return;
         }
 
-        tinkoffCouponRepositoryUseCase.saveCoupon(couponBatch);
+        tinkoffCouponRepositoryUseCase.saveCouponData(couponBatch);
     }
 }

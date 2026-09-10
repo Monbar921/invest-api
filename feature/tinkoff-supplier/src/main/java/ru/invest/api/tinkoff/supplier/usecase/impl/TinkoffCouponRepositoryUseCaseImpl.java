@@ -15,13 +15,16 @@ import ru.invest.api.common.model.CouponDataModel;
 import ru.invest.api.common.model.CouponModel;
 import ru.invest.api.common.repository.BondRepository;
 import ru.invest.api.common.repository.CouponRepository;
-import ru.invest.api.tinkoff.supplier.mapper.CouponEntityMapper;
+import ru.invest.api.tinkoff.supplier.mapper.CouponDataMapper;
+import ru.invest.api.tinkoff.supplier.mapper.CouponModelMapper;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffCouponRepositoryUseCase;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -32,7 +35,9 @@ public class TinkoffCouponRepositoryUseCaseImpl implements TinkoffCouponReposito
 
     private final CouponRepository couponRepository;
     private final BondRepository bondRepository;
-    private final CouponEntityMapper couponEntityMapper;
+
+    private final CouponModelMapper couponModelMapper;
+    private final CouponDataMapper couponDataMapper;
 
     @Override
     @Transactional(readOnly = true)
@@ -43,13 +48,13 @@ public class TinkoffCouponRepositoryUseCaseImpl implements TinkoffCouponReposito
 
         final List<CouponData> couponData = couponRepository.findByTicker(ticker);
 
-        return couponEntityMapper.toModel(bondModel, couponData);
+        return couponModelMapper.toModel(bondModel, couponData);
     }
 
     @Override
     @Transactional
-    public CouponModel saveCoupon(final CouponModel couponModel) {
-        final String uid = Optional.ofNullable(couponModel)
+    public List<CouponDataModel> saveCouponData(final List<CouponDataModel> couponDataModel) {
+        final String uid = Optional.ofNullable(couponDataModel)
                 .map(CouponModel::getUid)
                 .filter(StringUtils::isNotBlank)
                 .orElseThrow(() -> new GeneralUnprocessableEntityException(ExceptionErrorCode.EMPTY_UID, EMPTY_UID_MESSAGE));
@@ -57,7 +62,7 @@ public class TinkoffCouponRepositoryUseCaseImpl implements TinkoffCouponReposito
         final Bond bond = bondRepository.findByUid(uid)
                 .orElseThrow(() -> new GeneralNotFoundEntityException(ExceptionErrorCode.BOND_NOT_FOUND, BOND_NOT_FOUND_MESSAGE.formatted(uid)));
 
-        final List<CouponData> entities = couponEntityMapper.toEntity(couponModel, bond);
+        final List<CouponData> entities = couponDataMapper.toEntity(couponModel, bond);
         couponRepository.saveAll(entities);
 
         return couponModel;
@@ -65,11 +70,19 @@ public class TinkoffCouponRepositoryUseCaseImpl implements TinkoffCouponReposito
 
     @Override
     @Transactional
-    public Map<String, List<CouponDataModel>> saveCoupon(final Map<String, List<CouponDataModel>> couponBatch) {
-        if(MapUtils.isEmpty(couponBatch)){
+    public Map<String, List<CouponDataModel>> saveCouponData(final Map<String, List<CouponDataModel>> couponDataBatch) {
+        if (MapUtils.isEmpty(couponDataBatch)) {
             return Collections.emptyMap();
         }
 
-        return Map.of();
+        final List<CouponData> savedEntities = couponRepository.saveAll(
+                couponDataMapper.toEntity(couponDataBatch)
+        );
+
+        return savedEntities
+                .stream()
+                .filter(Objects::nonNull)
+                .map(couponDataMapper::toModel)
+                .collect(Collectors.groupingBy(CouponDataModel::getTicker));
     }
 }

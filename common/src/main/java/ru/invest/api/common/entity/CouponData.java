@@ -33,6 +33,9 @@ public class CouponData {
     @JoinColumn(name = "bond_id")
     private Bond bond;
 
+    @Column(name = "ticker")
+    private String ticker;
+
     @Column(name = "price")
     private BigDecimal price;
 
