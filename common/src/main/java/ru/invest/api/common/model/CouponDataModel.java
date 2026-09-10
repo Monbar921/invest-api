@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 @Accessors(chain = true)
 @NoArgsConstructor
 public class CouponDataModel {
+    private Long id;
     private MoneyModel price;
     private LocalDateTime fixDate;
     private LocalDateTime paymentDate;

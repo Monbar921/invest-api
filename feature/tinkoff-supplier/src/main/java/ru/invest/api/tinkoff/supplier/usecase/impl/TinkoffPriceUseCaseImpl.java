@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 import static ru.invest.api.common.constants.CacheConstants.PRICE_CACHE_MANAGER;
 import static ru.invest.api.common.constants.CacheConstants.PRICE_CACHE_NAME;
 
-@Component
+@Service
 @RequiredArgsConstructor
 public class TinkoffPriceUseCaseImpl implements TinkoffPriceUseCase {
     private final MarketDataGrpcRateLimitedWrapper marketDataServiceBlockingStub;

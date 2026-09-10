@@ -10,7 +10,7 @@ import ru.tinkoff.piapi.contract.v1.GetLastPricesResponse;
 import ru.tinkoff.piapi.contract.v1.MarketDataServiceGrpc;
 
 @Slf4j
-@Component
+@Service
 @RequiredArgsConstructor
 public class MarketDataGrpcRateLimitedWrapperImpl implements MarketDataGrpcRateLimitedWrapper {
 

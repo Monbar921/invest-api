@@ -23,8 +23,8 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @Entity
-@Table(name = "coupon")
-public class Coupon {
+@Table(name = "coupon_data")
+public class CouponData {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -32,9 +32,6 @@ public class Coupon {
     @ManyToOne
     @JoinColumn(name = "bond_id")
     private Bond bond;
-
-    @Column(name = "quantity_per_year")
-    private Integer quantityPerYear;
 
     @Column(name = "price")
     private BigDecimal price;

@@ -16,7 +16,7 @@ import java.util.Optional;
 import static ru.invest.api.common.constants.CacheConstants.COUPON_CACHE_MANAGER;
 import static ru.invest.api.common.constants.CacheConstants.COUPON_CACHE_NAME;
 
-@Component
+@Service
 @RequiredArgsConstructor
 public class TinkoffCouponDispatcherImpl implements TinkoffCouponDispatcher {
     private final TinkoffCouponApiUseCase tinkoffCouponApiUseCase;

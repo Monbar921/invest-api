@@ -6,14 +6,14 @@
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
             http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.4.xsd">
 
-    <changeSet id="INVEST-XXX-create-bond-coupon-table" author="d.v.kornilovich">
+    <changeSet id="INVEST-XXX-create-bond-couponData-table" author="d.v.kornilovich">
         <preConditions onFail="MARK_RAN">
             <not>
-                <tableExists tableName="coupon"/>
+                <tableExists tableName="couponData"/>
             </not>
         </preConditions>
 
-        <createTable tableName="coupon">
+        <createTable tableName="couponData">
             <column autoIncrement="true" name="id" type="bigserial">
                 <constraints primaryKey="true"/>
             </column>

@@ -14,7 +14,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 
-@Component
+@Service
 public class BondComparatorUseCaseImpl implements BondComparatorUseCase {
     @Override
     public Comparator<BondModel> createComparator(final List<BondSortModel> bondSorts) {

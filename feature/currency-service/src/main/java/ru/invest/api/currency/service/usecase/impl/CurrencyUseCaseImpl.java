@@ -10,7 +10,7 @@ import ru.invest.api.currency.service.usecase.CurrencyUseCase;
 import java.math.BigDecimal;
 import java.util.Optional;
 
-@Component
+@Service
 @RequiredArgsConstructor
 public class CurrencyUseCaseImpl implements CurrencyUseCase {
     private final CurrencyMapper currencyMapper;

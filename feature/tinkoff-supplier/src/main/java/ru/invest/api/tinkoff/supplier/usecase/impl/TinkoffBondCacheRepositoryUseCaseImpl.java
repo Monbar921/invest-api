@@ -6,7 +6,7 @@ import org.apache.commons.collections4.MapUtils;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import ru.invest.api.common.entity.Bond;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.repository.BondRepository;
@@ -27,7 +27,7 @@ import static ru.invest.api.common.constants.CacheConstants.BOND_REPOSITORY_CACH
 import static ru.invest.api.tinkoff.supplier.predicates.BondModelCurrencyPredicates.FOREIGN_CURRENCY_PREDICATE;
 import static ru.invest.api.tinkoff.supplier.predicates.BondModelCurrencyPredicates.RUBBLE_CURRENCY_PREDICATE;
 
-@Component
+@Service
 @RequiredArgsConstructor
 public class TinkoffBondCacheRepositoryUseCaseImpl implements TinkoffBondCacheRepositoryUseCase {
 

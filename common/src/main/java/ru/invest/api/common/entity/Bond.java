@@ -70,7 +70,7 @@ public class Bond {
     private Integer couponQuantityPerYear;
 
     @OneToMany(mappedBy = "bond")
-    private List<Coupon> coupons;
+    private List<CouponData> couponData;
 
     @Embedded
     @AttributeOverride(name = "committedBy", column = @Column(name = "created_by"))

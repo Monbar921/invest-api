@@ -17,7 +17,7 @@ import java.util.List;
 import static ru.invest.api.common.constants.CacheConstants.CB_RF_ALL_CACHE_MANAGER;
 import static ru.invest.api.common.constants.CacheConstants.CB_RF_ALL_CACHE_NAME;
 
-@Component
+@Service
 @RequiredArgsConstructor
 public class CbRfCurrencyUseCaseImpl implements CbRfCurrencyUseCase {
     private final static DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy");

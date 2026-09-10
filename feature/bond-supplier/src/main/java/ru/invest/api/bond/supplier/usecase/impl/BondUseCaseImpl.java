@@ -10,7 +10,7 @@ import ru.invest.api.tinkoff.supplier.dispatcher.TinkoffBondDispatcher;
 
 import java.util.List;
 
-@Component
+@Service
 @RequiredArgsConstructor
 public class BondUseCaseImpl implements BondUseCase {
     private final TinkoffBondDispatcher tinkoffBondDispatcher;

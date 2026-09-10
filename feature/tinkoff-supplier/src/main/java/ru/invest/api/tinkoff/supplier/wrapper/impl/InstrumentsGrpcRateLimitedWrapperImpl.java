@@ -12,7 +12,7 @@ import ru.tinkoff.piapi.contract.v1.InstrumentsRequest;
 import ru.tinkoff.piapi.contract.v1.InstrumentsServiceGrpc;
 
 @Slf4j
-@Component
+@Service
 @RequiredArgsConstructor
 public class InstrumentsGrpcRateLimitedWrapperImpl implements InstrumentsGrpcRateLimitedWrapper {
 

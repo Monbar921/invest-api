@@ -28,7 +28,7 @@ import java.util.function.Supplier;
 
 import static ru.invest.api.tinkoff.supplier.constants.Constants.COUPON_EXECUTOR_SERVICE;
 
-@Component
+@Service
 @RequiredArgsConstructor
 public class TinkoffBondDispatcherImpl implements TinkoffBondDispatcher {
     private final BondParametersMapper bondParametersMapper;

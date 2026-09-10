@@ -5,7 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 @Data
-@Component
+@Service
 @ConfigurationProperties(prefix = "invest.rate-limiter")
 public class RateLimiterProperties {
 

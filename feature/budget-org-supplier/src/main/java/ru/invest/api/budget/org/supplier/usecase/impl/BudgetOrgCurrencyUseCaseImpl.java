@@ -14,7 +14,7 @@ import static ru.invest.api.common.constants.CacheConstants.BUDGET_ORG_CACHE_MAN
 import static ru.invest.api.common.constants.CacheConstants.BUDGET_ORG_CACHE_NAME;
 import static ru.invest.api.common.exception.enums.ExceptionErrorCode.EMPTY_CURRENCY;
 
-@Component
+@Service
 @RequiredArgsConstructor
 public class BudgetOrgCurrencyUseCaseImpl implements BudgetOrgCurrencyUseCase {
     private final BudgetOrgCurrencyMapper currencyMapper;

@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.invest.api.common.entity.Bond;
 import ru.invest.api.common.model.BondModel;
@@ -17,7 +18,7 @@ import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-@Component
+@Service
 @RequiredArgsConstructor
 public class TinkoffBondSyncRepositoryUseCaseImpl implements TinkoffBondSyncRepositoryUseCase {
     private final BondRepository bondRepository;

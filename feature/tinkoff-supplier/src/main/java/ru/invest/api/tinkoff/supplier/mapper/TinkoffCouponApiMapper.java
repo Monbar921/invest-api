@@ -7,7 +7,7 @@ import ru.invest.api.common.model.CouponDataModel;
 import ru.tinkoff.piapi.contract.v1.Coupon;
 
 @Mapper(uses = {MoneyMapper.class, DateTimeMapper.class})
-public interface TinkoffCouponMapper {
+public interface TinkoffCouponApiMapper {
     @Mapping(target = "price", source = "payOneBond")
     @Mapping(target = "paymentDate", source = "couponDate")
     CouponDataModel toCouponDataModel(Coupon coupon);

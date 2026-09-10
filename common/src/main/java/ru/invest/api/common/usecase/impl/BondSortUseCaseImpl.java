@@ -21,7 +21,7 @@ import java.util.Optional;
 
 import static ru.invest.api.common.predicates.BondModelPredicates.OFZ_PREDICATE;
 
-@Component
+@Service
 @RequiredArgsConstructor
 public class BondSortUseCaseImpl implements BondSortUseCase {
     private final BondParametersMapper bondParametersMapper;

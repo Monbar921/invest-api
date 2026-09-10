@@ -20,7 +20,7 @@ import static ru.invest.api.common.constants.CacheConstants.CURRENCY_PROVIDER_CA
 import static ru.invest.api.common.constants.CacheConstants.CURRENCY_PROVIDER_CACHE_NAME;
 import static ru.invest.api.common.exception.enums.ExceptionErrorCode.EMPTY_CURRENCY;
 
-@Component
+@Service
 @RequiredArgsConstructor
 public class CurrencyProviderImpl implements CurrencyProvider {
     private static final List<String> RUB_CODES = List.of("RUB", "RUR");

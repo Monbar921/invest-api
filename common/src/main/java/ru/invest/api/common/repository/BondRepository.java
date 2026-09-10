@@ -14,7 +14,7 @@ public interface BondRepository extends JpaRepository<Bond, Long> {
     @Query("""
     select b from Bond b
     where b.isFixedCoupon = false
-      or b.coupons is empty
+      or b.couponData is empty
     """)
     Slice<Bond> findByNotFixedCouponAndEmptyCoupons(Pageable pageable);
 }

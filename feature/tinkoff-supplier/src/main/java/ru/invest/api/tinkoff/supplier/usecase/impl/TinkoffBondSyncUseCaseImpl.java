@@ -3,6 +3,7 @@ package ru.invest.api.tinkoff.supplier.usecase.impl;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.collections4.MapUtils;
 import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import ru.invest.api.common.annotation.Active;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.usecase.BondSyncUseCase;
@@ -11,7 +12,7 @@ import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondSyncRepositoryUseCase;
 
 import java.util.Map;
 
-@Component
+@Service
 @RequiredArgsConstructor
 @Active
 public class TinkoffBondSyncUseCaseImpl implements BondSyncUseCase {

@@ -10,7 +10,7 @@ import ru.invest.api.common.usecase.BondSyncUseCase;
 import java.util.List;
 
 @Slf4j
-@Component
+@Service
 @RequiredArgsConstructor
 @ConditionalOnProperty(prefix = "ru.invest.api.stock.supplier.scheduler.bond", name = "enabled", havingValue = "true")
 public class BondSyncScheduler {
