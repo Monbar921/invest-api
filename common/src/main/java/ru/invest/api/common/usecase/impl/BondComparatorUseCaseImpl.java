@@ -1,7 +1,7 @@
 package ru.invest.api.common.usecase.impl;
 
 import org.apache.commons.collections4.CollectionUtils;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.parameters.BondSortField;
 import ru.invest.api.common.model.parameters.BondSortModel;

@@ -10,7 +10,5 @@ import java.util.Map;
 public interface TinkoffCouponRepositoryUseCase {
     CouponModel getCoupon(BondModel bondModel);
 
-    CouponModel saveCouponData(CouponModel couponModel);
-
     Map<String, List<CouponDataModel>> saveCouponData(Map<String, List<CouponDataModel>> couponBatch);
 }

@@ -10,6 +10,8 @@ import org.mapstruct.Named;
 import org.springframework.beans.factory.annotation.Autowired;
 import ru.invest.api.common.entity.Bond;
 import ru.invest.api.common.entity.CouponData;
+import ru.invest.api.common.exception.GeneralNotFoundEntityException;
+import ru.invest.api.common.exception.enums.ExceptionErrorCode;
 import ru.invest.api.common.mapper.DateTimeMapper;
 import ru.invest.api.common.model.CouponDataModel;
 import ru.invest.api.common.model.MoneyModel;
@@ -21,11 +23,14 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Mapper(uses = {MoneyMapper.class, DateTimeMapper.class})
 public abstract class CouponDataMapper {
+    private static final String BOND_NOT_FOUND_MESSAGE = "Bond not found for ticker %s";
+
     @Setter(onMethod_ = @Autowired)
     private MoneyMapper moneyMapper;
     @Setter(onMethod_ = @Autowired)
@@ -35,12 +40,6 @@ public abstract class CouponDataMapper {
 
     @Mapping(target = "price", source = "couponData", qualifiedByName = "toMoneyModel")
     public abstract CouponDataModel toModel(CouponData couponData);
-
-    public List<CouponData> toEntity(final List<CouponDataModel> couponModel) {
-        if (CollectionUtils.isEmpty(couponModel)) {
-            return Collections.emptyList();
-        }
-    }
 
     public List<CouponData> toEntity(final Map<String, List<CouponDataModel>> couponModelMap) {
         if (MapUtils.isEmpty(couponModelMap)) {
@@ -78,7 +77,11 @@ public abstract class CouponDataMapper {
         return couponDataModels
                 .stream()
                 .filter(Objects::nonNull)
-                .map(couponDataModel -> toEntity(couponDataModel, bonds.get(ticker)))
+                .map(couponDataModel -> {
+                    final Bond bond = Optional.ofNullable(bonds.get(ticker))
+                            .orElseThrow(() -> new GeneralNotFoundEntityException(ExceptionErrorCode.BOND_NOT_FOUND, BOND_NOT_FOUND_MESSAGE));
+                    return toEntity(couponDataModel, bond);
+                })
                 .collect(Collectors.toList());
     }
 
