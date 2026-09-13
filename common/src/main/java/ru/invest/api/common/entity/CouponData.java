@@ -36,6 +36,9 @@ public class CouponData {
     @Column(name = "ticker")
     private String ticker;
 
+    @Column(name = "uid")
+    private String uid;
+
     @Column(name = "price")
     private BigDecimal price;
 

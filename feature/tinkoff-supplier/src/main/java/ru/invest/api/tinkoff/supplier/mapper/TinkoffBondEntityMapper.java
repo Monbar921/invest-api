@@ -9,6 +9,7 @@ import org.mapstruct.MappingTarget;
 import org.mapstruct.ObjectFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import ru.invest.api.common.entity.Bond;
+import ru.invest.api.common.mapper.AuditMapper;
 import ru.invest.api.common.mapper.DateTimeMapper;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.PriceModel;
@@ -24,11 +25,19 @@ public abstract class TinkoffBondEntityMapper {
     @Setter(onMethod_ = @Autowired)
     private AuditMapper auditMapper;
     @Setter(onMethod_ = @Autowired)
-    private CouponMapper couponMapper;
+    private TinkoffCouponMapper tinkoffCouponMapper;
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "created", ignore = true)
     @Mapping(target = "updated", ignore = true)
+    @Mapping(target = "coupon", ignore = true)
+    @Mapping(target = "ticker", source = "bondModel.ticker")
+    @Mapping(target = "uid", source = "bondModel.uid")
+    @Mapping(target = "isin", source = "bondModel.isin")
+    @Mapping(target = "name", source = "bondModel.name")
+    @Mapping(target = "sector", source = "bondModel.sector")
+    @Mapping(target = "riskLevel", source = "bondModel.riskLevel")
+    @Mapping(target = "maturityDate", source = "bondModel.maturityDate")
     @Mapping(target = "currency", source = "bondModel.price.current.currency")
     @Mapping(target = "nominalCurrency", source = "bondModel.price.nominal.currency")
     @Mapping(target = "nominalPrice", source = "bondModel.price.nominal.quantity")
@@ -78,7 +87,7 @@ public abstract class TinkoffBondEntityMapper {
     @AfterMapping
     protected void afterMapping(@MappingTarget final Bond bond, final BondModel bondModel) {
         bond.setCoupon(
-                couponMapper.toEntity(bond, bondModel)
+                tinkoffCouponMapper.toEntity(bond, bondModel)
         );
     }
 }

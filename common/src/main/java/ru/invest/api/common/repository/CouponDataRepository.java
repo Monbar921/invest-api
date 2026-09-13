@@ -7,5 +7,5 @@ import java.util.List;
 import java.util.Set;
 
 public interface CouponDataRepository extends JpaRepository<CouponData, Long> {
-    List<CouponData> findByTickerIn(Set<String> tickers);
+    List<CouponData> findByUidIn(Set<String> tickers);
 }

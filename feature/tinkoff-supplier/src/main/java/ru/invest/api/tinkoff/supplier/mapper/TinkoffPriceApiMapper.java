@@ -17,8 +17,8 @@ import ru.tinkoff.piapi.contract.v1.MoneyValue;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
-@Mapper(uses = {MoneyMapper.class})
-public abstract class PriceMapper {
+@Mapper(uses = {TinkoffMoneyApiMapper.class})
+public abstract class TinkoffPriceApiMapper {
     private static final BigDecimal PERCENTAGE = BigDecimal.valueOf(100.0);
     private static final int SCALE = 10;
 

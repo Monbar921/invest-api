@@ -14,10 +14,11 @@ import ru.invest.api.common.entity.CouponData;
 import ru.invest.api.common.exception.GeneralNotFoundEntityException;
 import ru.invest.api.common.exception.enums.ExceptionErrorCode;
 import ru.invest.api.common.mapper.DateTimeMapper;
+import ru.invest.api.common.mapper.MoneyMapper;
 import ru.invest.api.common.model.CouponDataModel;
 import ru.invest.api.common.model.MoneyModel;
 import ru.invest.api.common.repository.BondRepository;
-import ru.invest.api.common.repository.CouponRepository;
+import ru.invest.api.common.repository.CouponDataRepository;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -29,16 +30,17 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Mapper(uses = {MoneyMapper.class, DateTimeMapper.class})
-public abstract class CouponDataMapper {
+public abstract class TinkoffCouponDataMapper {
     private static final String BOND_NOT_FOUND_MESSAGE = "Bond not found for ticker %s";
 
     @Setter(onMethod_ = @Autowired)
-    private MoneyMapper moneyMapper;
+    private TinkoffMoneyApiMapper tinkoffMoneyApiMapper;
     @Setter(onMethod_ = @Autowired)
-    private CouponRepository couponRepository;
+    private CouponDataRepository couponDataRepository;
     @Setter(onMethod_ = @Autowired)
     private BondRepository bondRepository;
 
+    @Mapping(target = "logged", ignore = true)
     @Mapping(target = "price", source = "couponData", qualifiedByName = "toMoneyModel")
     public abstract CouponDataModel toModel(CouponData couponData);
 
@@ -47,12 +49,12 @@ public abstract class CouponDataMapper {
             return Collections.emptyList();
         }
 
-        final List<CouponData> existingEntities = couponRepository.findByTickerIn(couponModelMap.keySet());
+        final List<CouponData> existingEntities = couponDataRepository.findByUidIn(couponModelMap.keySet());
         if (CollectionUtils.isNotEmpty(existingEntities)) {
             existingEntities.clear();
         }
 
-        final Map<String, Bond> bonds = bondRepository.findByTickerIn(couponModelMap.keySet())
+        final Map<String, Bond> bonds = bondRepository.findByUidIn(couponModelMap.keySet())
                 .stream()
                 .filter(Objects::nonNull)
                 .filter(bond -> StringUtils.isNotBlank(bond.getTicker()))
@@ -81,10 +83,7 @@ public abstract class CouponDataMapper {
                 .map(couponDataModel -> {
                     final Bond bond = Optional.ofNullable(bonds.get(ticker))
                             .orElseThrow(() -> new GeneralNotFoundEntityException(ExceptionErrorCode.BOND_NOT_FOUND, BOND_NOT_FOUND_MESSAGE));
-                    if(bond.getCoupon() == null) {
-                        bond.setCoupon(couponMapper.toEntity(bond));
-                    }
-                    return toEntity(couponDataModel, bond);
+                    return toEntity(couponDataModel, bond.getCoupon());
                 })
                 .collect(Collectors.toList());
     }
@@ -93,7 +92,7 @@ public abstract class CouponDataMapper {
     @Mapping(target = "ticker", source = "couponData.ticker")
     @Mapping(target = "price", source = "couponData.price.quantity")
     @Mapping(target = "currency", source = "couponData.price.currency")
-    protected abstract CouponData toEntity(CouponDataModel couponData, Bond bond);
+    protected abstract CouponData toEntity(CouponDataModel couponData, Coupon coupon);
 
     @Named("toMoneyModel")
     protected MoneyModel toMoneyModel(final CouponData coupon) {
@@ -101,6 +100,6 @@ public abstract class CouponDataMapper {
             return null;
         }
 
-        return moneyMapper.toModel(coupon.getCurrency(), coupon.getPrice());
+        return tinkoffMoneyApiMapper.toModel(coupon.getCurrency(), coupon.getPrice());
     }
 }

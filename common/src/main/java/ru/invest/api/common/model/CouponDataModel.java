@@ -15,5 +15,5 @@ public class CouponDataModel {
     private MoneyModel price;
     private LocalDateTime fixDate;
     private LocalDateTime paymentDate;
-    private AuditModel fetchedAudit;
+    private AuditModel logged;
 }

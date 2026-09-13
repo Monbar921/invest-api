@@ -7,7 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ru.invest.api.common.entity.CouponData;
 import ru.invest.api.common.model.CouponDataModel;
 import ru.invest.api.common.repository.CouponDataRepository;
-import ru.invest.api.tinkoff.supplier.mapper.CouponDataMapper;
+import ru.invest.api.tinkoff.supplier.mapper.TinkoffCouponDataMapper;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffCouponDataRepositoryUseCase;
 
 import java.util.Collections;
@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
 public class TinkoffCouponDataRepositoryUseCaseImpl implements TinkoffCouponDataRepositoryUseCase {
     private final CouponDataRepository couponDataRepository;
 
-    private final CouponDataMapper couponDataMapper;
+    private final TinkoffCouponDataMapper tinkoffCouponDataMapper;
 
     @Override
     @Transactional
@@ -31,13 +31,13 @@ public class TinkoffCouponDataRepositoryUseCaseImpl implements TinkoffCouponData
         }
 
         final List<CouponData> savedEntities = couponDataRepository.saveAll(
-                couponDataMapper.toEntity(couponDataBatch)
+                tinkoffCouponDataMapper.toEntity(couponDataBatch)
         );
 
         return savedEntities
                 .stream()
                 .filter(Objects::nonNull)
-                .map(couponDataMapper::toModel)
+                .map(tinkoffCouponDataMapper::toModel)
                 .collect(Collectors.groupingBy(CouponDataModel::getTicker));
     }
 }

@@ -1,4 +1,4 @@
-package ru.invest.api.tinkoff.supplier.mapper;
+package ru.invest.api.common.mapper;
 
 import org.mapstruct.Mapper;
 import ru.invest.api.common.entity.Audit;

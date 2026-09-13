@@ -7,7 +7,7 @@ import ru.invest.api.common.model.AuditModel;
 import ru.invest.api.common.model.CouponDataModel;
 import ru.tinkoff.piapi.contract.v1.Coupon;
 
-@Mapper(uses = {MoneyMapper.class, DateTimeMapper.class})
+@Mapper(uses = {TinkoffMoneyApiMapper.class, DateTimeMapper.class})
 public interface TinkoffCouponApiMapper {
 
     @Mapping(target = "id", ignore = true)

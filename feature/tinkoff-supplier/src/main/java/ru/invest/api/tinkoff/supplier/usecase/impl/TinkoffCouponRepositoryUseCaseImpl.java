@@ -9,7 +9,7 @@ import ru.invest.api.common.exception.GeneralUnprocessableEntityException;
 import ru.invest.api.common.exception.enums.ExceptionErrorCode;
 import ru.invest.api.common.model.CouponModel;
 import ru.invest.api.common.repository.CouponRepository;
-import ru.invest.api.tinkoff.supplier.mapper.CouponMapper;
+import ru.invest.api.tinkoff.supplier.mapper.TinkoffCouponMapper;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffCouponRepositoryUseCase;
 
 @Service
@@ -20,7 +20,7 @@ public class TinkoffCouponRepositoryUseCaseImpl implements TinkoffCouponReposito
 
     private final CouponRepository couponRepository;
 
-    private final CouponMapper couponMapper;
+    private final TinkoffCouponMapper tinkoffCouponMapper;
 
     @Transactional(readOnly = true)
     public CouponModel getCouponByUid(final String uid) {
@@ -29,7 +29,7 @@ public class TinkoffCouponRepositoryUseCaseImpl implements TinkoffCouponReposito
         }
 
         return couponRepository.findByUid(uid)
-                .map(couponMapper::toModel)
+                .map(tinkoffCouponMapper::toModel)
                 .orElseThrow(() -> new GeneralNotFoundEntityException(ExceptionErrorCode.COUPON_NOT_FOUND, COUPON_NOT_FOUND_MESSAGE.formatted(uid)));
     }
 }

@@ -48,11 +48,8 @@ public class Coupon {
     @Column(name = "is_fixed")
     private Boolean isFixed;
 
-    @Column(name = "nominal_interest")
-    private BigDecimal nominalInterest;
-
     @Column(name = "current_interest")
-    private BigDecimal currentInterest;
+    private BigDecimal interest;
 
     @OneToMany(mappedBy = "coupon")
     private List<CouponData> couponData;

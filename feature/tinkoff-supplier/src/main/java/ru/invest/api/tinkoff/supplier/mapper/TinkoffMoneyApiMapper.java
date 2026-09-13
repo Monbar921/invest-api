@@ -12,8 +12,7 @@ import ru.tinkoff.piapi.contract.v1.MoneyValue;
 import java.math.BigDecimal;
 
 @Mapper
-public abstract class MoneyMapper {
-    private static final BigDecimal NANO_MULTIPLIER = BigDecimal.valueOf(1_000_000_000);
+public abstract class TinkoffMoneyApiMapper {
 
     @Setter(onMethod_ = {@Autowired})
     private BigDecimalMapper bigDecimalMapper;
@@ -22,23 +21,6 @@ public abstract class MoneyMapper {
     public abstract MoneyModel toModel(MoneyValue moneyValue);
 
     public abstract MoneyModel toModel(String currency, BigDecimal quantity);
-
-    public MoneyValue toMoneyValue(final BigDecimal quantity, final String currency) {
-        if (quantity == null) {
-            return null;
-        }
-
-        final long units = quantity.longValue();
-        final int nano = quantity.subtract(BigDecimal.valueOf(units))
-                .multiply(NANO_MULTIPLIER)
-                .intValue();
-
-        return MoneyValue.newBuilder()
-                .setUnits(units)
-                .setNano(nano)
-                .setCurrency(currency)
-                .build();
-    }
 
     @Named("toQuantity")
     protected BigDecimal toQuantity(final MoneyValue moneyValue) {

@@ -7,7 +7,7 @@ import org.springframework.stereotype.Service;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.MoneyModel;
 import ru.invest.api.common.model.PriceModel;
-import ru.invest.api.tinkoff.supplier.mapper.PriceMapper;
+import ru.invest.api.tinkoff.supplier.mapper.TinkoffPriceApiMapper;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffPriceUseCase;
 import ru.invest.api.tinkoff.supplier.wrapper.MarketDataGrpcRateLimitedWrapper;
 import ru.tinkoff.piapi.contract.v1.GetLastPricesRequest;
@@ -29,7 +29,7 @@ import static ru.invest.api.common.constants.CacheConstants.PRICE_CACHE_NAME;
 public class TinkoffPriceUseCaseImpl implements TinkoffPriceUseCase {
     private final MarketDataGrpcRateLimitedWrapper marketDataServiceBlockingStub;
 
-    private final PriceMapper priceMapper;
+    private final TinkoffPriceApiMapper tinkoffPriceApiMapper;
 
     @Override
     @Cacheable(cacheManager = PRICE_CACHE_MANAGER, cacheNames = PRICE_CACHE_NAME)
@@ -61,6 +61,6 @@ public class TinkoffPriceUseCaseImpl implements TinkoffPriceUseCase {
                 .map(PriceModel::getNominal)
                 .orElse(null);
 
-        return priceMapper.toBondPriceModel(lastPrice, moneyModel);
+        return tinkoffPriceApiMapper.toBondPriceModel(lastPrice, moneyModel);
     }
 }

@@ -9,7 +9,7 @@ import ru.invest.api.common.model.CouponModel;
 import ru.invest.api.common.model.PriceModel;
 import ru.tinkoff.piapi.contract.v1.Bond;
 
-@Mapper(uses = {PriceMapper.class, DateTimeMapper.class})
+@Mapper(uses = {TinkoffPriceApiMapper.class, DateTimeMapper.class})
 public interface TinkoffBondApiMapper {
 
     @Mapping(target = "price", source = "price")
