@@ -4,8 +4,6 @@ import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -17,10 +15,9 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import ru.invest.api.common.model.enums.RiskLevel;
+import lombok.experimental.Accessors;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.List;
 
 @AllArgsConstructor
@@ -28,6 +25,7 @@ import java.util.List;
 @Getter
 @Setter
 @Entity
+@Accessors(chain = true)
 @Table(name = "bond")
 public class Coupon {
     @Id
@@ -38,14 +36,17 @@ public class Coupon {
     @JoinColumn(name = "bond_id", referencedColumnName = "id")
     private Bond bond;
 
+    @Column(name = "uid")
+    private String uid;
+
     @Column(name = "ticker")
-    private Integer ticker;
+    private String ticker;
 
     @Column(name = "quantity_per_year")
     private Integer quantityPerYear;
 
-    @Column(name = "quantity_per_year")
-    private Boolean isFixedCoupon;
+    @Column(name = "is_fixed")
+    private Boolean isFixed;
 
     @Column(name = "nominal_interest")
     private BigDecimal nominalInterest;

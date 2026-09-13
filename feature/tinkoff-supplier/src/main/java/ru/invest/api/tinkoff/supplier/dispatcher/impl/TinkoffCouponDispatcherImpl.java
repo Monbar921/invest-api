@@ -7,8 +7,8 @@ import org.springframework.stereotype.Service;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.CouponModel;
 import ru.invest.api.tinkoff.supplier.dispatcher.TinkoffCouponDispatcher;
-import ru.invest.api.tinkoff.supplier.service.CouponCalculationService;
 import ru.invest.api.tinkoff.supplier.provider.TinkoffCouponProvider;
+import ru.invest.api.tinkoff.supplier.service.CouponCalculationService;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffCouponRepositoryUseCase;
 
 import java.util.Collections;
@@ -58,13 +58,13 @@ public class TinkoffCouponDispatcherImpl implements TinkoffCouponDispatcher {
             return fetchCouponsFromTinkoffApi(bondModel);
         }
 
-        return Optional.ofNullable(fetchCouponsFromDatabase(bondModel))
+        return Optional.ofNullable(fetchCouponsFromDatabase(bondModel.getUid()))
                 .filter(databaseCoupon -> CollectionUtils.isNotEmpty(databaseCoupon.getCouponData()))
                 .orElseGet(() -> fetchCouponsFromTinkoffApi(bondModel));
     }
 
-    private CouponModel fetchCouponsFromDatabase(final BondModel bondModel) {
-        return tinkoffCouponRepositoryUseCase.getCoupon(bondModel);
+    private CouponModel fetchCouponsFromDatabase(final String uid) {
+        return tinkoffCouponRepositoryUseCase.getCouponByUid(uid);
     }
 
     private CouponModel fetchCouponsFromTinkoffApi(final BondModel bondModel) {

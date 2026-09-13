@@ -9,7 +9,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.invest.api.common.entity.Bond;
-import ru.invest.api.common.model.Pair;
+import ru.invest.api.common.model.ShortProductModel;
 import ru.invest.api.common.repository.BondRepository;
 import ru.invest.api.tinkoff.supplier.usecase.GetNeedToUpdateCouponsUseCase;
 
@@ -26,8 +26,8 @@ public class GetNeedToUpdateCouponsUseCaseImpl implements GetNeedToUpdateCoupons
 
     @Override
     @Transactional
-    public List<Pair<String, String>> getUidTickersToUpdate() {
-        final Map<String, Pair<String, String>> uidTickers = new HashMap<>();
+    public List<ShortProductModel> getUidTickersToUpdate() {
+        final Map<String, ShortProductModel> uidTickers = new HashMap<>();
 
         Pageable pageable = ONE_THOUSAND_PAGEABLE;
         Slice<Bond> bondSlice;
@@ -40,8 +40,11 @@ public class GetNeedToUpdateCouponsUseCaseImpl implements GetNeedToUpdateCoupons
                         .filter(bond -> StringUtils.isNotBlank(bond.getUid()))
                         .filter(bond -> StringUtils.isNotBlank(bond.getTicker()))
                         .forEach(bond -> {
-                                    final Pair<String, String> uidTicker = uidTickers.getOrDefault(bond.getUid(),
-                                            new Pair<>(bond.getUid(), bond.getTicker()));
+                                    final ShortProductModel uidTicker = uidTickers.getOrDefault(bond.getUid(),
+                                            new ShortProductModel()
+                                                    .setTicker(bond.getTicker())
+                                                    .setUid(bond.getUid())
+                                    );
                                     uidTickers.put(bond.getUid(), uidTicker);
                                 }
                         );

@@ -21,7 +21,10 @@
                 <constraints nullable="false" foreignKeyName="fk_coupon_bond_id" references="bond(id)"/>
             </column>
             <column name="ticker" type="text">
-                <constraints nullable="false"/>
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="uid" type="text">
+                <constraints nullable="false" unique="true"/>
             </column>
             <column name="quantity_per_year" type="integer">
                 <constraints nullable="false"/>
@@ -48,17 +51,11 @@
                 <not>
                     <indexExists tableName="coupon" indexName="coupon_bond_id_uq_idx"/>
                 </not>
-                <not>
-                    <indexExists tableName="coupon" indexName="coupon_ticker_uq_idx"/>
-                </not>
             </and>
         </preConditions>
 
         <createIndex tableName="coupon" indexName="coupon_bond_id_uq_idx" unique="true">
             <column>bond_id</column>
-        </createIndex>
-        <createIndex tableName="coupon" indexName="coupon_ticker_uq_idx" unique="true">
-            <column>ticker</column>
         </createIndex>
     </changeSet>
 </databaseChangeLog>

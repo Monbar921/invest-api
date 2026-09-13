@@ -104,6 +104,6 @@ public class TinkoffBondCacheRepositoryUseCaseImpl implements TinkoffBondCacheRe
     private Map<String, BondModel> toBondModels(final List<Bond> entities) {
         return entities.stream()
                 .filter(Objects::nonNull)
-                .collect(Collectors.toMap(Bond::getUid, bond -> tinkoffBondEntityMapper.toModel(bond, null)));
+                .collect(Collectors.toMap(Bond::getUid, tinkoffBondEntityMapper::toModel));
     }
 }

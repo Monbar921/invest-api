@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
 import ru.invest.api.common.annotation.Active;
 import ru.invest.api.common.model.AuditModel;
 import ru.invest.api.common.model.CouponDataModel;
-import ru.invest.api.common.model.Pair;
+import ru.invest.api.common.model.ShortProductModel;
 import ru.invest.api.tinkoff.supplier.provider.TinkoffCouponProvider;
 import ru.invest.api.tinkoff.supplier.usecase.CouponSyncUseCase;
 import ru.invest.api.tinkoff.supplier.usecase.GetNeedToUpdateCouponsUseCase;
@@ -20,9 +20,10 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
+import java.util.stream.Collectors;
 
 import static ru.invest.api.tinkoff.supplier.constants.Constants.COUPON_EXECUTOR_SERVICE;
 
@@ -42,34 +43,44 @@ public class TinkoffCouponSyncUseCaseImpl implements CouponSyncUseCase {
 
     @Override
     public void syncAll(final AuditModel audit) {
-        final List<Pair<String, String>> uidTickers = getNeedToUpdateCouponsUseCase.getUidTickersToUpdate();
+        final List<ShortProductModel> uidTickers = getNeedToUpdateCouponsUseCase.getUidTickersToUpdate();
 
         if (CollectionUtils.isEmpty(uidTickers)) {
             return;
         }
 
-        final Iterator<String> iterator = tickers.stream()
-                .filter(StringUtils::isNotBlank)
+        final Iterator<ShortProductModel> uidTickerIterator = uidTickers.stream()
+                .filter(Objects::nonNull)
+                .filter(uidTicker -> StringUtils.isNotBlank(uidTicker.getTicker()))
+                .filter(uidTicker -> StringUtils.isNotBlank(uidTicker.getUid()))
                 .iterator();
 
         final Map<String, List<CouponDataModel>> couponBatch = new HashMap<>(BATCH_SIZE);
 
-        while (iterator.hasNext()) {
-            String ticker = iterator.next();
-            couponBatch.put(ticker, List.of());
+        final Map<String, String> uidTickerMap = uidTickers
+                .stream()
+                .filter(Objects::nonNull)
+                .filter(uidTicker -> StringUtils.isNotBlank(uidTicker.getTicker()))
+                .filter(uidTicker -> StringUtils.isNotBlank(uidTicker.getUid()))
+                .collect(Collectors.toMap(ShortProductModel::getUid, ShortProductModel::getTicker));
 
-            if (couponBatch.size() == BATCH_SIZE || !iterator.hasNext()) {
-                fetchCouponsAsyncAndGet(couponBatch, audit);
+        while (uidTickerIterator.hasNext()) {
+            final ShortProductModel uidTicker = uidTickerIterator.next();
+            couponBatch.put(uidTicker.getUid(), List.of());
+
+            if (couponBatch.size() == BATCH_SIZE || !uidTickerIterator.hasNext()) {
+                fetchCouponsAsyncAndGet(couponBatch, uidTickerMap, audit);
                 updateEntity(couponBatch);
                 couponBatch.clear();
             }
         }
     }
 
-    private void fetchCouponsAsyncAndGet(final Map<String, List<CouponDataModel>> batchCouponData, final AuditModel audit) {
+    private void fetchCouponsAsyncAndGet(final Map<String, List<CouponDataModel>> batchCouponData, final Map<String, String> uidTickerMap,
+                                         final AuditModel audit) {
         final List<CompletableFuture<Void>> futures = batchCouponData.keySet().stream()
-                .map(ticker -> CompletableFuture.runAsync(
-                        () -> batchCouponData.put(ticker, tinkoffCouponProvider.getCouponData(ticker, audit)),
+                .map(uid -> CompletableFuture.runAsync(
+                        () -> batchCouponData.put(uid, tinkoffCouponProvider.getCouponData(uid, uidTickerMap.get(uid), audit)),
                         couponExecutorService))
                 .toList();
 

@@ -1,20 +1,18 @@
 package ru.invest.api.tinkoff.supplier.mapper;
 
+import lombok.Setter;
 import org.apache.commons.collections4.MapUtils;
 import org.mapstruct.AfterMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
-import org.mapstruct.Named;
-import ru.invest.api.common.entity.Audit;
+import org.mapstruct.ObjectFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import ru.invest.api.common.entity.Bond;
 import ru.invest.api.common.mapper.DateTimeMapper;
 import ru.invest.api.common.model.BondModel;
-import ru.invest.api.common.model.CouponModel;
 import ru.invest.api.common.model.PriceModel;
 
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -23,34 +21,28 @@ import java.util.Optional;
 
 @Mapper(uses = {DateTimeMapper.class})
 public abstract class TinkoffBondEntityMapper {
-    private static final String SYSTEM_AUDIT_USER = "tinkoff-bond-scheduler";
+    @Setter(onMethod_ = @Autowired)
+    private AuditMapper auditMapper;
+    @Setter(onMethod_ = @Autowired)
+    private CouponMapper couponMapper;
 
-    public Bond toEntity(final BondModel protoBond, final Bond existing) {
-        final Bond target = Optional.ofNullable(existing)
-                .orElseGet(Bond::new);
-        updateEntity(target, protoBond);
-        return target;
-    }
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "created", ignore = true)
+    @Mapping(target = "updated", ignore = true)
+    @Mapping(target = "currency", source = "bondModel.price.current.currency")
+    @Mapping(target = "nominalCurrency", source = "bondModel.price.nominal.currency")
+    @Mapping(target = "nominalPrice", source = "bondModel.price.nominal.quantity")
+    public abstract Bond toEntity(BondModel bondModel, Bond existing);
 
-    @Mapping(target = "price", source = "price")
+    @Mapping(target = "logged", ignore = true)
+    @Mapping(target = "price", ignore = true)
     @Mapping(target = "ticker", source = "bond.ticker")
     @Mapping(target = "uid", source = "bond.uid")
     @Mapping(target = "isin", source = "bond.isin")
     @Mapping(target = "name", source = "bond.name")
     @Mapping(target = "sector", source = "bond.sector")
     @Mapping(target = "riskLevel", source = "bond.riskLevel")
-    @Mapping(target = "coupon", source = "bond", qualifiedByName = "toInitialCoupon")
-    @Mapping(target = "maturityDate", source = "bond.maturityDate")
-    public abstract BondModel toModel(Bond bond, PriceModel price);
-
-    @Mapping(target = "price", source = "bond")
-    @Mapping(target = "ticker", source = "bond.ticker")
-    @Mapping(target = "uid", source = "bond.uid")
-    @Mapping(target = "isin", source = "bond.isin")
-    @Mapping(target = "name", source = "bond.name")
-    @Mapping(target = "sector", source = "bond.sector")
-    @Mapping(target = "riskLevel", source = "bond.riskLevel")
-    @Mapping(target = "coupon", source = "bond", qualifiedByName = "toInitialCoupon")
+    @Mapping(target = "coupon", ignore = true)
     @Mapping(target = "maturityDate", source = "bond.maturityDate")
     public abstract BondModel toModel(Bond bond);
 
@@ -72,35 +64,21 @@ public abstract class TinkoffBondEntityMapper {
                 .toList();
     }
 
-    @Mapping(target = "currency", source = "price.current.currency")
-    @Mapping(target = "couponQuantityPerYear", source = "coupon.quantityPerYear")
-    @Mapping(target = "id", ignore = true)
-    @Mapping(target = "created", ignore = true)
-    @Mapping(target = "updated", ignore = true)
-    @Mapping(target = "nominalCurrency", source = "price.nominal.currency")
-    @Mapping(target = "nominalPrice", source = "price.nominal.quantity")
-    @Mapping(target = "isFixedCoupon", source = "protoBond.coupon.isFixed")
-    protected abstract void updateEntity(@MappingTarget Bond entity, BondModel protoBond);
-
-    @AfterMapping
-    protected void stampAudit(@MappingTarget final Bond entity) {
-        final LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
-
-        if (entity.getId() == null) {
-            entity.setCreated(new Audit().setCommittedBy(SYSTEM_AUDIT_USER).setCommittedAt(now));
-        } else {
-            entity.setUpdated(new Audit().setCommittedBy(SYSTEM_AUDIT_USER).setCommittedAt(now));
+    @ObjectFactory
+    protected Bond objectFactory(final BondModel bondModel, final Bond existing) {
+        if (existing == null) {
+            return new Bond()
+                    .setCreated(auditMapper.toEntity(bondModel.getLogged()));
         }
+
+        return existing
+                .setUpdated(auditMapper.toEntity(bondModel.getLogged()));
     }
 
-    @Named("toInitialCoupon")
-    protected CouponModel toInitialCoupon(final Bond bond) {
-        if (bond == null) {
-            return null;
-        }
-
-        return new CouponModel()
-                .setQuantityPerYear(Optional.ofNullable(bond.getCouponQuantityPerYear()).orElse(0))
-                .setIsFixed(bond.getIsFixedCoupon());
+    @AfterMapping
+    protected void afterMapping(@MappingTarget final Bond bond, final BondModel bondModel) {
+        bond.setCoupon(
+                couponMapper.toEntity(bond, bondModel)
+        );
     }
 }

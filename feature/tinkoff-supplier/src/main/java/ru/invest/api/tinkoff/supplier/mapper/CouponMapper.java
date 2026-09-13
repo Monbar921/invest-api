@@ -17,47 +17,37 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-@Mapper
+@Mapper(uses = CouponDataMapper.class)
 public abstract class CouponMapper {
     @Setter
     private CouponDataMapper couponDataMapper;
     @Setter
     private AuditMapper auditMapper;
 
-    public CouponModel toModel(final BondModel bond, final List<CouponData> coupons) {
-        if (CollectionUtils.isEmpty(coupons)) {
-            return null;
-        }
+    public abstract CouponModel toModel(Coupon coupon);
 
-        final List<CouponDataModel> couponData = coupons
-                .stream()
-                .filter(Objects::nonNull)
-                .map(couponDataMapper::toModel)
-                .toList();
-
-        return toCouponModel(bond, couponData);
-    }
-
+    @Mapping(target = "created", ignore = true)
     @Mapping(target = "updated", ignore = true)
-    @Mapping(target = "quantityPerYear", ignore = true)
+    @Mapping(target = "quantityPerYear", source = "bondModel.coupon.quantityPerYear")
     @Mapping(target = "nominalInterest", ignore = true)
-    @Mapping(target = "isFixedCoupon", ignore = true)
+    @Mapping(target = "isFixedCoupon", source = "bondModel.coupon.quantityPerYear")
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "currentInterest", ignore = true)
-    @Mapping(target = "created", ignore = true)
     @Mapping(target = "couponData", ignore = true)
     @Mapping(target = "bond", source = "bond")
-    @Mapping(target = "ticker", source = "bond")
-    public abstract Coupon toEntity(Bond bond);
+    @Mapping(target = "ticker", source = "bond.ticker")
+    @Mapping(target = "uid", source = "bond.uid")
+    public abstract Coupon toEntity(Bond bond, BondModel bondModel);
 
     @ObjectFactory
-    protected Coupon objectFactory(final Bond bond) {
-        if(bond.getCoupon() == null) {
+    protected Coupon objectFactory(final Bond bond, final BondModel bondModel) {
+        if (bond.getCoupon() == null) {
             return new Coupon()
-                    .setCreated(auditMapper.toEntity());
+                    .setCreated(auditMapper.toEntity(bondModel.getLogged()));
         }
 
-        return bond.getCoupon();
+        return bond.getCoupon()
+                .setUpdated(auditMapper.toEntity(bondModel.getLogged()));
     }
 
     @Mapping(target = "quantityPerYear", source = "bond.coupon.quantityPerYear")

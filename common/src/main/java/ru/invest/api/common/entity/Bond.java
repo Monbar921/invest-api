@@ -15,6 +15,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.experimental.Accessors;
 import ru.invest.api.common.model.enums.RiskLevel;
 
 import java.math.BigDecimal;
@@ -26,6 +27,7 @@ import java.time.LocalDateTime;
 @Setter
 @Entity
 @Table(name = "bond")
+@Accessors(chain = true)
 public class Bond {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -54,9 +56,6 @@ public class Bond {
 
     @Column(name = "nominal_currency")
     private String nominalCurrency;
-
-    @Column(name = "is_fixed_coupon")
-    private Boolean isFixedCoupon;
 
     @Column(name = "currency")
     private String currency;
