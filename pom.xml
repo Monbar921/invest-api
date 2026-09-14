@@ -26,6 +26,7 @@
         <vavr.version>1.0.1</vavr.version>
         <apache.commons.collections.version>4.6.0</apache.commons.collections.version>
 
+        <shedlock-spring.version>4.44.0</shedlock-spring.version>
         <mapstruct.version>1.6.3</mapstruct.version>
         <protobuf.java.version>4.34.1</protobuf.java.version>
         <caffeine.version>3.2.4</caffeine.version>
@@ -123,6 +124,17 @@
                 <groupId>com.github.ben-manes.caffeine</groupId>
                 <artifactId>caffeine</artifactId>
                 <version>${caffeine.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>net.javacrumbs.shedlock</groupId>
+                <artifactId>shedlock-provider-jdbc-template</artifactId>
+                <version>${shedlock-spring.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.javacrumbs.shedlock</groupId>
+                <artifactId>shedlock-spring</artifactId>
+                <version>${shedlock-spring.version}</version>
             </dependency>
 
             <dependency>

@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import ru.invest.api.common.entity.Bond;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 public interface BondRepository extends JpaRepository<Bond, Long> {
@@ -20,4 +21,6 @@ public interface BondRepository extends JpaRepository<Bond, Long> {
     Slice<Bond> findByNotFixedCouponAndEmptyCoupons(Pageable pageable);
 
     List<Bond> findByUidIn(Set<String> tickers);
+
+    Optional<Bond> findByUid(String uid);
 }

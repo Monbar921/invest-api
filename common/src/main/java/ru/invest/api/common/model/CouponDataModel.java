@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 public class CouponDataModel {
     private Long id;
     private String ticker;
+    private String uid;
     private MoneyModel price;
     private LocalDateTime fixDate;
     private LocalDateTime paymentDate;

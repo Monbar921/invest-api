@@ -14,7 +14,7 @@ import ru.invest.api.common.model.ShortProductModel;
 import ru.invest.api.tinkoff.supplier.provider.TinkoffCouponProvider;
 import ru.invest.api.tinkoff.supplier.usecase.CouponSyncUseCase;
 import ru.invest.api.tinkoff.supplier.usecase.GetNeedToUpdateCouponsUseCase;
-import ru.invest.api.tinkoff.supplier.usecase.TinkoffCouponDataRepositoryUseCase;
+import ru.invest.api.tinkoff.supplier.usecase.TinkoffCouponRepositoryUseCase;
 
 import java.util.HashMap;
 import java.util.Iterator;
@@ -35,7 +35,7 @@ public class TinkoffCouponSyncUseCaseImpl implements CouponSyncUseCase {
     private static final int BATCH_SIZE = 100;
 
     private final TinkoffCouponProvider tinkoffCouponProvider;
-    private final TinkoffCouponDataRepositoryUseCase tinkoffCouponDataRepositoryUseCase;
+    private final TinkoffCouponRepositoryUseCase tinkoffCouponRepositoryUseCase;
     private final GetNeedToUpdateCouponsUseCase getNeedToUpdateCouponsUseCase;
 
     @Qualifier(COUPON_EXECUTOR_SERVICE)
@@ -87,11 +87,11 @@ public class TinkoffCouponSyncUseCaseImpl implements CouponSyncUseCase {
         CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
     }
 
-    private void updateEntity(final Map<String, List<CouponDataModel>> couponBatch) {
-        if (MapUtils.isEmpty(couponBatch)) {
+    private void updateEntity(final Map<String, List<CouponDataModel>> couponDataBatch) {
+        if (MapUtils.isEmpty(couponDataBatch)) {
             return;
         }
 
-        tinkoffCouponDataRepositoryUseCase.saveCouponData(couponBatch);
+        tinkoffCouponRepositoryUseCase.saveCouponData(couponDataBatch);
     }
 }

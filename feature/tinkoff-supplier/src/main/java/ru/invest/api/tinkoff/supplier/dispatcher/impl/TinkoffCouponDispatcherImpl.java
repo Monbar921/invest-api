@@ -13,9 +13,6 @@ import ru.invest.api.tinkoff.supplier.usecase.TinkoffCouponRepositoryUseCase;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 
 import static ru.invest.api.tinkoff.supplier.constants.Constants.COUPON_EXECUTOR_SERVICE;
@@ -32,48 +29,49 @@ public class TinkoffCouponDispatcherImpl implements TinkoffCouponDispatcher {
 
     @Override
     public List<CouponModel> getCoupons(final List<BondModel> bonds) {
-        if (CollectionUtils.isEmpty(bonds)) {
-            return Collections.emptyList();
-        }
-
-        final CouponModel coupon = dispatchCoupon(bondModel);
-
-        return coupon.setInterest(
-                couponCalculationService.calculateInterest(coupon, bondModel)
-        );
+//        if (CollectionUtils.isEmpty(bonds)) {
+//            return Collections.emptyList();
+//        }
+//
+//        final CouponModel coupon = dispatchCoupon(bondModel);
+//
+//        return coupon.setInterest(
+//                couponCalculationService.calculateInterest(coupon, bondModel)
+//        );
+        return null;
     }
-
-    private void enrichWithCouponsAsync(final List<BondModel> bondModels) {
-        final List<CompletableFuture<Void>> futures = bondModels.stream()
-                .filter(Objects::nonNull)
-                .map(bondModel -> CompletableFuture.runAsync(() ->
-                        bondModel.setCoupon(tinkoffCouponDispatcher.getCoupons(bondModel)), couponExecutorService))
-                .toList();
-
-        CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
-    }
-
-    public CouponModel dispatchCoupon(final BondModel bondModel) {
-        if (!needTryFetchFromDatabase(bondModel)) {
-            return fetchCouponsFromTinkoffApi(bondModel);
-        }
-
-        return Optional.ofNullable(fetchCouponsFromDatabase(bondModel.getUid()))
-                .filter(databaseCoupon -> CollectionUtils.isNotEmpty(databaseCoupon.getCouponData()))
-                .orElseGet(() -> fetchCouponsFromTinkoffApi(bondModel));
-    }
-
-    private CouponModel fetchCouponsFromDatabase(final String uid) {
-        return tinkoffCouponRepositoryUseCase.getCouponByUid(uid);
-    }
-
-    private CouponModel fetchCouponsFromTinkoffApi(final BondModel bondModel) {
-        return tinkoffCouponProvider.getCoupon(bondModel);
-    }
-
-    private boolean needTryFetchFromDatabase(final BondModel bondModel) {
-        return Optional.ofNullable(bondModel.getCoupon())
-                .map(CouponModel::getIsFixed)
-                .orElse(false);
-    }
+//
+//    private void enrichWithCouponsAsync(final List<BondModel> bondModels) {
+//        final List<CompletableFuture<Void>> futures = bondModels.stream()
+//                .filter(Objects::nonNull)
+//                .map(bondModel -> CompletableFuture.runAsync(() ->
+//                        bondModel.setCoupon(tinkoffCouponDispatcher.getCoupons(bondModel)), couponExecutorService))
+//                .toList();
+//
+//        CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
+//    }
+//
+//    public CouponModel dispatchCoupon(final BondModel bondModel) {
+//        if (!needTryFetchFromDatabase(bondModel)) {
+//            return fetchCouponsFromTinkoffApi(bondModel);
+//        }
+//
+//        return Optional.ofNullable(fetchCouponsFromDatabase(bondModel.getUid()))
+//                .filter(databaseCoupon -> CollectionUtils.isNotEmpty(databaseCoupon.getCouponData()))
+//                .orElseGet(() -> fetchCouponsFromTinkoffApi(bondModel));
+//    }
+//
+//    private CouponModel fetchCouponsFromDatabase(final String uid) {
+//        return tinkoffCouponRepositoryUseCase.getCouponByUid(uid);
+//    }
+//
+//    private CouponModel fetchCouponsFromTinkoffApi(final BondModel bondModel) {
+//        return tinkoffCouponProvider.getCoupon(bondModel);
+//    }
+//
+//    private boolean needTryFetchFromDatabase(final BondModel bondModel) {
+//        return Optional.ofNullable(bondModel.getCoupon())
+//                .map(CouponModel::getIsFixed)
+//                .orElse(false);
+//    }
 }

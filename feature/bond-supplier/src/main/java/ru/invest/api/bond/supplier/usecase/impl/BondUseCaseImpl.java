@@ -1,7 +1,7 @@
 package ru.invest.api.bond.supplier.usecase.impl;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import ru.invest.api.bond.supplier.usecase.BondUseCase;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.parameters.BondParametersModel;

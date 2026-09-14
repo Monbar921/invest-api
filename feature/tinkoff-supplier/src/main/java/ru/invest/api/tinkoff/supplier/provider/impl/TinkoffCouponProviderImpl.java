@@ -47,7 +47,7 @@ public class TinkoffCouponProviderImpl implements TinkoffCouponProvider {
         return response.getEventsList()
                 .stream()
                 .filter(Objects::nonNull)
-                .map(coupon -> tinkoffCouponApiMapper.toCouponDataModel(coupon, ticker, audit))
+                .map(coupon -> tinkoffCouponApiMapper.toCouponDataModel(coupon, ticker, uid, audit))
                 .toList();
     }
 }

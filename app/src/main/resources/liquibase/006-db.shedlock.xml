@@ -4,7 +4,7 @@
         xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.1.xsd">
 
-    <changeSet id="SMI-11444-scheduler-lock" author="d.kornilovich">
+    <changeSet id="create-scheduler-lock" author="d.kornilovich">
         <preConditions onFail="MARK_RAN">
             <not>
                 <tableExists tableName="shedlock"/>

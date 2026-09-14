@@ -12,8 +12,9 @@ public interface TinkoffCouponApiMapper {
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "ticker", source = "ticker")
-    @Mapping(target = "fetchedAudit", source = "audit")
+    @Mapping(target = "uid", source = "uid")
+    @Mapping(target = "logged", source = "logged")
     @Mapping(target = "price", source = "coupon.payOneBond")
     @Mapping(target = "paymentDate", source = "coupon.couponDate")
-    CouponDataModel toCouponDataModel(Coupon coupon, String ticker, AuditModel audit);
+    CouponDataModel toCouponDataModel(Coupon coupon, String ticker, String uid, AuditModel logged);
 }
