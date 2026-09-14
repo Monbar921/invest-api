@@ -5,6 +5,10 @@ invest:
   enabled: true
   connector:
     token: {TOKEN}
+  rate-limiter:
+    requests-per-second: 10
+    requests-per-minute: 200
+    timeout-ms: 30000
 
 ru:
   invest:
@@ -14,10 +18,11 @@ ru:
           scheduler:
             bond:
               enabled: false
-              cron: "0 0 0 * * ?"
+              cron: "0 0 3 * * *"
             coupon:
               enabled: false
-              cron: "0 0 0 * * ?"
+              cron: "0 30 3 * * *"
+
 spring:
   cache:
     type: caffeine
@@ -28,8 +33,6 @@ spring:
           enabled: true
       client:
         config:
-          invest-api-client:
-            url: http://localhost:8099
           cb-rf-client:
             enabled: true
             url: https://www.cbr.ru/
@@ -39,7 +42,7 @@ spring:
   datasource:
     hikari:
       connection-test-query: select 1
-      connection-init-sql: SET search_path TO public
+      connection-init-sql: SET search_path TO invest_api_test
       connection-timeout: 30000
       driver-class-name: org.postgresql.Driver
       idle-timeout: 30000
@@ -49,12 +52,27 @@ spring:
       pool-name: postgres
       password: password
       jdbc-url: jdbc:postgresql://localhost:5432/postgres
-      username: username
+      username: postgres
   liquibase:
     change-log: classpath:liquibase/db.changelog-master.xml
     parameters:
       appUsername: ${spring.datasource.hikari.username}
-      schema: public
-      sql_schema: public
+      schema: invest_api_test
+      sql_schema: invest_api_test
     enabled: true
-    default-schema: public
+    default-schema: invest_api_test
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html

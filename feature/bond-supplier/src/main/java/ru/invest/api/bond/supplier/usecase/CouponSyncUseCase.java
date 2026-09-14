@@ -1,4 +1,4 @@
-package ru.invest.api.common.usecase;
+package ru.invest.api.bond.supplier.usecase;
 
 public interface CouponSyncUseCase {
     void syncAll();
