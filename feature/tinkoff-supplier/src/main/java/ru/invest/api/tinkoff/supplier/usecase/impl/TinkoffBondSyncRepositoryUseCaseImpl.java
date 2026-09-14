@@ -3,10 +3,10 @@ package ru.invest.api.tinkoff.supplier.usecase.impl;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
-import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.invest.api.common.entity.Bond;
+import ru.invest.api.common.model.AuditModel;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.repository.BondRepository;
 import ru.invest.api.tinkoff.supplier.mapper.TinkoffBondEntityMapper;
@@ -26,7 +26,7 @@ public class TinkoffBondSyncRepositoryUseCaseImpl implements TinkoffBondSyncRepo
 
     @Override
     @Transactional
-    public void sync(final Map<String, BondModel> tinkoffBonds) {
+    public void sync(final Map<String, BondModel> tinkoffBonds, final AuditModel audit) {
         if (MapUtils.isEmpty(tinkoffBonds)) {
             return;
         }

@@ -1,4 +1,4 @@
-package ru.invest.api.tinkoff.supplier.usecase;
+package ru.invest.api.common.usecase;
 
 import ru.invest.api.common.model.AuditModel;
 

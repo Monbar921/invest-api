@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.apache.commons.collections4.MapUtils;
 import org.springframework.stereotype.Service;
 import ru.invest.api.common.annotation.Active;
+import ru.invest.api.common.model.AuditModel;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.usecase.BondSyncUseCase;
 import ru.invest.api.tinkoff.supplier.provider.TinkoffBondProvider;
@@ -19,13 +20,13 @@ public class TinkoffBondSyncUseCaseImpl implements BondSyncUseCase {
     private final TinkoffBondSyncRepositoryUseCase tinkoffBondSyncRepositoryUseCase;
 
     @Override
-    public void syncAll() {
+    public void syncAll(final AuditModel audit) {
         final Map<String, BondModel> tinkoffBonds = tinkoffBondProvider.getAllBonds();
 
         if (MapUtils.isEmpty(tinkoffBonds)) {
             return;
         }
 
-        tinkoffBondSyncRepositoryUseCase.sync(tinkoffBonds);
+        tinkoffBondSyncRepositoryUseCase.sync(tinkoffBonds, audit);
     }
 }

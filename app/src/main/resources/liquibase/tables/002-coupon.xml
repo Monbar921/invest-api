@@ -44,15 +44,13 @@
 
     <changeSet id="INVEST-001-create-coupon-indexes" author="d.v.kornilovich">
         <preConditions onFail="MARK_RAN">
-            <and>
-                <not>
-                    <indexExists tableName="coupon" indexName="coupon_bond_id_uq_idx"/>
-                </not>
-            </and>
+            <not>
+                <indexExists tableName="coupon" indexName="coupon_bond_id_uq_idx"/>
+            </not>
         </preConditions>
 
         <createIndex tableName="coupon" indexName="coupon_bond_id_uq_idx" unique="true">
-            <column>bond_id</column>
+            <column name="bond_id"/>
         </createIndex>
     </changeSet>
 </databaseChangeLog>

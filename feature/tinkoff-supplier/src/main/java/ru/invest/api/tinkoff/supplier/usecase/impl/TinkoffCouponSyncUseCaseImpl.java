@@ -11,8 +11,8 @@ import ru.invest.api.common.annotation.Active;
 import ru.invest.api.common.model.AuditModel;
 import ru.invest.api.common.model.CouponDataModel;
 import ru.invest.api.common.model.ShortProductModel;
+import ru.invest.api.common.usecase.CouponSyncUseCase;
 import ru.invest.api.tinkoff.supplier.provider.TinkoffCouponProvider;
-import ru.invest.api.tinkoff.supplier.usecase.CouponSyncUseCase;
 import ru.invest.api.tinkoff.supplier.usecase.GetNeedToUpdateCouponsUseCase;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffCouponRepositoryUseCase;
 

@@ -1,19 +1,24 @@
 package ru.invest.api;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.SneakyThrows;
 import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.util.TestPropertyValues;
 import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.testcontainers.containers.Network;
 import org.testcontainers.postgresql.PostgreSQLContainer;
+import ru.invest.api.budget.org.supplier.client.feign.BudgetOrgClient;
+import ru.invest.api.cb.rf.supplier.client.feign.CbRfClient;
 import ru.invest.api.config.InvestApiTestConfiguration;
+import ru.tinkoff.piapi.contract.v1.InstrumentsServiceGrpc;
+import ru.tinkoff.piapi.contract.v1.MarketDataServiceGrpc;
+import tools.jackson.databind.ObjectMapper;
 
 import java.nio.charset.StandardCharsets;
 
@@ -24,9 +29,17 @@ import java.nio.charset.StandardCharsets;
 public abstract class AbstractInvestApplicationTest {
     @Autowired
     private ObjectMapper objectMapper;
+    @MockitoBean
+    private BudgetOrgClient budgetOrgClient;
+    @MockitoBean
+    private CbRfClient cbRfClient;
+    @MockitoBean
+    private InstrumentsServiceGrpc.InstrumentsServiceBlockingStub instrumentsServiceBlockingStub;
+    @MockitoBean
+    private MarketDataServiceGrpc.MarketDataServiceBlockingStub marketDataServiceBlockingStub;
 
     public static final PostgreSQLContainer postgreSQLContainer = new PostgreSQLContainer("postgres:17.6")
-            .withDatabaseName("hotels")
+            .withDatabaseName("invest")
             .withUsername("sa")
             .withPassword("sa")
             .withNetwork(Network.SHARED)

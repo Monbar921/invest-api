@@ -49,24 +49,4 @@
             <column name="updated_by" type="varchar(200)"/>
         </createTable>
     </changeSet>
-
-    <changeSet id="INVEST-001-create-bond-indexes" author="d.v.kornilovich">
-        <preConditions onFail="MARK_RAN">
-            <and>
-                <not>
-                    <indexExists tableName="bond" indexName="bond_uid_uq_idx"/>
-                </not>
-                <not>
-                    <indexExists tableName="bond" indexName="bond_ticker_uq_idx"/>
-                </not>
-            </and>
-        </preConditions>
-
-        <createIndex tableName="bond" indexName="bond_uid_uq_idx" unique="true">
-            <column>uid</column>
-        </createIndex>
-        <createIndex tableName="bond" indexName="bond_ticker_uq_idx" unique="true">
-            <column>ticker</column>
-        </createIndex>
-    </changeSet>
 </databaseChangeLog>

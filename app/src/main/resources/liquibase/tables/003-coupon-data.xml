@@ -20,8 +20,11 @@
             <column name="coupon_id" type="bigint">
                 <constraints nullable="false" foreignKeyName="fk_coupon_data_coupon_id" references="coupon(id)"/>
             </column>
+            <column name="uid" type="text">
+                <constraints nullable="false" unique="true"/>
+            </column>
             <column name="ticker" type="text">
-                <constraints nullable="false"/>
+                <constraints nullable="false" unique="true"/>
             </column>
             <column name="price" type="numeric(10,2)">
                 <constraints nullable="false"/>
@@ -44,21 +47,13 @@
 
     <changeSet id="INVEST-001-create-coupon-data-indexes" author="d.v.kornilovich">
         <preConditions onFail="MARK_RAN">
-            <and>
-                <not>
-                    <indexExists tableName="coupon_data" indexName="coupon_data_coupon_id_idx"/>
-                </not>
-                <not>
-                    <indexExists tableName="coupon_data" indexName="coupon_data_ticker_uq_idx"/>
-                </not>
-            </and>
+            <not>
+                <indexExists tableName="coupon_data" indexName="coupon_data_coupon_id_idx"/>
+            </not>
         </preConditions>
 
         <createIndex tableName="coupon_data" indexName="coupon_data_coupon_id_idx">
-            <column>coupon_id</column>
-        </createIndex>
-        <createIndex tableName="coupon_data" indexName="coupon_data_ticker_uq_idx" unique="true">
-            <column>ticker</column>
+            <column name="coupon_id"/>
         </createIndex>
     </changeSet>
 </databaseChangeLog>
