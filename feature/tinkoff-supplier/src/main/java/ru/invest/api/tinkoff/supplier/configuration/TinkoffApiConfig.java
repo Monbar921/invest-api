@@ -7,7 +7,6 @@ import org.springframework.context.annotation.Configuration;
 import ru.tinkoff.piapi.contract.v1.InstrumentsServiceGrpc;
 import ru.tinkoff.piapi.contract.v1.MarketDataServiceGrpc;
 import ru.ttech.piapi.core.connector.ServiceStubFactory;
-import ru.ttech.piapi.core.connector.SyncStubWrapper;
 
 @Configuration
 @Slf4j
