@@ -1,7 +1,7 @@
 invest:
   enabled: true
   connector:
-    token: {TOKEN}
+    token: ${TOKEN}
   rate-limiter:
     requests-per-second: 10
     requests-per-minute: 200
@@ -14,10 +14,10 @@ ru:
         supplier:
           scheduler:
             bond:
-              enabled: true
+              enabled: false
               cron: "0 0 3 * * *"
             coupon:
-              enabled: true
+              enabled: false
               cron: "0 30 3 * * *"
 
 spring:

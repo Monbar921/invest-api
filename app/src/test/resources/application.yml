@@ -4,7 +4,7 @@ server:
 invest:
   enabled: false
   connector:
-    token: {TOKEN}
+    token: TOKEN
 
 ru:
   invest:
