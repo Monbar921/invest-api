@@ -6,32 +6,23 @@ import org.mapstruct.Named;
 import ru.invest.api.common.mapper.DateTimeMapper;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.CouponModel;
-import ru.invest.api.common.model.PriceModel;
 import ru.tinkoff.piapi.contract.v1.Bond;
 
 @Mapper(uses = {TinkoffPriceApiMapper.class, DateTimeMapper.class})
 public interface TinkoffBondApiMapper {
 
-    @Mapping(target = "price", source = "price")
-    @Mapping(target = "ticker", source = "bond.ticker")
-    @Mapping(target = "uid", source = "bond.uid")
-    @Mapping(target = "isin", source = "bond.isin")
-    @Mapping(target = "name", source = "bond.name")
-    @Mapping(target = "sector", source = "bond.sector")
-    @Mapping(target = "riskLevel", source = "bond.riskLevel")
+    @Mapping(target = "updated", ignore = true)
+    @Mapping(target = "logged", ignore = true)
+    @Mapping(target = "created", ignore = true)
+    @Mapping(target = "ticker", source = "ticker")
+    @Mapping(target = "uid", source = "uid")
+    @Mapping(target = "isin", source = "isin")
+    @Mapping(target = "name", source = "name")
+    @Mapping(target = "sector", source = "sector")
+    @Mapping(target = "riskLevel", source = "riskLevel")
     @Mapping(target = "coupon", source = "bond", qualifiedByName = "toInitialCoupon")
-    @Mapping(target = "maturityDate", source = "bond.maturityDate")
-    BondModel toModel(Bond bond, PriceModel price);
-
-    @Mapping(target = "price", ignore = true)
-    @Mapping(target = "ticker", source = "bond.ticker")
-    @Mapping(target = "uid", source = "bond.uid")
-    @Mapping(target = "isin", source = "bond.isin")
-    @Mapping(target = "name", source = "bond.name")
-    @Mapping(target = "sector", source = "bond.sector")
-    @Mapping(target = "riskLevel", source = "bond.riskLevel")
-    @Mapping(target = "coupon", source = "bond", qualifiedByName = "toInitialCoupon")
-    @Mapping(target = "maturityDate", source = "bond.maturityDate")
+    @Mapping(target = "maturityDate", source = "maturityDate")
+    @Mapping(target = "price", source = "nominal")
     BondModel toModel(Bond bond);
 
     @Named("toInitialCoupon")

@@ -31,9 +31,9 @@ import java.util.stream.Collectors;
 public abstract class TinkoffCouponMapper {
     private static final String BOND_NOT_FOUND_MESSAGE = "Bond not found for ticker %s";
 
-    @Setter
+    @Setter(onMethod_ = @Autowired)
     private AuditMapper auditMapper;
-    @Setter
+    @Setter(onMethod_ = @Autowired)
     private TinkoffCouponDataMapper tinkoffCouponDataMapper;
     @Setter(onMethod_ = @Autowired)
     private CouponRepository couponRepository;

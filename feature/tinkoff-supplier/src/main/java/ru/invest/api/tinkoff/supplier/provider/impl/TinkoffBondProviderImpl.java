@@ -1,6 +1,7 @@
 package ru.invest.api.tinkoff.supplier.provider.impl;
 
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import ru.invest.api.common.model.BondModel;
@@ -12,9 +13,11 @@ import ru.tinkoff.piapi.contract.v1.BondsResponse;
 import ru.tinkoff.piapi.contract.v1.InstrumentStatus;
 import ru.tinkoff.piapi.contract.v1.InstrumentsRequest;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static ru.invest.api.common.constants.CacheConstants.BOND_TINKOFF_API_CACHE_MANAGER;
@@ -30,7 +33,11 @@ public class TinkoffBondProviderImpl implements TinkoffBondProvider {
     @Override
     @Cacheable(cacheNames = BOND_TINKOFF_API_CACHE_NAME, cacheManager = BOND_TINKOFF_API_CACHE_MANAGER)
     public Map<String, BondModel> getAllBonds() {
-        return getAllBondsDto()
+        final List<Bond> originalBonds = getAllBondsDto();
+        final List<Bond> filterByUidBonds = filterDuplicates(originalBonds, Bond::getUid);
+        final List<Bond> filterByTickerBonds = filterDuplicates(filterByUidBonds, Bond::getTicker);
+
+        return filterByTickerBonds
                 .stream()
                 .filter(Objects::nonNull)
                 .collect(Collectors.toMap(Bond::getUid, tinkoffBondApiMapper::toModel));
@@ -45,5 +52,22 @@ public class TinkoffBondProviderImpl implements TinkoffBondProvider {
                 .bonds(bondsRequest);
 
         return response.getInstrumentsList();
+    }
+
+    private <T> List<Bond> filterDuplicates(final List<Bond> bonds, final Function<Bond, T> duplicateFieldGetter) {
+        if (CollectionUtils.isEmpty(bonds)) {
+            return Collections.emptyList();
+        }
+
+        return bonds
+                .stream()
+                .filter(Objects::nonNull)
+                .collect(Collectors.toMap(
+                        duplicateFieldGetter,      // ключ
+                        p -> p,             // значение
+                        (first, second) -> first
+                ))
+                .values().stream()
+                .toList();
     }
 }

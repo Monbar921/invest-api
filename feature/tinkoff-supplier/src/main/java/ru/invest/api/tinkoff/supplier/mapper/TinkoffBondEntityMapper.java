@@ -38,7 +38,7 @@ public abstract class TinkoffBondEntityMapper {
     @Mapping(target = "sector", source = "bondModel.sector")
     @Mapping(target = "riskLevel", source = "bondModel.riskLevel")
     @Mapping(target = "maturityDate", source = "bondModel.maturityDate")
-    @Mapping(target = "currency", source = "bondModel.price.current.currency")
+    @Mapping(target = "currency", source = "bondModel.currency")
     @Mapping(target = "nominalCurrency", source = "bondModel.price.nominal.currency")
     @Mapping(target = "nominalPrice", source = "bondModel.price.nominal.quantity")
     public abstract Bond toEntity(BondModel bondModel, Bond existing);

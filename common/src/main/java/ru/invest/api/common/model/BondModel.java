@@ -16,6 +16,7 @@ public class BondModel {
     private String isin;
     private String name;
     private String sector;
+    private String currency;
     private PriceModel price;
     private CouponModel coupon;
     private RiskLevel riskLevel;

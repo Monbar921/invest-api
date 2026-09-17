@@ -61,6 +61,7 @@ public class TinkoffBondSyncRepositoryUseCaseImpl implements TinkoffBondSyncRepo
             existingBonds.addAll(toSave);
         }
 
+
         bondRepository.saveAll(existingBonds);
     }
 }
