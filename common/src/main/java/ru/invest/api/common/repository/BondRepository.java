@@ -23,4 +23,6 @@ public interface BondRepository extends JpaRepository<Bond, Long> {
     List<Bond> findByUidIn(Set<String> tickers);
 
     Optional<Bond> findByUid(String uid);
+
+    Optional<Bond> findByTicker(String ticker);
 }

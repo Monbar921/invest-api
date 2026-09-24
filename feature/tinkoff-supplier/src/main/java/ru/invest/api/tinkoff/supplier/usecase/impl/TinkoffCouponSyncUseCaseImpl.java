@@ -8,9 +8,13 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import ru.invest.api.common.annotation.Active;
+import ru.invest.api.common.entity.Bond;
+import ru.invest.api.common.exception.GeneralNotFoundEntityException;
+import ru.invest.api.common.exception.enums.ExceptionErrorCode;
 import ru.invest.api.common.model.AuditModel;
 import ru.invest.api.common.model.CouponDataModel;
 import ru.invest.api.common.model.ShortProductModel;
+import ru.invest.api.common.repository.BondRepository;
 import ru.invest.api.common.usecase.CouponSyncUseCase;
 import ru.invest.api.tinkoff.supplier.provider.TinkoffCouponProvider;
 import ru.invest.api.tinkoff.supplier.usecase.GetNeedToUpdateCouponsUseCase;
@@ -33,36 +37,51 @@ import static ru.invest.api.tinkoff.supplier.constants.Constants.COUPON_EXECUTOR
 @Active
 public class TinkoffCouponSyncUseCaseImpl implements CouponSyncUseCase {
     private static final int BATCH_SIZE = 100;
+    private static final String BOND_NOT_FOUND_MESSAGE = "Bond not found for ticker %s";
 
     private final TinkoffCouponProvider tinkoffCouponProvider;
     private final TinkoffCouponRepositoryUseCase tinkoffCouponRepositoryUseCase;
     private final GetNeedToUpdateCouponsUseCase getNeedToUpdateCouponsUseCase;
+    private final BondRepository bondRepository;
 
     @Qualifier(COUPON_EXECUTOR_SERVICE)
     private final ExecutorService couponExecutorService;
 
     @Override
     public void syncAll(final AuditModel audit) {
-        final List<ShortProductModel> uidTickers = getNeedToUpdateCouponsUseCase.getUidTickersToUpdate();
+        syncCoupons(getNeedToUpdateCouponsUseCase.getUidTickersToUpdate(), audit);
+    }
 
+    @Override
+    public void syncByTicker(final String ticker, final AuditModel audit) {
+        final Bond bond = bondRepository.findByTicker(ticker)
+                .orElseThrow(() -> new GeneralNotFoundEntityException(
+                        ExceptionErrorCode.BOND_NOT_FOUND, BOND_NOT_FOUND_MESSAGE.formatted(ticker)));
+
+        final ShortProductModel shortProductModel = new ShortProductModel().setUid(bond.getUid()).setTicker(bond.getTicker());
+        syncCoupons(List.of(shortProductModel), audit);
+    }
+
+    private void syncCoupons(final List<ShortProductModel> uidTickers, final AuditModel audit) {
         if (CollectionUtils.isEmpty(uidTickers)) {
             return;
         }
 
-        final Iterator<ShortProductModel> uidTickerIterator = uidTickers.stream()
+        final List<ShortProductModel> validUidTickers = uidTickers.stream()
                 .filter(Objects::nonNull)
                 .filter(uidTicker -> StringUtils.isNotBlank(uidTicker.getTicker()))
                 .filter(uidTicker -> StringUtils.isNotBlank(uidTicker.getUid()))
-                .iterator();
+                .toList();
 
-        final Map<String, List<CouponDataModel>> couponBatch = new HashMap<>(BATCH_SIZE);
+        if (CollectionUtils.isEmpty(validUidTickers)) {
+            return;
+        }
 
-        final Map<String, String> uidTickerMap = uidTickers
-                .stream()
-                .filter(Objects::nonNull)
-                .filter(uidTicker -> StringUtils.isNotBlank(uidTicker.getTicker()))
-                .filter(uidTicker -> StringUtils.isNotBlank(uidTicker.getUid()))
+        final Map<String, String> uidTickerMap = validUidTickers.stream()
                 .collect(Collectors.toMap(ShortProductModel::getUid, ShortProductModel::getTicker));
+
+        final Iterator<ShortProductModel> uidTickerIterator = validUidTickers.iterator();
+        final Map<String, List<CouponDataModel>> couponBatch = new HashMap<>(BATCH_SIZE);
 
         while (uidTickerIterator.hasNext()) {
             final ShortProductModel uidTicker = uidTickerIterator.next();

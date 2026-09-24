@@ -6,7 +6,7 @@
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
             http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.4.xsd">
 
-    <changeSet id="INVEST-001-create-bond-coupon-data-table" author="d.v.kornilovich">
+    <changeSet id="INVEST-001-create-coupon-data-table" author="d.v.kornilovich">
         <preConditions onFail="MARK_RAN">
             <not>
                 <tableExists tableName="coupon_data"/>
@@ -21,10 +21,10 @@
                 <constraints nullable="false" foreignKeyName="fk_coupon_data_coupon_id" references="coupon(id)"/>
             </column>
             <column name="uid" type="text">
-                <constraints nullable="false" unique="true"/>
+                <constraints nullable="false"/>
             </column>
             <column name="ticker" type="text">
-                <constraints nullable="false" unique="true"/>
+                <constraints nullable="false"/>
             </column>
             <column name="price" type="numeric(19,2)">
                 <constraints nullable="false"/>
