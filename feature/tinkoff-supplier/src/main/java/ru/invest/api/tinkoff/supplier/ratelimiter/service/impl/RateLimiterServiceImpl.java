@@ -61,7 +61,7 @@ public class RateLimiterServiceImpl implements RateLimiterService {
             lock.lock();
             try {
                 int requests = secondWindowCounter.getAndSet(DEFAULT_VALUE);
-                log.info("Rate limit - last second: {} requests", requests);
+                log.debug("Rate limit - last second: {} requests", requests);
                 notLimited.signalAll();
             } finally {
                 lock.unlock();
@@ -73,7 +73,7 @@ public class RateLimiterServiceImpl implements RateLimiterService {
             lock.lock();
             try {
                 int requests = minuteWindowCounter.getAndSet(DEFAULT_VALUE);
-                log.info("Rate limit - last minute: {} requests", requests);
+                log.debug("Rate limit - last minute: {} requests", requests);
                 notLimited.signalAll();
             } finally {
                 lock.unlock();

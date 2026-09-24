@@ -26,7 +26,7 @@
             <column name="ticker" type="text">
                 <constraints nullable="false" unique="true"/>
             </column>
-            <column name="price" type="numeric(10,2)">
+            <column name="price" type="numeric(19,2)">
                 <constraints nullable="false"/>
             </column>
             <column name="currency" type="varchar2(3)">

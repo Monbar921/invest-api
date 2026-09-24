@@ -32,7 +32,7 @@
             <column name="sector" type="varchar2(100)">
                 <constraints nullable="false"/>
             </column>
-            <column name="nominal_price" type="numeric(10,2)">
+            <column name="nominal_price" type="numeric(19,2)">
                 <constraints nullable="false"/>
             </column>
             <column name="nominal_currency" type="varchar2(3)">

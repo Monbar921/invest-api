@@ -1,6 +1,7 @@
 package ru.invest.api.common.entity;
 
 import jakarta.persistence.AttributeOverride;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
@@ -33,7 +34,7 @@ public class Bond {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne(mappedBy = "bond")
+    @OneToOne(mappedBy = "bond", cascade = CascadeType.ALL, orphanRemoval = true)
     private Coupon coupon;
 
     @Column(name = "ticker")

@@ -32,9 +32,7 @@
             <column name="is_fixed_coupon" type="boolean">
                 <constraints nullable="false"/>
             </column>
-            <column name="interest" type="numeric(10,2)">
-                <constraints nullable="false"/>
-            </column>
+            <column name="interest" type="numeric(19,2)"/>
             <column name="created_at" type="timestamp"/>
             <column name="created_by" type="varchar(200)"/>
             <column name="updated_at" type="timestamp"/>

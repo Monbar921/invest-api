@@ -1,6 +1,7 @@
 package ru.invest.api.common.entity;
 
 import jakarta.persistence.AttributeOverride;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
@@ -26,7 +27,7 @@ import java.util.List;
 @Setter
 @Entity
 @Accessors(chain = true)
-@Table(name = "bond")
+@Table(name = "coupon")
 public class Coupon {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -45,13 +46,13 @@ public class Coupon {
     @Column(name = "quantity_per_year")
     private Integer quantityPerYear;
 
-    @Column(name = "is_fixed")
+    @Column(name = "is_fixed_coupon")
     private Boolean isFixed;
 
-    @Column(name = "current_interest")
+    @Column(name = "interest")
     private BigDecimal interest;
 
-    @OneToMany(mappedBy = "coupon")
+    @OneToMany(mappedBy = "coupon", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CouponData> couponData;
 
     @Embedded
