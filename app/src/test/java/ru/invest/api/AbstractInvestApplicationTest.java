@@ -1,5 +1,6 @@
 package ru.invest.api;
 
+import com.google.protobuf.TextFormat;
 import lombok.SneakyThrows;
 import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,9 +17,10 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 import ru.invest.api.budget.org.supplier.client.feign.BudgetOrgClient;
 import ru.invest.api.cb.rf.supplier.client.feign.CbRfClient;
 import ru.invest.api.config.InvestApiTestConfiguration;
+import ru.tinkoff.piapi.contract.v1.BondsResponse;
 import ru.tinkoff.piapi.contract.v1.InstrumentsServiceGrpc;
 import ru.tinkoff.piapi.contract.v1.MarketDataServiceGrpc;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.nio.charset.StandardCharsets;
 
@@ -28,7 +30,7 @@ import java.nio.charset.StandardCharsets;
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 public abstract class AbstractInvestApplicationTest {
     @Autowired
-    private ObjectMapper objectMapper;
+    private JsonMapper jsonMapper;
     @MockitoBean
     private BudgetOrgClient budgetOrgClient;
     @MockitoBean
@@ -65,6 +67,17 @@ public abstract class AbstractInvestApplicationTest {
 
     @SneakyThrows
     protected <T> T readObjectFromFile(final String json, final Class<T> clazz) {
-        return objectMapper.readValue(IOUtils.resourceToString(json, StandardCharsets.UTF_8), clazz);
+        return jsonMapper.readValue(IOUtils.resourceToString(json, StandardCharsets.UTF_8), clazz);
+    }
+
+    @SneakyThrows
+    protected BondsResponse loadFixture() {
+        final String text = IOUtils.resourceToString("/fixtures/bonds-response.pbtxt", StandardCharsets.UTF_8);
+        final BondsResponse.Builder builder = BondsResponse.newBuilder();
+        TextFormat.Parser.newBuilder()
+                .setAllowUnknownFields(true)
+                .build()
+                .merge(text, builder);
+        return builder.build();
     }
 }

@@ -1,6 +1,7 @@
 package ru.invest.api.tinkoff.supplier.provider.impl;
 
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -13,6 +14,8 @@ import ru.tinkoff.piapi.contract.v1.BondsResponse;
 import ru.tinkoff.piapi.contract.v1.InstrumentStatus;
 import ru.tinkoff.piapi.contract.v1.InstrumentsRequest;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -33,11 +36,11 @@ public class TinkoffBondProviderImpl implements TinkoffBondProvider {
     @Override
     @Cacheable(cacheNames = BOND_TINKOFF_API_CACHE_NAME, cacheManager = BOND_TINKOFF_API_CACHE_MANAGER)
     public Map<String, BondModel> getAllBonds() {
-        final List<Bond> originalBonds = getAllBondsDto();
-        final List<Bond> filterByUidBonds = filterDuplicates(originalBonds, Bond::getUid);
-        final List<Bond> filterByTickerBonds = filterDuplicates(filterByUidBonds, Bond::getTicker);
+        final List<Bond> filteredBonds = filterDuplicates(
+                filterDuplicates(getAllBondsDto(), Bond::getUid), Bond::getTicker
+        );
 
-        return filterByTickerBonds
+        return filteredBonds
                 .stream()
                 .filter(Objects::nonNull)
                 .collect(Collectors.toMap(Bond::getUid, tinkoffBondApiMapper::toModel));
@@ -52,6 +55,18 @@ public class TinkoffBondProviderImpl implements TinkoffBondProvider {
                 .bonds(bondsRequest);
 
         return response.getInstrumentsList();
+    }
+
+    @SneakyThrows
+    private void dumpFixture(final List<Bond> originalBonds)  {
+        final BondsResponse response = BondsResponse.newBuilder()
+                .addAllInstruments(originalBonds.stream().limit(20).toList())
+                .build();
+
+        Files.writeString(
+                Path.of("app/src/test/resources/fixtures/bonds-response.pbtxt"),
+                com.google.protobuf.TextFormat.printer().printToString(response)
+        );
     }
 
     private <T> List<Bond> filterDuplicates(final List<Bond> bonds, final Function<Bond, T> duplicateFieldGetter) {

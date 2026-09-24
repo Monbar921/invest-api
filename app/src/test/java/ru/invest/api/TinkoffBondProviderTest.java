@@ -2,28 +2,30 @@ package ru.invest.api;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import ru.invest.api.bond.supplier.usecase.BondUseCase;
-import ru.invest.api.common.mapper.AuditMapper;
+import ru.invest.api.common.model.BondModel;
+import ru.invest.api.tinkoff.supplier.provider.TinkoffBondProvider;
 import ru.tinkoff.piapi.contract.v1.InstrumentsServiceGrpc;
 
+import java.util.Map;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
-import static ru.invest.api.common.constants.SchedulerConstants.SCHEDULER_PROCESS;
 
-public class BondSyncTest extends AbstractInvestApplicationTest {
+public class TinkoffBondProviderTest extends AbstractInvestApplicationTest {
+
     @Autowired
-    private BondUseCase bondUseCase;
-    @Autowired
-    private AuditMapper auditMapper;
+    private TinkoffBondProvider tinkoffBondProvider;
     @Autowired
     private InstrumentsServiceGrpc.InstrumentsServiceBlockingStub instrumentsServiceBlockingStub;
 
     @Test
-    public void syncAllBondsTest() {
+    public void getAllBonds_mapsRealFixture() {
         when(instrumentsServiceBlockingStub.bonds(any()))
                 .thenReturn(loadFixture());
 
-        bondUseCase.syncAll(auditMapper.toCurrentAuditModel(SCHEDULER_PROCESS));
-    }
+        final Map<String, BondModel> bonds = tinkoffBondProvider.getAllBonds();
 
+        assertThat(bonds).isNotEmpty();
+    }
 }

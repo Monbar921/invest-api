@@ -1,0 +1,1493 @@
+instruments {
+  figi: "TCS00A10EQ34"
+  ticker: "RU000A10EQ34"
+  class_code: "TQCB"
+  isin: "RU000A10EQ34"
+  lot: 1
+  currency: "rub"
+  name: "\320\220\320\262\321\202\320\276 \320\244\320\270\320\275\320\260\320\275\321\201 \320\221\320\260\320\275\320\272 \320\221\320\236-001\320\240-18"
+  exchange: "moex_weekend_plus_bonds"
+  coupon_quantity_per_year: 12
+  maturity_date {
+    seconds: 1868140800
+  }
+  nominal {
+    currency: "rub"
+    units: 1000
+  }
+  initial_nominal {
+    currency: "rub"
+    units: 1000
+  }
+  state_reg_date {
+    seconds: 1774310400
+  }
+  placement_date {
+    seconds: 1774828800
+  }
+  placement_price {
+  }
+  aci_value {
+    currency: "rub"
+    units: 11
+    nano: 720000000
+  }
+  country_of_risk: "RU"
+  country_of_risk_name: "\320\240\320\276\321\201\321\201\320\270\320\271\321\201\320\272\320\260\321\217 \320\244\320\265\320\264\320\265\321\200\320\260\321\206\320\270\321\217"
+  sector: "financial"
+  issue_kind: "non_documentary"
+  issue_size: 7000000
+  issue_size_plan: 7000000
+  trading_status: SECURITY_TRADING_STATUS_NORMAL_TRADING
+  buy_available_flag: true
+  sell_available_flag: true
+  min_price_increment {
+    nano: 10000000
+  }
+  api_trade_available_flag: true
+  uid: "ddf7148f-5261-4eb9-994f-d7afc5cf9849"
+  real_exchange: REAL_EXCHANGE_MOEX
+  position_uid: "4727733c-efbf-44ef-a445-f71a1697f470"
+  asset_uid: "fdc539fe-ccaf-46ed-ba78-ef19c53903cb"
+  for_iis_flag: true
+  liquidity_flag: true
+  first_1min_candle_date {
+    seconds: 1774873800
+  }
+  first_1day_candle_date {
+    seconds: 1774828800
+  }
+  risk_level: RISK_LEVEL_LOW
+  brand {
+    logo_name: "avtofinance.png"
+    logo_base_color: "#DEE1E3"
+    text_color: "#000000"
+  }
+}
+instruments {
+  figi: "TCS00A1089K2"
+  ticker: "RU000A1089K2"
+  class_code: "TQOY"
+  isin: "RU000A1089K2"
+  lot: 1
+  currency: "cny"
+  name: "\320\240\320\243\320\241\320\220\320\233 \320\221\320\236-001P-07"
+  exchange: "moex_weekend_plus_bonds"
+  coupon_quantity_per_year: 4
+  maturity_date {
+    seconds: 1791504000
+  }
+  nominal {
+    currency: "cny"
+    units: 1000
+  }
+  initial_nominal {
+    currency: "cny"
+    units: 1000
+  }
+  state_reg_date {
+    seconds: 1712620800
+  }
+  placement_date {
+    seconds: 1712880000
+  }
+  placement_price {
+    currency: "cny"
+    units: 1000
+  }
+  aci_value {
+    currency: "cny"
+    units: 17
+    nano: 320000000
+  }
+  country_of_risk: "RU"
+  country_of_risk_name: "\320\240\320\276\321\201\321\201\320\270\320\271\321\201\320\272\320\260\321\217 \320\244\320\265\320\264\320\265\321\200\320\260\321\206\320\270\321\217"
+  sector: "materials"
+  issue_kind: "non_documentary"
+  issue_size: 900000
+  issue_size_plan: 900000
+  trading_status: SECURITY_TRADING_STATUS_NORMAL_TRADING
+  buy_available_flag: true
+  sell_available_flag: true
+  min_price_increment {
+    nano: 100000
+  }
+  api_trade_available_flag: true
+  uid: "1f92a9ba-cb73-443e-b04e-e219ca0a3788"
+  real_exchange: REAL_EXCHANGE_RTS
+  position_uid: "76a4f99f-789e-4ae8-887a-2efa01e90909"
+  asset_uid: "15f25539-ccd3-48a6-8a65-b47cd0c33343"
+  for_iis_flag: true
+  liquidity_flag: true
+  first_1min_candle_date {
+    seconds: 1712914320
+  }
+  first_1day_candle_date {
+    seconds: 1712880000
+  }
+  risk_level: RISK_LEVEL_LOW
+  brand {
+    logo_name: "RU000A0JWDN61.png"
+    logo_base_color: "#dde0e4"
+    text_color: "#000000"
+  }
+  92: {
+    1: "\320\220\320\232\320\240\320\220"
+    2: "A+"
+    3: {
+      1: 1774483200
+    }
+  }
+}
+instruments {
+  figi: "TCS00A1098F3"
+  ticker: "RU000A1098F3"
+  class_code: "TQCB"
+  isin: "RU000A1098F3"
+  lot: 1
+  currency: "rub"
+  dlong {
+    nano: 570000000
+  }
+  dlong_min {
+    nano: 500000000
+  }
+  name: "\320\220\320\244\320\232 \320\241\320\270\321\201\321\202\320\265\320\274\320\260 \320\221\320\236 001\320\240-31"
+  exchange: "moex_weekend_plus_bonds"
+  coupon_quantity_per_year: 4
+  maturity_date {
+    seconds: 1857254400
+  }
+  nominal {
+    currency: "rub"
+    units: 1000
+  }
+  initial_nominal {
+    currency: "rub"
+    units: 1000
+  }
+  state_reg_date {
+    seconds: 1722816000
+  }
+  placement_date {
+    seconds: 1723593600
+  }
+  placement_price {
+    currency: "rub"
+    units: 1000
+  }
+  aci_value {
+    currency: "rub"
+    units: 19
+    nano: 530000000
+  }
+  country_of_risk: "RU"
+  country_of_risk_name: "\320\240\320\276\321\201\321\201\320\270\320\271\321\201\320\272\320\260\321\217 \320\244\320\265\320\264\320\265\321\200\320\260\321\206\320\270\321\217"
+  sector: "financial"
+  issue_kind: "non_documentary"
+  issue_size: 11500000
+  issue_size_plan: 11500000
+  trading_status: SECURITY_TRADING_STATUS_NORMAL_TRADING
+  buy_available_flag: true
+  sell_available_flag: true
+  floating_coupon_flag: true
+  min_price_increment {
+    nano: 10000000
+  }
+  api_trade_available_flag: true
+  uid: "c0d32be3-9ab0-4ebf-8e02-703113050890"
+  real_exchange: REAL_EXCHANGE_MOEX
+  position_uid: "639b7f7f-5f2c-4c17-8ebd-07e761eaa502"
+  asset_uid: "de2abbc7-31a2-4683-906d-4ed1c2362b57"
+  for_iis_flag: true
+  for_qual_investor_flag: true
+  liquidity_flag: true
+  first_1min_candle_date {
+    seconds: 1723637280
+  }
+  first_1day_candle_date {
+    seconds: 1723593600
+  }
+  risk_level: RISK_LEVEL_LOW
+  brand {
+    logo_name: "RU000A0DQZE3.png"
+    logo_base_color: "#137baf"
+    text_color: "#ffffff"
+  }
+  dlong_client {
+    nano: 570000000
+  }
+  92: {
+    1: "\320\220\320\232\320\240\320\220"
+    2: "A+"
+    3: {
+      1: 1788220800
+    }
+  }
+}
+instruments {
+  figi: "TCS00A10C5B8"
+  ticker: "RU000A10C5B8"
+  class_code: "TQCB"
+  isin: "RU000A10C5B8"
+  lot: 1
+  currency: "rub"
+  name: "\320\224\320\265\320\275\321\203\320\274 \320\241\320\276\320\273\321\216\321\210\320\275\320\267 001\320\240-01"
+  exchange: "moex_weekend_plus_bonds"
+  coupon_quantity_per_year: 12
+  maturity_date {
+    seconds: 1846454400
+  }
+  nominal {
+    currency: "rub"
+    units: 1000
+  }
+  initial_nominal {
+    currency: "rub"
+    units: 1000
+  }
+  state_reg_date {
+    seconds: 1751500800
+  }
+  placement_date {
+    seconds: 1753142400
+  }
+  placement_price {
+    currency: "rub"
+    units: 1000
+  }
+  aci_value {
+    currency: "rub"
+    units: 7
+    nano: 400000000
+  }
+  sector: "other"
+  issue_kind: "non_documentary"
+  issue_size: 100000
+  issue_size_plan: 100000
+  trading_status: SECURITY_TRADING_STATUS_NORMAL_TRADING
+  buy_available_flag: true
+  sell_available_flag: true
+  min_price_increment {
+    nano: 10000000
+  }
+  api_trade_available_flag: true
+  uid: "53948dfd-f477-4d4e-95e8-1121acdeb772"
+  real_exchange: REAL_EXCHANGE_MOEX
+  position_uid: "6aed10d7-4f31-4773-80e8-03238842981d"
+  asset_uid: "2ec7e572-2e0d-43ae-bf98-06a720f17a8d"
+  for_iis_flag: true
+  for_qual_investor_flag: true
+  liquidity_flag: true
+  first_1min_candle_date {
+    seconds: 1753191000
+  }
+  first_1day_candle_date {
+    seconds: 1753142400
+  }
+  risk_level: RISK_LEVEL_HIGH
+  brand {
+    logo_name: "RU000A10C5B8.png"
+    logo_base_color: "#1F145D"
+    text_color: "#ffffff"
+  }
+  call_date {
+    seconds: 1799798400
+  }
+}
+instruments {
+  figi: "TCS00A10EHB3"
+  ticker: "RU000A10EHB3"
+  class_code: "TQCB"
+  isin: "RU000A10EHB3"
+  lot: 1
+  currency: "rub"
+  name: "\320\234\320\244\320\232 \320\233\320\260\320\271\320\274-\320\227\320\260\320\271\320\274 06"
+  exchange: "moex_weekend_plus_bonds"
+  coupon_quantity_per_year: 12
+  maturity_date {
+    seconds: 1928707200
+  }
+  nominal {
+    currency: "rub"
+    units: 1000
+  }
+  initial_nominal {
+    currency: "rub"
+    units: 1000
+  }
+  state_reg_date {
+    seconds: 1772668800
+  }
+  placement_date {
+    seconds: 1773187200
+  }
+  placement_price {
+  }
+  aci_value {
+    currency: "rub"
+    units: 11
+    nano: 590000000
+  }
+  country_of_risk: "RU"
+  country_of_risk_name: "\320\240\320\276\321\201\321\201\320\270\320\271\321\201\320\272\320\260\321\217 \320\244\320\265\320\264\320\265\321\200\320\260\321\206\320\270\321\217"
+  sector: "financial"
+  issue_kind: "non_documentary"
+  issue_size: 2000000
+  issue_size_plan: 2000000
+  trading_status: SECURITY_TRADING_STATUS_NORMAL_TRADING
+  buy_available_flag: true
+  sell_available_flag: true
+  amortization_flag: true
+  min_price_increment {
+    nano: 10000000
+  }
+  api_trade_available_flag: true
+  uid: "642d2fb0-a57d-4cf0-8dbf-5218dfa201e7"
+  real_exchange: REAL_EXCHANGE_MOEX
+  position_uid: "39a8530d-309c-4d25-90f5-1c767d820366"
+  asset_uid: "b6ffabf2-19fb-494f-b7d8-d0cafa5097d4"
+  for_iis_flag: true
+  for_qual_investor_flag: true
+  liquidity_flag: true
+  first_1min_candle_date {
+    seconds: 1773235800
+  }
+  first_1day_candle_date {
+    seconds: 1773187200
+  }
+  risk_level: RISK_LEVEL_HIGH
+  brand {
+    logo_name: "RU000A104AX8.png"
+    logo_base_color: "#000000"
+    text_color: "#ffffff"
+  }
+  call_date {
+    seconds: 1835395200
+  }
+}
+instruments {
+  figi: "TCS00A10DZH4"
+  ticker: "RU000A10DZH4"
+  class_code: "TQCB"
+  isin: "RU000A10DZH4"
+  lot: 1
+  currency: "rub"
+  name: "\320\220\320\237\320\240\320\230 \320\221\320\236-002\320\240-12"
+  exchange: "moex_weekend_plus_bonds"
+  coupon_quantity_per_year: 12
+  maturity_date {
+    seconds: 1875571200
+  }
+  nominal {
+    currency: "rub"
+    units: 1000
+  }
+  initial_nominal {
+    currency: "rub"
+    units: 1000
+  }
+  state_reg_date {
+    seconds: 1766448000
+  }
+  placement_date {
+    seconds: 1766707200
+  }
+  placement_price {
+  }
+  aci_value {
+    currency: "rub"
+    units: 2
+    nano: 50000000
+  }
+  country_of_risk: "RU"
+  country_of_risk_name: "\320\240\320\276\321\201\321\201\320\270\320\271\321\201\320\272\320\260\321\217 \320\244\320\265\320\264\320\265\321\200\320\260\321\206\320\270\321\217"
+  sector: "real_estate"
+  issue_kind: "non_documentary"
+  issue_size: 600000
+  issue_size_plan: 600000
+  trading_status: SECURITY_TRADING_STATUS_NORMAL_TRADING
+  buy_available_flag: true
+  sell_available_flag: true
+  amortization_flag: true
+  min_price_increment {
+    nano: 10000000
+  }
+  api_trade_available_flag: true
+  uid: "4829dd4f-6d9a-45f2-80ab-bb1f1ee1ddca"
+  real_exchange: REAL_EXCHANGE_MOEX
+  position_uid: "cb08fa8b-3eff-4172-bad0-c6dcb9c0a096"
+  asset_uid: "f52bcb8b-63e3-4c4a-b971-d0a2328c5cc1"
+  required_tests: "bond"
+  for_iis_flag: true
+  liquidity_flag: true
+  first_1min_candle_date {
+    seconds: 1766749500
+  }
+  first_1day_candle_date {
+    seconds: 1766707200
+  }
+  risk_level: RISK_LEVEL_HIGH
+  brand {
+    logo_name: "RU000A1003E6.png"
+    logo_base_color: "#010202"
+    text_color: "#ffffff"
+  }
+}
+instruments {
+  figi: "TCS00A10AUG3"
+  ticker: "RU000A10AUG3"
+  class_code: "TQCB"
+  isin: "RU000A10AUG3"
+  lot: 1
+  currency: "rub"
+  name: "\320\220\320\237\320\240\320\230 \320\221\320\236-002\320\240-07"
+  exchange: "moex_weekend_plus_bonds_dealer"
+  coupon_quantity_per_year: 12
+  maturity_date {
+    seconds: 1894838400
+  }
+  nominal {
+    currency: "rub"
+    units: 1000
+  }
+  initial_nominal {
+    currency: "rub"
+    units: 1000
+  }
+  state_reg_date {
+    seconds: 1732147200
+  }
+  placement_date {
+    seconds: 1739318400
+  }
+  placement_price {
+    currency: "rub"
+    units: 1000
+  }
+  aci_value {
+    currency: "rub"
+    units: 13
+    nano: 970000000
+  }
+  country_of_risk: "RU"
+  country_of_risk_name: "\320\240\320\276\321\201\321\201\320\270\320\271\321\201\320\272\320\260\321\217 \320\244\320\265\320\264\320\265\321\200\320\260\321\206\320\270\321\217"
+  sector: "real_estate"
+  issue_kind: "non_documentary"
+  issue_size: 305000
+  issue_size_plan: 200000
+  trading_status: SECURITY_TRADING_STATUS_NORMAL_TRADING
+  buy_available_flag: true
+  sell_available_flag: true
+  min_price_increment {
+    nano: 10000000
+  }
+  api_trade_available_flag: true
+  uid: "1ac3481f-f318-45e9-8498-9a8132240047"
+  real_exchange: REAL_EXCHANGE_MOEX
+  position_uid: "17d03036-1f37-4195-9698-3fcffe47453c"
+  asset_uid: "aae1d23c-661c-403d-bd4f-f0bd1e501625"
+  required_tests: "bond"
+  for_iis_flag: true
+  weekend_flag: true
+  liquidity_flag: true
+  first_1min_candle_date {
+    seconds: 1739360700
+  }
+  first_1day_candle_date {
+    seconds: 1739318400
+  }
+  risk_level: RISK_LEVEL_MODERATE
+  brand {
+    logo_name: "RU000A1003E6.png"
+    logo_base_color: "#010202"
+    text_color: "#ffffff"
+  }
+}
+instruments {
+  figi: "TCS00A10ECY6"
+  ticker: "RU000A10ECY6"
+  class_code: "TQCB"
+  isin: "RU000A10ECY6"
+  lot: 1
+  currency: "rub"
+  name: "\320\255\320\273\320\265\320\272\321\202\321\200\320\276\321\200\320\265\321\210\320\265\320\275\320\270\321\217 001\320\240-03"
+  exchange: "moex_weekend_plus_bonds_dealer"
+  coupon_quantity_per_year: 12
+  maturity_date {
+    seconds: 1818633600
+  }
+  nominal {
+    currency: "rub"
+    units: 1000
+  }
+  initial_nominal {
+    currency: "rub"
+    units: 1000
+  }
+  state_reg_date {
+    seconds: 1771372800
+  }
+  placement_date {
+    seconds: 1771977600
+  }
+  placement_price {
+  }
+  aci_value {
+    currency: "rub"
+    units: 1
+    nano: 290000000
+  }
+  country_of_risk: "RU"
+  country_of_risk_name: "\320\240\320\276\321\201\321\201\320\270\320\271\321\201\320\272\320\260\321\217 \320\244\320\265\320\264\320\265\321\200\320\260\321\206\320\270\321\217"
+  sector: "other"
+  issue_kind: "non_documentary"
+  issue_size: 1000000
+  issue_size_plan: 1000000
+  trading_status: SECURITY_TRADING_STATUS_NORMAL_TRADING
+  buy_available_flag: true
+  sell_available_flag: true
+  min_price_increment {
+    nano: 10000000
+  }
+  api_trade_available_flag: true
+  uid: "3b3fda48-20b1-4679-be84-35bfa1117efa"
+  real_exchange: REAL_EXCHANGE_MOEX
+  position_uid: "e37cfa8e-8e8e-46de-b7b9-a93071794e50"
+  asset_uid: "a9ee7c1b-3050-4113-bdb6-888512f05f26"
+  required_tests: "bond"
+  for_iis_flag: true
+  weekend_flag: true
+  liquidity_flag: true
+  first_1min_candle_date {
+    seconds: 1772027100
+  }
+  first_1day_candle_date {
+    seconds: 1771977600
+  }
+  risk_level: RISK_LEVEL_HIGH
+  brand {
+    logo_name: "RU000A106HF5.png"
+    logo_base_color: "#000000"
+    text_color: "#ffffff"
+  }
+}
+instruments {
+  figi: "TCS00A10DA66"
+  ticker: "RU000A10DA66"
+  class_code: "TQCB"
+  isin: "RU000A10DA66"
+  lot: 1
+  currency: "rub"
+  name: "\320\223\320\260\320\267\320\277\321\200\320\276\320\274 \320\275\320\265\321\204\321\202\321\214 005P-02R"
+  exchange: "moex_weekend_plus_bonds"
+  coupon_quantity_per_year: 12
+  maturity_date {
+    seconds: 1870473600
+  }
+  nominal {
+    currency: "rub"
+    units: 1000
+  }
+  initial_nominal {
+    currency: "rub"
+    units: 1000
+  }
+  state_reg_date {
+    seconds: 1761177600
+  }
+  placement_date {
+    seconds: 1761609600
+  }
+  placement_price {
+  }
+  aci_value {
+    currency: "rub"
+    nano: 850000000
+  }
+  country_of_risk: "RU"
+  country_of_risk_name: "\320\240\320\276\321\201\321\201\320\270\320\271\321\201\320\272\320\260\321\217 \320\244\320\265\320\264\320\265\321\200\320\260\321\206\320\270\321\217"
+  sector: "energy"
+  issue_kind: "non_documentary"
+  issue_size: 57000000
+  issue_size_plan: 57000000
+  trading_status: SECURITY_TRADING_STATUS_NORMAL_TRADING
+  buy_available_flag: true
+  sell_available_flag: true
+  floating_coupon_flag: true
+  min_price_increment {
+    nano: 10000000
+  }
+  api_trade_available_flag: true
+  uid: "05ceceb0-b278-4255-b1ff-79e0ce4f1e58"
+  real_exchange: REAL_EXCHANGE_MOEX
+  position_uid: "538d331e-5f44-49ef-a408-b25ffb549409"
+  asset_uid: "a9abb890-5027-4bac-a153-3c646083fecd"
+  required_tests: "structured_income_bonds"
+  for_iis_flag: true
+  liquidity_flag: true
+  first_1min_candle_date {
+    seconds: 1761652380
+  }
+  first_1day_candle_date {
+    seconds: 1761609600
+  }
+  risk_level: RISK_LEVEL_MODERATE
+  brand {
+    logo_name: "RU0007661625.png"
+    logo_base_color: "#137ec2"
+    text_color: "#ffffff"
+  }
+  92: {
+    1: "\320\255\320\272\321\201\320\277\320\265\321\200\321\202 \320\240\320\220"
+    2: "AAA"
+    3: {
+      1: 1781827200
+    }
+  }
+}
+instruments {
+  figi: "TCS00A10BGH8"
+  ticker: "RU000A10BGH8"
+  class_code: "TQCB"
+  isin: "RU000A10BGH8"
+  lot: 1
+  currency: "rub"
+  name: "\320\220\320\272\321\200\320\276\320\275 \320\221\320\236-001\320\240-08"
+  exchange: "moex_weekend_plus_bonds"
+  coupon_quantity_per_year: 12
+  maturity_date {
+    seconds: 1825804800
+  }
+  nominal {
+    currency: "usd"
+    units: 1000
+  }
+  initial_nominal {
+    currency: "usd"
+    units: 1000
+  }
+  state_reg_date {
+    seconds: 1744761600
+  }
+  placement_date {
+    seconds: 1745452800
+  }
+  placement_price {
+    currency: "usd"
+    units: 1000
+  }
+  aci_value {
+    currency: "usd"
+    units: 1
+    nano: 960000000
+  }
+  country_of_risk: "RU"
+  country_of_risk_name: "\320\240\320\276\321\201\321\201\320\270\320\271\321\201\320\272\320\260\321\217 \320\244\320\265\320\264\320\265\321\200\320\260\321\206\320\270\321\217"
+  sector: "materials"
+  issue_kind: "non_documentary"
+  issue_size: 200000
+  issue_size_plan: 200000
+  trading_status: SECURITY_TRADING_STATUS_NORMAL_TRADING
+  buy_available_flag: true
+  sell_available_flag: true
+  min_price_increment {
+    nano: 100000
+  }
+  api_trade_available_flag: true
+  uid: "98aedb87-c957-48c5-bfb1-9cabfc614331"
+  real_exchange: REAL_EXCHANGE_MOEX
+  position_uid: "07e9d6c3-ef9b-4a5d-83c2-e135a912eace"
+  asset_uid: "9fca888a-44f7-452f-94e4-1a57a5d9a88f"
+  for_iis_flag: true
+  liquidity_flag: true
+  first_1min_candle_date {
+    seconds: 1745495100
+  }
+  first_1day_candle_date {
+    seconds: 1745452800
+  }
+  risk_level: RISK_LEVEL_LOW
+  brand {
+    logo_name: "RU0009028674.png"
+    logo_base_color: "#dde0e4"
+    text_color: "#000000"
+  }
+  bond_type: BOND_TYPE_REPLACED
+  92: {
+    1: "\320\255\320\272\321\201\320\277\320\265\321\200\321\202 \320\240\320\220"
+    2: "AA"
+    3: {
+      1: 1764633600
+    }
+  }
+}
+instruments {
+  figi: "TCS97A1080Y2"
+  ticker: "RU000A1080Y2"
+  class_code: "TQRD"
+  isin: "RU000A1080Y2"
+  lot: 1
+  currency: "rub"
+  name: "\320\237\321\203\321\210\320\272\320\270\320\275\321\201\320\272\320\276\320\265 \320\237\320\227 001\320\240-03"
+  exchange: "moex_weekend_plus_bonds"
+  coupon_quantity_per_year: 4
+  maturity_date {
+    seconds: 1867622400
+  }
+  nominal {
+    currency: "rub"
+    units: 950
+  }
+  initial_nominal {
+    currency: "rub"
+    units: 1000
+  }
+  state_reg_date {
+    seconds: 1709596800
+  }
+  placement_date {
+    seconds: 1710374400
+  }
+  placement_price {
+    currency: "rub"
+    units: 1000
+  }
+  aci_value {
+    currency: "rub"
+  }
+  country_of_risk: "RU"
+  country_of_risk_name: "\320\240\320\276\321\201\321\201\320\270\320\271\321\201\320\272\320\260\321\217 \320\244\320\265\320\264\320\265\321\200\320\260\321\206\320\270\321\217"
+  sector: "consumer"
+  issue_kind: "non_documentary"
+  issue_size: 130783
+  issue_size_plan: 200000
+  trading_status: SECURITY_TRADING_STATUS_NORMAL_TRADING
+  buy_available_flag: true
+  sell_available_flag: true
+  floating_coupon_flag: true
+  amortization_flag: true
+  min_price_increment {
+    nano: 10000000
+  }
+  api_trade_available_flag: true
+  uid: "da80302b-be24-4237-9e01-e166eb4b3398"
+  real_exchange: REAL_EXCHANGE_MOEX
+  position_uid: "3412fc36-6f33-4f19-adf3-8fd3280a0e3d"
+  asset_uid: "00e5044f-64b3-4f5d-a63d-cb34f24025c2"
+  for_iis_flag: true
+  for_qual_investor_flag: true
+  first_1min_candle_date {
+    seconds: 1710423000
+  }
+  first_1day_candle_date {
+    seconds: 1710374400
+  }
+  risk_level: RISK_LEVEL_HIGH
+  brand {
+    logo_name: "RU000A104JF6.png"
+    logo_base_color: "#000000"
+    text_color: "#ffffff"
+  }
+}
+instruments {
+  figi: "TCS00A10DMN0"
+  ticker: "RU000A10DMN0"
+  class_code: "TQCB"
+  isin: "RU000A10DMN0"
+  lot: 1
+  currency: "rub"
+  name: "\321\200\320\265\320\241\321\202\320\276\321\200 001\320\240-02"
+  exchange: "moex_weekend_plus_bonds"
+  coupon_quantity_per_year: 12
+  maturity_date {
+    seconds: 1826755200
+  }
+  nominal {
+    currency: "rub"
+    units: 1000
+  }
+  initial_nominal {
+    currency: "rub"
+    units: 1000
+  }
+  state_reg_date {
+    seconds: 1764028800
+  }
+  placement_date {
+    seconds: 1764547200
+  }
+  placement_price {
+  }
+  aci_value {
+    currency: "rub"
+    units: 14
+    nano: 460000000
+  }
+  country_of_risk: "RU"
+  country_of_risk_name: "\320\240\320\276\321\201\321\201\320\270\320\271\321\201\320\272\320\260\321\217 \320\244\320\265\320\264\320\265\321\200\320\260\321\206\320\270\321\217"
+  sector: "consumer"
+  issue_kind: "non_documentary"
+  issue_size: 1000000
+  issue_size_plan: 1000000
+  trading_status: SECURITY_TRADING_STATUS_NORMAL_TRADING
+  buy_available_flag: true
+  sell_available_flag: true
+  min_price_increment {
+    nano: 10000000
+  }
+  api_trade_available_flag: true
+  uid: "dc7600f2-db30-4c79-8386-98cc253aee9d"
+  real_exchange: REAL_EXCHANGE_MOEX
+  position_uid: "b9f3b485-4a2f-427e-b026-fb90089a7728"
+  asset_uid: "6da8c338-8e1c-4285-85d8-8bc1a6952109"
+  required_tests: "bond"
+  for_iis_flag: true
+  liquidity_flag: true
+  first_1min_candle_date {
+    seconds: 1764589500
+  }
+  first_1day_candle_date {
+    seconds: 1764547200
+  }
+  risk_level: RISK_LEVEL_HIGH
+  brand {
+    logo_name: "ReStore2.png"
+    logo_base_color: "#000000"
+    text_color: "#ffffff"
+  }
+}
+instruments {
+  figi: "TCS00A10BTA6"
+  ticker: "RU000A10BTA6"
+  class_code: "TQCB"
+  isin: "RU000A10BTA6"
+  lot: 1
+  currency: "rub"
+  dlong {
+    nano: 500000000
+  }
+  dlong_min {
+    nano: 500000000
+  }
+  name: "\320\240\320\226\320\224 \320\221\320\236 001P-43R"
+  exchange: "moex_weekend_plus_bonds"
+  coupon_quantity_per_year: 12
+  maturity_date {
+    seconds: 2061244800
+  }
+  nominal {
+    currency: "rub"
+    units: 1000
+  }
+  initial_nominal {
+    currency: "rub"
+    units: 1000
+  }
+  state_reg_date {
+    seconds: 1749600000
+  }
+  placement_date {
+    seconds: 1750204800
+  }
+  placement_price {
+    currency: "rub"
+    units: 1000
+  }
+  aci_value {
+    currency: "rub"
+    units: 6
+    nano: 100000000
+  }
+  country_of_risk: "RU"
+  country_of_risk_name: "\320\240\320\276\321\201\321\201\320\270\320\271\321\201\320\272\320\260\321\217 \320\244\320\265\320\264\320\265\321\200\320\260\321\206\320\270\321\217"
+  sector: "industrials"
+  issue_kind: "non_documentary"
+  issue_size: 40000000
+  issue_size_plan: 40000000
+  trading_status: SECURITY_TRADING_STATUS_NORMAL_TRADING
+  buy_available_flag: true
+  sell_available_flag: true
+  min_price_increment {
+    nano: 10000000
+  }
+  api_trade_available_flag: true
+  uid: "a84b7e30-3ea0-4f09-89cc-5fc3b45254ca"
+  real_exchange: REAL_EXCHANGE_MOEX
+  position_uid: "ba9716f7-d5e2-475e-9b87-b723b143f059"
+  asset_uid: "a17b1c54-a6df-43f6-b1de-da456413dea5"
+  for_iis_flag: true
+  liquidity_flag: true
+  first_1min_candle_date {
+    seconds: 1750247100
+  }
+  first_1day_candle_date {
+    seconds: 1750204800
+  }
+  risk_level: RISK_LEVEL_LOW
+  brand {
+    logo_name: "RU000A0JQRD9.png"
+    logo_base_color: "#C4151C"
+    text_color: "#ffffff"
+  }
+  call_date {
+    seconds: 1874620800
+  }
+  dlong_client {
+    nano: 500000000
+  }
+  92: {
+    1: "\320\220\320\232\320\240\320\220"
+    2: "AAA"
+    3: {
+      1: 1782172800
+    }
+  }
+}
+instruments {
+  figi: "TCS00A10EHC1"
+  ticker: "RU000A10EHC1"
+  class_code: "TQCB"
+  isin: "RU000A10EHC1"
+  lot: 1
+  currency: "rub"
+  name: "\320\223\320\270\320\264\321\200\320\276\320\274\320\260\321\210\321\201\320\265\321\200\320\262\320\270\321\201 002\320\240-01"
+  exchange: "moex_weekend_plus_bonds"
+  coupon_quantity_per_year: 12
+  maturity_date {
+    seconds: 2084227200
+  }
+  nominal {
+    currency: "rub"
+    units: 1000
+  }
+  initial_nominal {
+    currency: "rub"
+    units: 1000
+  }
+  state_reg_date {
+    seconds: 1771545600
+  }
+  placement_date {
+    seconds: 1773187200
+  }
+  placement_price {
+  }
+  aci_value {
+    currency: "rub"
+    units: 8
+    nano: 510000000
+  }
+  country_of_risk: "RU"
+  country_of_risk_name: "\320\240\320\276\321\201\321\201\320\270\320\271\321\201\320\272\320\260\321\217 \320\244\320\265\320\264\320\265\321\200\320\260\321\206\320\270\321\217"
+  sector: "consumer"
+  issue_kind: "non_documentary"
+  issue_size: 4000000
+  issue_size_plan: 4000000
+  trading_status: SECURITY_TRADING_STATUS_NORMAL_TRADING
+  buy_available_flag: true
+  sell_available_flag: true
+  floating_coupon_flag: true
+  min_price_increment {
+    nano: 10000000
+  }
+  api_trade_available_flag: true
+  uid: "ec7ddfb7-b537-4d3d-b7ea-1a3a5960d13e"
+  real_exchange: REAL_EXCHANGE_MOEX
+  position_uid: "6fda50ec-ea61-4eb6-91a0-fb0a69c4919b"
+  asset_uid: "b622b73c-0e7a-415a-8ff6-d98feae8f481"
+  for_iis_flag: true
+  for_qual_investor_flag: true
+  liquidity_flag: true
+  first_1min_candle_date {
+    seconds: 1773232200
+  }
+  first_1day_candle_date {
+    seconds: 1773187200
+  }
+  risk_level: RISK_LEVEL_HIGH
+  brand {
+    logo_name: "RU000A0JXJE0.png"
+    logo_base_color: "#EBECEE"
+    text_color: "#000000"
+  }
+  call_date {
+    seconds: 1866499200
+  }
+  92: {
+    1: "\320\235\320\232\320\240"
+    2: "A+"
+    3: {
+      1: 1773187200
+    }
+  }
+}
+instruments {
+  figi: "TCS00A10C0X3"
+  ticker: "RU000A10C0X3"
+  class_code: "TQCB"
+  isin: "RU000A10C0X3"
+  lot: 1
+  currency: "rub"
+  dlong {
+    nano: 444400000
+  }
+  dlong_min {
+    nano: 400000000
+  }
+  name: "\320\255\320\275+ \320\223\320\270\320\264\321\200\320\276 001\320\240\320\241-07"
+  exchange: "moex_weekend_plus_bonds"
+  coupon_quantity_per_year: 12
+  maturity_date {
+    seconds: 1814227200
+  }
+  nominal {
+    currency: "cny"
+    units: 1000
+  }
+  initial_nominal {
+    currency: "cny"
+    units: 1000
+  }
+  state_reg_date {
+    seconds: 1751500800
+  }
+  placement_date {
+    seconds: 1752019200
+  }
+  placement_price {
+    currency: "cny"
+    units: 1000
+  }
+  aci_value {
+    currency: "cny"
+    units: 5
+    nano: 200000000
+  }
+  sector: "energy"
+  issue_kind: "non_documentary"
+  issue_size: 1950000
+  issue_size_plan: 1950000
+  trading_status: SECURITY_TRADING_STATUS_NORMAL_TRADING
+  buy_available_flag: true
+  sell_available_flag: true
+  min_price_increment {
+    nano: 100000
+  }
+  api_trade_available_flag: true
+  uid: "55a011d6-1f03-477e-b177-02435a84c2b5"
+  real_exchange: REAL_EXCHANGE_MOEX
+  position_uid: "82285435-4428-4189-b19e-14385d79012b"
+  asset_uid: "7fb39777-880d-442b-98bd-78b240425ac7"
+  required_tests: "bond"
+  for_iis_flag: true
+  first_1min_candle_date {
+    seconds: 1752061980
+  }
+  first_1day_candle_date {
+    seconds: 1752019200
+  }
+  risk_level: RISK_LEVEL_LOW
+  brand {
+    logo_name: "RU000A10AG22.png"
+    logo_base_color: "#FFFFFF"
+    text_color: "#000000"
+  }
+  bond_type: BOND_TYPE_REPLACED
+  dlong_client {
+    nano: 444400000
+  }
+  92: {
+    1: "\320\255\320\272\321\201\320\277\320\265\321\200\321\202 \320\240\320\220"
+    2: "AA-"
+    3: {
+      1: 1759968000
+    }
+  }
+}
+instruments {
+  figi: "TCS00A108FC2"
+  ticker: "RU000A108FC2"
+  class_code: "TQCB"
+  isin: "RU000A108FC2"
+  lot: 1
+  currency: "rub"
+  dlong {
+    nano: 250000000
+  }
+  dlong_min {
+    nano: 222200000
+  }
+  name: "\320\224\320\236\320\234.\320\240\320\244 002P-04"
+  exchange: "moex_weekend_plus_bonds"
+  coupon_quantity_per_year: 4
+  maturity_date {
+    seconds: 1842307200
+  }
+  nominal {
+    currency: "rub"
+    units: 1000
+  }
+  initial_nominal {
+    currency: "rub"
+    units: 1000
+  }
+  state_reg_date {
+    seconds: 1715558400
+  }
+  placement_date {
+    seconds: 1716508800
+  }
+  placement_price {
+    currency: "rub"
+    units: 1000
+  }
+  aci_value {
+    currency: "rub"
+    units: 14
+    nano: 340000000
+  }
+  country_of_risk: "RU"
+  country_of_risk_name: "\320\240\320\276\321\201\321\201\320\270\320\271\321\201\320\272\320\260\321\217 \320\244\320\265\320\264\320\265\321\200\320\260\321\206\320\270\321\217"
+  sector: "financial"
+  issue_kind: "non_documentary"
+  issue_size: 90000000
+  issue_size_plan: 50000000
+  trading_status: SECURITY_TRADING_STATUS_NORMAL_TRADING
+  buy_available_flag: true
+  sell_available_flag: true
+  floating_coupon_flag: true
+  min_price_increment {
+    nano: 10000000
+  }
+  api_trade_available_flag: true
+  uid: "00ae13c0-9a07-4992-a54a-4f4d67387727"
+  real_exchange: REAL_EXCHANGE_MOEX
+  position_uid: "7e1f4afa-7008-4f6f-9c2f-499e62636db2"
+  asset_uid: "86f3de8c-b208-403a-bafe-d1be6357f0a6"
+  required_tests: "structured_income_bonds"
+  for_iis_flag: true
+  liquidity_flag: true
+  first_1min_candle_date {
+    seconds: 1716559440
+  }
+  first_1day_candle_date {
+    seconds: 1716508800
+  }
+  risk_level: RISK_LEVEL_HIGH
+  brand {
+    logo_name: "RU000A0ZYAR5.png"
+    logo_base_color: "#1D3D4A"
+    text_color: "#ffffff"
+  }
+  dlong_client {
+    nano: 250000000
+  }
+  92: {
+    1: "\320\255\320\272\321\201\320\277\320\265\321\200\321\202 \320\240\320\220"
+    2: "AAA"
+    3: {
+      1: 1782172800
+    }
+  }
+}
+instruments {
+  figi: "TCSM2750FC62"
+  ticker: "RU000A10FC62"
+  class_code: "TQCB"
+  isin: "RU000A10FC62"
+  lot: 1
+  currency: "rub"
+  dlong {
+    nano: 285700000
+  }
+  dlong_min {
+    nano: 250000000
+  }
+  name: "\320\223\320\234\320\232 \320\235\320\276\321\200\320\275\320\270\320\272\320\265\320\273\321\214 \320\221\320\236-001\320\240-17"
+  exchange: "moex_weekend_plus_bonds"
+  coupon_quantity_per_year: 12
+  maturity_date {
+    seconds: 1905984000
+  }
+  nominal {
+    currency: "cny"
+    units: 1000
+  }
+  initial_nominal {
+    currency: "cny"
+    units: 1000
+  }
+  state_reg_date {
+    seconds: 1780444800
+  }
+  placement_date {
+    seconds: 1781568000
+  }
+  placement_price {
+  }
+  aci_value {
+    currency: "cny"
+    units: 2
+    nano: 290000000
+  }
+  country_of_risk: "RU"
+  country_of_risk_name: "\320\240\320\276\321\201\321\201\320\270\320\271\321\201\320\272\320\260\321\217 \320\244\320\265\320\264\320\265\321\200\320\260\321\206\320\270\321\217"
+  sector: "materials"
+  issue_kind: "non_documentary"
+  issue_size: 3000000
+  issue_size_plan: 3000000
+  trading_status: SECURITY_TRADING_STATUS_NORMAL_TRADING
+  buy_available_flag: true
+  sell_available_flag: true
+  min_price_increment {
+    nano: 100000
+  }
+  api_trade_available_flag: true
+  uid: "8ce73363-a7ca-4a48-aef5-166fa6a5a6ea"
+  real_exchange: REAL_EXCHANGE_MOEX
+  position_uid: "cf8bc1b3-edcb-4cc1-aa2e-25a7ccbf465b"
+  asset_uid: "185493c2-7b39-401e-8248-5f0d89a41da1"
+  for_iis_flag: true
+  liquidity_flag: true
+  first_1min_candle_date {
+    seconds: 1781610300
+  }
+  first_1day_candle_date {
+    seconds: 1781568000
+  }
+  risk_level: RISK_LEVEL_LOW
+  brand {
+    logo_name: "nornikel.png"
+    logo_base_color: "#2c499a"
+    text_color: "#ffffff"
+  }
+  bond_type: BOND_TYPE_REPLACED
+  dlong_client {
+    nano: 285700000
+  }
+  92: {
+    1: "\320\255\320\272\321\201\320\277\320\265\321\200\321\202 \320\240\320\220"
+    2: "AAA"
+    3: {
+      1: 1781568000
+    }
+  }
+}
+instruments {
+  figi: "BBG011MDDX15"
+  ticker: "RU000A101S16"
+  class_code: "TQCB"
+  isin: "RU000A101S16"
+  lot: 1
+  currency: "rub"
+  name: "\320\240\320\265\321\201\320\277\321\203\320\261\320\273\320\270\320\272\320\260 \320\232\320\260\320\267\320\260\321\205\321\201\321\202\320\260\320\275 13"
+  exchange: "moex_weekend_plus_bonds"
+  coupon_quantity_per_year: 2
+  maturity_date {
+    seconds: 1939334400
+  }
+  nominal {
+    currency: "rub"
+    units: 1000
+  }
+  initial_nominal {
+    currency: "rub"
+    units: 1000
+  }
+  state_reg_date {
+    seconds: 1594857600
+  }
+  placement_date {
+    seconds: 1624838400
+  }
+  placement_price {
+    currency: "rub"
+    units: 1000
+  }
+  aci_value {
+    currency: "rub"
+    units: 20
+    nano: 610000000
+  }
+  country_of_risk: "KZ"
+  country_of_risk_name: "\320\240\320\265\321\201\320\277\321\203\320\261\320\273\320\270\320\272\320\260 \320\232\320\260\320\267\320\260\321\205\321\201\321\202\320\260\320\275"
+  sector: "government"
+  issue_kind: "non_documentary"
+  issue_size: 10000000
+  issue_size_plan: 10000000
+  trading_status: SECURITY_TRADING_STATUS_NORMAL_TRADING
+  buy_available_flag: true
+  sell_available_flag: true
+  min_price_increment {
+    nano: 10000000
+  }
+  api_trade_available_flag: true
+  uid: "414375ad-f17f-417b-8566-2fe029895ada"
+  real_exchange: REAL_EXCHANGE_MOEX
+  position_uid: "8c63d5af-58c6-427e-9719-7d91edb94911"
+  asset_uid: "22f9ea07-8813-4686-8416-d5d6f292e1f7"
+  liquidity_flag: true
+  first_1min_candle_date {
+    seconds: 1624893660
+  }
+  first_1day_candle_date {
+    seconds: 1624863600
+  }
+  risk_level: RISK_LEVEL_HIGH
+  brand {
+    logo_name: "RU000A101RP4.png"
+    logo_base_color: "#000000"
+    text_color: "#ffffff"
+  }
+}
+instruments {
+  figi: "BBG00XD2M5S2"
+  ticker: "SU52003RMFS9"
+  class_code: "TQOB"
+  isin: "RU000A102069"
+  lot: 1
+  currency: "rub"
+  dlong {
+    nano: 500000000
+  }
+  dlong_min {
+    nano: 400000000
+  }
+  name: "\320\236\320\244\320\227 52003"
+  exchange: "moex_weekend_plus_bonds"
+  coupon_quantity_per_year: 2
+  maturity_date {
+    seconds: 1910476800
+  }
+  nominal {
+    currency: "rub"
+    units: 1608
+    nano: 870000000
+  }
+  initial_nominal {
+    currency: "rub"
+    units: 1000
+  }
+  state_reg_date {
+    seconds: 1596585600
+  }
+  placement_date {
+    seconds: 1597190400
+  }
+  placement_price {
+  }
+  aci_value {
+    currency: "rub"
+    units: 7
+    nano: 160000000
+  }
+  country_of_risk: "RU"
+  country_of_risk_name: "\320\240\320\276\321\201\321\201\320\270\320\271\321\201\320\272\320\260\321\217 \320\244\320\265\320\264\320\265\321\200\320\260\321\206\320\270\321\217"
+  sector: "government"
+  issue_kind: "documentary"
+  issue_size: 218186911
+  issue_size_plan: 250000000
+  trading_status: SECURITY_TRADING_STATUS_NORMAL_TRADING
+  buy_available_flag: true
+  sell_available_flag: true
+  min_price_increment {
+    nano: 1000000
+  }
+  api_trade_available_flag: true
+  uid: "788ced35-f059-4bb1-b9b0-262aee0a2d8b"
+  real_exchange: REAL_EXCHANGE_MOEX
+  position_uid: "3f2067b7-2805-4015-a698-352ea2a9e821"
+  asset_uid: "8a3c3bcb-abf5-4226-a9c1-3e7926720795"
+  required_tests: "structured_income_bonds"
+  for_iis_flag: true
+  liquidity_flag: true
+  first_1min_candle_date {
+    seconds: 1600270740
+  }
+  first_1day_candle_date {
+    seconds: 1600239600
+  }
+  risk_level: RISK_LEVEL_LOW
+  brand {
+    logo_name: "minfin.png"
+    logo_base_color: "#00A651"
+    text_color: "#ffffff"
+  }
+  dlong_client {
+    nano: 500000000
+  }
+}
+instruments {
+  figi: "TCS00A10ADD6"
+  ticker: "RU000A10ADD6"
+  class_code: "TQCB"
+  isin: "RU000A10ADD6"
+  lot: 1
+  currency: "rub"
+  name: "\320\235\320\241\320\232\320\220\320\242\320\224 \320\221\320\236-02"
+  exchange: "moex_weekend_plus_bonds_dealer"
+  coupon_quantity_per_year: 12
+  maturity_date {
+    seconds: 1827792000
+  }
+  nominal {
+    currency: "rub"
+    units: 1000
+  }
+  initial_nominal {
+    currency: "rub"
+    units: 1000
+  }
+  state_reg_date {
+    seconds: 1733184000
+  }
+  placement_date {
+    seconds: 1734480000
+  }
+  placement_price {
+    currency: "rub"
+    units: 1000
+  }
+  aci_value {
+    currency: "rub"
+    units: 12
+    nano: 710000000
+  }
+  country_of_risk: "RU"
+  country_of_risk_name: "\320\240\320\276\321\201\321\201\320\270\320\271\321\201\320\272\320\260\321\217 \320\244\320\265\320\264\320\265\321\200\320\260\321\206\320\270\321\217"
+  sector: "other"
+  issue_kind: "non_documentary"
+  issue_size: 500000
+  issue_size_plan: 500000
+  trading_status: SECURITY_TRADING_STATUS_NORMAL_TRADING
+  buy_available_flag: true
+  sell_available_flag: true
+  min_price_increment {
+    nano: 10000000
+  }
+  api_trade_available_flag: true
+  uid: "52245624-6f8f-4490-8cb7-1ce4b1be00b8"
+  real_exchange: REAL_EXCHANGE_MOEX
+  position_uid: "c1711334-0702-452d-9246-53208a8e7e5e"
+  asset_uid: "fa6c9ab6-b846-424b-bd74-d38ff193677d"
+  required_tests: "bond"
+  for_iis_flag: true
+  weekend_flag: true
+  liquidity_flag: true
+  first_1min_candle_date {
+    seconds: 1734522360
+  }
+  first_1day_candle_date {
+    seconds: 1734480000
+  }
+  risk_level: RISK_LEVEL_MODERATE
+  brand {
+    logo_name: "RU000A108UJ6.png"
+    logo_base_color: "#FFFFFF"
+    text_color: "#000000"
+  }
+  call_date {
+    seconds: 1796688000
+  }
+}
