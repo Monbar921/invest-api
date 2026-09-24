@@ -31,6 +31,8 @@ public class TinkoffBondSyncRepositoryUseCaseImpl implements TinkoffBondSyncRepo
             return;
         }
 
+        tinkoffBonds.values().forEach(bondModel -> bondModel.setLogged(audit));
+
         final List<Bond> existingBonds = bondRepository.findAll();
 
         final Map<String, Bond> existingBondsMap = existingBonds

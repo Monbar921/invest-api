@@ -8,6 +8,7 @@ import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.ObjectFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import ru.invest.api.common.entity.Audit;
 import ru.invest.api.common.entity.Bond;
 import ru.invest.api.common.mapper.AuditMapper;
 import ru.invest.api.common.mapper.DateTimeMapper;
@@ -74,18 +75,22 @@ public abstract class TinkoffBondEntityMapper {
     }
 
     @ObjectFactory
-    protected Bond objectFactory(final BondModel bondModel, final Bond existing) {
-        if (existing == null) {
-            return new Bond()
-                    .setCreated(auditMapper.toEntity(bondModel.getLogged()));
-        }
+    protected Bond objectFactory(final Bond existing) {
 
-        return existing
-                .setUpdated(auditMapper.toEntity(bondModel.getLogged()));
+        return Optional.ofNullable(existing)
+                .orElseGet(Bond::new);
     }
 
     @AfterMapping
     protected void afterMapping(@MappingTarget final Bond bond, final BondModel bondModel) {
+        final Audit audit = auditMapper.toEntity(bondModel.getLogged());
+
+        if (bond.getId() == null) {
+            bond.setCreated(audit);
+        } else {
+            bond.setUpdated(audit);
+        }
+
         bond.setCoupon(
                 tinkoffCouponMapper.toEntity(bond, bondModel)
         );
