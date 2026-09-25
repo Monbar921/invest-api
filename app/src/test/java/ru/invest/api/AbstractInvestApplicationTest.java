@@ -18,6 +18,7 @@ import ru.invest.api.budget.org.supplier.client.feign.BudgetOrgClient;
 import ru.invest.api.cb.rf.supplier.client.feign.CbRfClient;
 import ru.invest.api.config.InvestApiTestConfiguration;
 import ru.tinkoff.piapi.contract.v1.BondsResponse;
+import ru.tinkoff.piapi.contract.v1.GetBondCouponsResponse;
 import ru.tinkoff.piapi.contract.v1.InstrumentsServiceGrpc;
 import ru.tinkoff.piapi.contract.v1.MarketDataServiceGrpc;
 import tools.jackson.databind.json.JsonMapper;
@@ -74,6 +75,17 @@ public abstract class AbstractInvestApplicationTest {
     protected BondsResponse loadFixture() {
         final String text = IOUtils.resourceToString("/fixtures/bonds-response.pbtxt", StandardCharsets.UTF_8);
         final BondsResponse.Builder builder = BondsResponse.newBuilder();
+        TextFormat.Parser.newBuilder()
+                .setAllowUnknownFields(true)
+                .build()
+                .merge(text, builder);
+        return builder.build();
+    }
+
+    @SneakyThrows
+    protected GetBondCouponsResponse loadCouponFixture() {
+        final String text = IOUtils.resourceToString("/fixtures/coupon-response.pbtxt", StandardCharsets.UTF_8);
+        final GetBondCouponsResponse.Builder builder = GetBondCouponsResponse.newBuilder();
         TextFormat.Parser.newBuilder()
                 .setAllowUnknownFields(true)
                 .build()
