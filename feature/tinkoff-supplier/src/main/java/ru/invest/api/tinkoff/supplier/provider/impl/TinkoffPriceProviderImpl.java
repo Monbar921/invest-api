@@ -1,14 +1,13 @@
-package ru.invest.api.tinkoff.supplier.usecase.impl;
+package ru.invest.api.tinkoff.supplier.provider.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.collections4.MapUtils;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.MoneyModel;
 import ru.invest.api.common.model.PriceModel;
 import ru.invest.api.tinkoff.supplier.mapper.TinkoffPriceApiMapper;
-import ru.invest.api.tinkoff.supplier.usecase.TinkoffPriceUseCase;
+import ru.invest.api.tinkoff.supplier.provider.TinkoffPriceProvider;
 import ru.invest.api.tinkoff.supplier.wrapper.MarketDataGrpcRateLimitedWrapper;
 import ru.tinkoff.piapi.contract.v1.GetLastPricesRequest;
 import ru.tinkoff.piapi.contract.v1.GetLastPricesResponse;
@@ -21,18 +20,14 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static ru.invest.api.common.constants.CacheConstants.PRICE_CACHE_MANAGER;
-import static ru.invest.api.common.constants.CacheConstants.PRICE_CACHE_NAME;
-
 @Service
 @RequiredArgsConstructor
-public class TinkoffPriceUseCaseImpl implements TinkoffPriceUseCase {
+public class TinkoffPriceProviderImpl implements TinkoffPriceProvider {
     private final MarketDataGrpcRateLimitedWrapper marketDataServiceBlockingStub;
 
     private final TinkoffPriceApiMapper tinkoffPriceApiMapper;
 
     @Override
-    @Cacheable(cacheManager = PRICE_CACHE_MANAGER, cacheNames = PRICE_CACHE_NAME)
     public Map<String, PriceModel> getLastPrices(final Map<String, BondModel> bonds) {
         if (MapUtils.isEmpty(bonds)) {
             return Collections.emptyMap();

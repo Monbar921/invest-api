@@ -7,17 +7,16 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
-import ru.invest.api.common.entity.Bond;
 import ru.invest.api.common.model.BondModel;
-import ru.invest.api.common.repository.BondRepository;
-import ru.invest.api.tinkoff.supplier.mapper.TinkoffBondEntityMapper;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondCacheRepositoryUseCase;
+import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondUseCase;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.Callable;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -35,9 +34,7 @@ public class TinkoffBondCacheRepositoryUseCaseImpl implements TinkoffBondCacheRe
     @Qualifier(BOND_REPOSITORY_CACHE_MANAGER)
     private final CacheManager bondCacheManager;
 
-    private final BondRepository bondRepository;
-
-    private final TinkoffBondEntityMapper tinkoffBondEntityMapper;
+    private final TinkoffBondUseCase tinkoffBondUseCase;
 
     @Override
     public Map<String, BondModel> getForeignCurrencyBonds() {
@@ -77,12 +74,14 @@ public class TinkoffBondCacheRepositoryUseCaseImpl implements TinkoffBondCacheRe
     }
 
     private Map<String, BondModel> loadAllBonds() {
-        final List<Bond> entities = bondRepository.findAll();
-        if (CollectionUtils.isEmpty(entities)) {
+        final List<BondModel> allBonds = tinkoffBondUseCase.getAll();
+        if (CollectionUtils.isEmpty(allBonds)) {
             return Collections.emptyMap();
         }
 
-        return toBondModels(entities);
+        return allBonds.stream()
+                .filter(Objects::nonNull)
+                .collect(Collectors.toMap(BondModel::getUid, Function.identity()));
     }
 
     private Map<String, BondModel> filterByCurrencies(final Map<String, BondModel> bonds, final Predicate<BondModel> currencyPredicate) {
@@ -96,11 +95,5 @@ public class TinkoffBondCacheRepositoryUseCaseImpl implements TinkoffBondCacheRe
                 .filter(entry -> entry.getValue() != null)
                 .filter(entry -> currencyPredicate.test(entry.getValue()))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-    }
-
-    private Map<String, BondModel> toBondModels(final List<Bond> entities) {
-        return entities.stream()
-                .filter(Objects::nonNull)
-                .collect(Collectors.toMap(Bond::getUid, tinkoffBondEntityMapper::toModel));
     }
 }

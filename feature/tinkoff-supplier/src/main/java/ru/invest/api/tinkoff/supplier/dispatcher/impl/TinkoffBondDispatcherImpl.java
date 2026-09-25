@@ -15,7 +15,7 @@ import ru.invest.api.tinkoff.supplier.dispatcher.TinkoffBondDispatcher;
 import ru.invest.api.tinkoff.supplier.dispatcher.TinkoffCouponDispatcher;
 import ru.invest.api.tinkoff.supplier.mapper.TinkoffBondEntityMapper;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondCacheRepositoryUseCase;
-import ru.invest.api.tinkoff.supplier.usecase.TinkoffPriceUseCase;
+import ru.invest.api.tinkoff.supplier.provider.TinkoffPriceProvider;
 
 import java.util.Collections;
 import java.util.List;
@@ -32,7 +32,7 @@ public class TinkoffBondDispatcherImpl implements TinkoffBondDispatcher {
     private final BondParametersMapper bondParametersMapper;
     private final TinkoffBondEntityMapper bondEntityMapper;
 
-    private final TinkoffPriceUseCase tinkoffPriceUseCase;
+    private final TinkoffPriceProvider tinkoffPriceProvider;
     private final TinkoffBondCacheRepositoryUseCase tinkoffBondCacheUseCase;
     private final TinkoffCouponDispatcher tinkoffCouponDispatcher;
     private final BondSortUseCase bondSortUseCase;
@@ -56,7 +56,7 @@ public class TinkoffBondDispatcherImpl implements TinkoffBondDispatcher {
         }
 
         //TODO Нужно пытаться получить цену и если не получили, то сходить в базу и вытащить оттуда
-        final Map<String, PriceModel> bondPrices = tinkoffPriceUseCase.getLastPrices(bondModelMap);
+        final Map<String, PriceModel> bondPrices = tinkoffPriceProvider.getLastPrices(bondModelMap);
         final List<BondModel> bondModels = bondEntityMapper.enrichBonds(bondModelMap, bondPrices);
 
         enrichByCoupons(bondModels);

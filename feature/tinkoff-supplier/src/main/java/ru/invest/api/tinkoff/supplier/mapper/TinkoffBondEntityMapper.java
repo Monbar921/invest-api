@@ -55,6 +55,8 @@ public abstract class TinkoffBondEntityMapper {
     @Mapping(target = "coupon", ignore = true)
     @Mapping(target = "maturityDate", source = "bond.maturityDate")
     public abstract BondModel toModel(Bond bond);
+    public abstract List<BondModel> toModel(List<Bond> bonds);
+
 
     public List<BondModel> enrichBonds(final Map<String, BondModel> bonds,
                                        final Map<String, PriceModel> bondPrices) {

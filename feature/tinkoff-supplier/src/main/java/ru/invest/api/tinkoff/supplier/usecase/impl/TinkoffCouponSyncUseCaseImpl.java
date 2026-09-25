@@ -8,16 +8,14 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import ru.invest.api.common.annotation.Active;
-import ru.invest.api.common.entity.Bond;
-import ru.invest.api.common.exception.GeneralNotFoundEntityException;
-import ru.invest.api.common.exception.enums.ExceptionErrorCode;
 import ru.invest.api.common.model.AuditModel;
+import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.CouponDataModel;
 import ru.invest.api.common.model.ShortProductModel;
-import ru.invest.api.common.repository.BondRepository;
 import ru.invest.api.common.usecase.CouponSyncUseCase;
 import ru.invest.api.tinkoff.supplier.provider.TinkoffCouponProvider;
 import ru.invest.api.tinkoff.supplier.usecase.GetNeedToUpdateCouponsUseCase;
+import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondUseCase;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffCouponRepositoryUseCase;
 
 import java.util.HashMap;
@@ -37,12 +35,11 @@ import static ru.invest.api.tinkoff.supplier.constants.Constants.COUPON_EXECUTOR
 @Active
 public class TinkoffCouponSyncUseCaseImpl implements CouponSyncUseCase {
     private static final int BATCH_SIZE = 100;
-    private static final String BOND_NOT_FOUND_MESSAGE = "Bond not found for ticker %s";
 
     private final TinkoffCouponProvider tinkoffCouponProvider;
     private final TinkoffCouponRepositoryUseCase tinkoffCouponRepositoryUseCase;
     private final GetNeedToUpdateCouponsUseCase getNeedToUpdateCouponsUseCase;
-    private final BondRepository bondRepository;
+    private final TinkoffBondUseCase tinkoffBondUseCase;
 
     @Qualifier(COUPON_EXECUTOR_SERVICE)
     private final ExecutorService couponExecutorService;
@@ -54,9 +51,7 @@ public class TinkoffCouponSyncUseCaseImpl implements CouponSyncUseCase {
 
     @Override
     public void syncByTicker(final String ticker, final AuditModel audit) {
-        final Bond bond = bondRepository.findByTicker(ticker)
-                .orElseThrow(() -> new GeneralNotFoundEntityException(
-                        ExceptionErrorCode.BOND_NOT_FOUND, BOND_NOT_FOUND_MESSAGE.formatted(ticker)));
+        final BondModel bond = tinkoffBondUseCase.findByTicker(ticker);
 
         final ShortProductModel shortProductModel = new ShortProductModel().setUid(bond.getUid()).setTicker(bond.getTicker());
         syncCoupons(List.of(shortProductModel), audit);
