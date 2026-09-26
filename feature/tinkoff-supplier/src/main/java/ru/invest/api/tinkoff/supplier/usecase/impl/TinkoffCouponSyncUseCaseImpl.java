@@ -16,7 +16,7 @@ import ru.invest.api.common.usecase.CouponSyncUseCase;
 import ru.invest.api.tinkoff.supplier.provider.TinkoffCouponProvider;
 import ru.invest.api.tinkoff.supplier.usecase.GetNeedToUpdateCouponsUseCase;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondUseCase;
-import ru.invest.api.tinkoff.supplier.usecase.TinkoffCouponRepositoryUseCase;
+import ru.invest.api.tinkoff.supplier.usecase.TinkoffCouponUseCase;
 
 import java.util.HashMap;
 import java.util.Iterator;
@@ -37,7 +37,7 @@ public class TinkoffCouponSyncUseCaseImpl implements CouponSyncUseCase {
     private static final int BATCH_SIZE = 100;
 
     private final TinkoffCouponProvider tinkoffCouponProvider;
-    private final TinkoffCouponRepositoryUseCase tinkoffCouponRepositoryUseCase;
+    private final TinkoffCouponUseCase tinkoffCouponUseCase;
     private final GetNeedToUpdateCouponsUseCase getNeedToUpdateCouponsUseCase;
     private final TinkoffBondUseCase tinkoffBondUseCase;
 
@@ -106,6 +106,6 @@ public class TinkoffCouponSyncUseCaseImpl implements CouponSyncUseCase {
             return;
         }
 
-        tinkoffCouponRepositoryUseCase.saveCouponData(couponDataBatch);
+        tinkoffCouponUseCase.saveCouponData(couponDataBatch);
     }
 }

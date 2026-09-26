@@ -8,7 +8,7 @@ import ru.invest.api.common.model.AuditModel;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.usecase.BondSyncUseCase;
 import ru.invest.api.tinkoff.supplier.provider.TinkoffBondProvider;
-import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondSyncRepositoryUseCase;
+import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondUseCase;
 
 import java.util.Map;
 
@@ -17,7 +17,7 @@ import java.util.Map;
 @Active
 public class TinkoffBondSyncUseCaseImpl implements BondSyncUseCase {
     private final TinkoffBondProvider tinkoffBondProvider;
-    private final TinkoffBondSyncRepositoryUseCase tinkoffBondSyncRepositoryUseCase;
+    private final TinkoffBondUseCase tinkoffBondUseCase;
 
     @Override
     public void syncAll(final AuditModel audit) {
@@ -27,6 +27,6 @@ public class TinkoffBondSyncUseCaseImpl implements BondSyncUseCase {
             return;
         }
 
-        tinkoffBondSyncRepositoryUseCase.sync(tinkoffBonds, audit);
+        tinkoffBondUseCase.save(tinkoffBonds, audit);
     }
 }

@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -34,29 +35,27 @@ public class TinkoffPriceSyncUseCaseImpl implements PriceSyncUseCase {
 
     @Override
     public void syncAll(final AuditModel audit) {
-        final List<String> bondUids = tinkoffBondUseCase.getAll()
+        final Map<String, BondModel> bonds = tinkoffBondUseCase.getAll()
                 .stream()
                 .filter(Objects::nonNull)
-                .map(BondModel::getUid)
-                .filter(StringUtils::isNotBlank)
-                .distinct()
-                .toList();
+                .filter(bond -> StringUtils.isNotBlank(bond.getUid()))
+                .collect(Collectors.toMap(BondModel::getUid, Function.identity()));
 
-        syncPrice(bondUids, audit);
+        syncPrice(bonds, audit);
     }
 
     @Override
     public void syncByTicker(final String ticker, final AuditModel audit) {
         final BondModel bond = tinkoffBondUseCase.findByTicker(ticker);
 
-        syncPrice(List.of(bond.getUid()), audit);
+        syncPrice(Map.of(bond.getUid(), bond), audit);
     }
 
-    private void syncPrice(final List<String> bondUids, final AuditModel audit) {
-        if (CollectionUtils.isEmpty(bondUids)) {
+    private void syncPrice(final Map<String, BondModel> bonds, final AuditModel audit) {
+        if (MapUtils.isEmpty(bonds)) {
             return;
         }
 
-        tinkoffPriceProvider.getLastPrices();
+        tinkoffPriceProvider.getLastPrices(bonds, audit);
     }
 }

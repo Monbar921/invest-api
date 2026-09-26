@@ -1,7 +1,6 @@
 package ru.invest.api.tinkoff.supplier.dispatcher.impl;
 
 import lombok.RequiredArgsConstructor;
-import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import ru.invest.api.common.model.BondModel;
@@ -9,9 +8,8 @@ import ru.invest.api.common.model.CouponModel;
 import ru.invest.api.tinkoff.supplier.dispatcher.TinkoffCouponDispatcher;
 import ru.invest.api.tinkoff.supplier.provider.TinkoffCouponProvider;
 import ru.invest.api.tinkoff.supplier.service.CouponCalculationService;
-import ru.invest.api.tinkoff.supplier.usecase.TinkoffCouponRepositoryUseCase;
+import ru.invest.api.tinkoff.supplier.usecase.TinkoffCouponUseCase;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 
@@ -21,7 +19,7 @@ import static ru.invest.api.tinkoff.supplier.constants.Constants.COUPON_EXECUTOR
 @RequiredArgsConstructor
 public class TinkoffCouponDispatcherImpl implements TinkoffCouponDispatcher {
     private final TinkoffCouponProvider tinkoffCouponProvider;
-    private final TinkoffCouponRepositoryUseCase tinkoffCouponRepositoryUseCase;
+    private final TinkoffCouponUseCase tinkoffCouponUseCase;
     private final CouponCalculationService couponCalculationService;
 
     @Qualifier(COUPON_EXECUTOR_SERVICE)

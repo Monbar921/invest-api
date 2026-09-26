@@ -3,6 +3,7 @@ package ru.invest.api.tinkoff.supplier.provider.impl;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.collections4.MapUtils;
 import org.springframework.stereotype.Service;
+import ru.invest.api.common.model.AuditModel;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.MoneyModel;
 import ru.invest.api.common.model.PriceModel;
@@ -28,7 +29,7 @@ public class TinkoffPriceProviderImpl implements TinkoffPriceProvider {
     private final TinkoffPriceApiMapper tinkoffPriceApiMapper;
 
     @Override
-    public Map<String, PriceModel> getLastPrices(final Map<String, BondModel> bonds) {
+    public Map<String, PriceModel> getLastPrices(final Map<String, BondModel> bonds, final AuditModel audit) {
         if (MapUtils.isEmpty(bonds)) {
             return Collections.emptyMap();
         }
@@ -41,13 +42,13 @@ public class TinkoffPriceProviderImpl implements TinkoffPriceProvider {
 
         return response.getLastPricesList().stream()
                 .filter(Objects::nonNull)
-                .map(lastPrice -> toModel(bonds, lastPrice))
+                .map(lastPrice -> toModel(bonds, lastPrice, audit))
                 .collect(Collectors.toMap(PriceModel::getUid, Function.identity()));
     }
 
     private PriceModel toModel(
             final Map<String, BondModel> bonds,
-            final LastPrice lastPrice) {
+            final LastPrice lastPrice, final AuditModel audit) {
 
         final BondModel bondModel = bonds.get(lastPrice.getInstrumentUid());
 
@@ -56,6 +57,6 @@ public class TinkoffPriceProviderImpl implements TinkoffPriceProvider {
                 .map(PriceModel::getNominal)
                 .orElse(null);
 
-        return tinkoffPriceApiMapper.toBondPriceModel(lastPrice, moneyModel);
+        return tinkoffPriceApiMapper.toBondPriceModel(lastPrice, moneyModel, audit);
     }
 }

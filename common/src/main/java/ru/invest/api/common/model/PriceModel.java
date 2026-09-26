@@ -14,4 +14,6 @@ public class PriceModel {
     private MoneyModel nominal;
     private MoneyModel current;
     private BigDecimal percentagePrice;
+    private AuditModel created;
+    private AuditModel updated;
 }

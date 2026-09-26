@@ -13,7 +13,7 @@ import ru.invest.api.common.model.CouponDataModel;
 import ru.invest.api.common.model.CouponModel;
 import ru.invest.api.common.repository.CouponRepository;
 import ru.invest.api.tinkoff.supplier.mapper.TinkoffCouponMapper;
-import ru.invest.api.tinkoff.supplier.usecase.TinkoffCouponRepositoryUseCase;
+import ru.invest.api.tinkoff.supplier.usecase.TinkoffCouponUseCase;
 
 import java.util.Collections;
 import java.util.List;
@@ -22,7 +22,7 @@ import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
-public class TinkoffCouponRepositoryUseCaseImpl implements TinkoffCouponRepositoryUseCase {
+public class TinkoffCouponUseCaseImpl implements TinkoffCouponUseCase {
     private static final String EMPTY_UID_MESSAGE = "Bond uid can not be empty";
     private static final String COUPON_NOT_FOUND_MESSAGE = "Coupon with uid=%s is not found";
 

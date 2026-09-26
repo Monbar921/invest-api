@@ -9,6 +9,7 @@ import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 import org.springframework.beans.factory.annotation.Autowired;
 import ru.invest.api.common.mapper.BigDecimalMapper;
+import ru.invest.api.common.model.AuditModel;
 import ru.invest.api.common.model.MoneyModel;
 import ru.invest.api.common.model.PriceModel;
 import ru.tinkoff.piapi.contract.v1.LastPrice;
@@ -30,7 +31,7 @@ public abstract class TinkoffPriceApiMapper {
     @Mapping(target = "nominal", source = "nominal")
     @Mapping(target = "current", ignore = true)
     @Mapping(target = "percentagePrice", ignore = true)
-    public abstract PriceModel toBondPriceModel(LastPrice lastPrice, MoneyModel nominal);
+    public abstract PriceModel toBondPriceModel(LastPrice lastPrice, MoneyModel nominal, AuditModel audit);
 
     @Mapping(target = "nominal", source = "nominal")
     @Mapping(target = "uid", ignore = true)
