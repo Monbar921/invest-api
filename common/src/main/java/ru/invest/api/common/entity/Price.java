@@ -1,15 +1,13 @@
 package ru.invest.api.common.entity;
 
 import jakarta.persistence.AttributeOverride;
-import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
@@ -17,27 +15,24 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import ru.invest.api.common.model.enums.RiskLevel;
 
-import java.time.LocalDateTime;
+import java.math.BigDecimal;
 
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
 @Setter
 @Entity
-@Table(name = "bond")
 @Accessors(chain = true)
-public class Bond {
+@Table(name = "price")
+public class Price {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne(mappedBy = "bond", cascade = CascadeType.ALL, orphanRemoval = true)
-    private Coupon coupon;
-
-    @OneToOne(mappedBy = "bond", cascade = CascadeType.ALL, orphanRemoval = true)
-    private Price price;
+    @OneToOne
+    @JoinColumn(name = "bond_id", referencedColumnName = "id")
+    private Bond bond;
 
     @Column(name = "ticker")
     private String ticker;
@@ -45,24 +40,17 @@ public class Bond {
     @Column(name = "uid")
     private String uid;
 
-    @Column(name = "isin")
-    private String isin;
+    @Column(name = "nominal_price")
+    private BigDecimal nominalPrice;
 
-    @Column(name = "name")
-    private String name;
+    @Column(name = "nominal_currency")
+    private String nominalCurrency;
 
-    @Column(name = "sector")
-    private String sector;
+    @Column(name = "price")
+    private BigDecimal price;
 
     @Column(name = "currency")
     private String currency;
-
-    @Column(name = "maturity_date")
-    private LocalDateTime maturityDate;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "risk_level")
-    private RiskLevel riskLevel;
 
     @Embedded
     @AttributeOverride(name = "committedBy", column = @Column(name = "created_by"))

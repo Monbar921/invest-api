@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import ru.invest.api.bond.supplier.usecase.BondUseCase;
 import ru.invest.api.common.entity.Bond;
+import ru.invest.api.common.entity.Price;
 import ru.invest.api.common.mapper.AuditMapper;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.repository.BondRepository;
@@ -21,6 +22,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static ru.invest.api.common.constants.SchedulerConstants.SCHEDULER_PROCESS;
@@ -71,12 +73,26 @@ public class BondSyncTest extends AbstractInvestApplicationTest {
             assertThat(actual.getRiskLevel(), equalTo(expected.getRiskLevel()));
             assertThat(actual.getMaturityDate(), equalTo(expected.getMaturityDate()));
 
-            assertThat(actual.getNominalCurrency(), equalTo(expected.getPrice().getNominal().getCurrency()));
-            assertThat(actual.getNominalPrice(), comparesEqualTo(expected.getPrice().getNominal().getQuantity()));
-
             assertThat(actual.getCreated(), notNullValue());
             assertThat(actual.getCreated().getCommittedBy(), equalTo(SCHEDULER_PROCESS));
             assertThat(actual.getCreated().getCommittedAt(), notNullValue());
+
+            final Price actualPrice = actual.getPrice();
+
+            assertThat(actualPrice, notNullValue());
+            assertThat(actualPrice.getTicker(), equalTo(expected.getTicker()));
+            assertThat(actualPrice.getUid(), equalTo(expected.getUid()));
+            assertThat(actualPrice.getNominalCurrency(), equalTo(expected.getPrice().getNominal().getCurrency()));
+            // BigDecimal.equals() чувствителен к scale (2 в БД против nano-точности в модели),
+            // поэтому сравниваем значение, а не представление
+            assertThat(actualPrice.getNominalPrice(), comparesEqualTo(expected.getPrice().getNominal().getQuantity()));
+            // текущая цена при сохранении облигации не заполняется - её пишет синхронизация цен
+            assertThat(actualPrice.getPrice(), nullValue());
+            assertThat(actualPrice.getCurrency(), nullValue());
+
+            assertThat(actualPrice.getCreated(), notNullValue());
+            assertThat(actualPrice.getCreated().getCommittedBy(), equalTo(SCHEDULER_PROCESS));
+            assertThat(actualPrice.getCreated().getCommittedAt(), notNullValue());
         }
     }
 }

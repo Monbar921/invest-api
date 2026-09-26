@@ -11,9 +11,11 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 public class PriceModel {
     private String uid;
+    private String ticker;
     private MoneyModel nominal;
     private MoneyModel current;
     private BigDecimal percentagePrice;
     private AuditModel created;
     private AuditModel updated;
+    private AuditModel logged;
 }

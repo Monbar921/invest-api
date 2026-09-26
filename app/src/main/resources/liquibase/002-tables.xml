@@ -7,4 +7,5 @@
     <include file="tables/001-bond.xml" relativeToChangelogFile="true"/>
     <include file="tables/002-coupon.xml" relativeToChangelogFile="true"/>
     <include file="tables/003-coupon-data.xml" relativeToChangelogFile="true"/>
+    <include file="tables/004-price.xml" relativeToChangelogFile="true"/>
 </databaseChangeLog>

@@ -21,17 +21,20 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
-@Mapper(uses = {DateTimeMapper.class})
+@Mapper(uses = {DateTimeMapper.class, TinkoffPriceEntityMapper.class})
 public abstract class TinkoffBondEntityMapper {
     @Setter(onMethod_ = @Autowired)
     private AuditMapper auditMapper;
     @Setter(onMethod_ = @Autowired)
     private TinkoffCouponMapper tinkoffCouponMapper;
+    @Setter(onMethod_ = @Autowired)
+    private TinkoffPriceEntityMapper tinkoffPriceEntityMapper;
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "created", ignore = true)
     @Mapping(target = "updated", ignore = true)
     @Mapping(target = "coupon", ignore = true)
+    @Mapping(target = "price", ignore = true)
     @Mapping(target = "ticker", source = "bondModel.ticker")
     @Mapping(target = "uid", source = "bondModel.uid")
     @Mapping(target = "isin", source = "bondModel.isin")
@@ -40,12 +43,10 @@ public abstract class TinkoffBondEntityMapper {
     @Mapping(target = "riskLevel", source = "bondModel.riskLevel")
     @Mapping(target = "maturityDate", source = "bondModel.maturityDate")
     @Mapping(target = "currency", source = "bondModel.currency")
-    @Mapping(target = "nominalCurrency", source = "bondModel.price.nominal.currency")
-    @Mapping(target = "nominalPrice", source = "bondModel.price.nominal.quantity")
     public abstract Bond toEntity(BondModel bondModel, Bond existing);
 
     @Mapping(target = "logged", ignore = true)
-    @Mapping(target = "price", ignore = true)
+    @Mapping(target = "price", source = "bond.price")
     @Mapping(target = "ticker", source = "bond.ticker")
     @Mapping(target = "uid", source = "bond.uid")
     @Mapping(target = "isin", source = "bond.isin")
@@ -55,6 +56,7 @@ public abstract class TinkoffBondEntityMapper {
     @Mapping(target = "coupon", ignore = true)
     @Mapping(target = "maturityDate", source = "bond.maturityDate")
     public abstract BondModel toModel(Bond bond);
+
     public abstract List<BondModel> toModel(List<Bond> bonds);
 
 
@@ -95,6 +97,9 @@ public abstract class TinkoffBondEntityMapper {
 
         bond.setCoupon(
                 tinkoffCouponMapper.toEntity(bond, bondModel)
+        );
+        bond.setPrice(
+                tinkoffPriceEntityMapper.toEntity(bond, bondModel)
         );
     }
 }

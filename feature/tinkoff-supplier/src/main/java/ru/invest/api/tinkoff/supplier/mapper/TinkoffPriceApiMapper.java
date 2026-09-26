@@ -31,6 +31,7 @@ public abstract class TinkoffPriceApiMapper {
     @Mapping(target = "nominal", source = "nominal")
     @Mapping(target = "current", ignore = true)
     @Mapping(target = "percentagePrice", ignore = true)
+    @Mapping(target = "logged", source = "audit")
     public abstract PriceModel toBondPriceModel(LastPrice lastPrice, MoneyModel nominal, AuditModel audit);
 
     @Mapping(target = "nominal", source = "nominal")

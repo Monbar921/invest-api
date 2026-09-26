@@ -56,7 +56,7 @@ public class TinkoffBondDispatcherImpl implements TinkoffBondDispatcher {
         }
 
         //TODO Нужно пытаться получить цену и если не получили, то сходить в базу и вытащить оттуда
-        final Map<String, PriceModel> bondPrices = tinkoffPriceProvider.getLastPrices(bondModelMap);
+        final Map<String, PriceModel> bondPrices = tinkoffPriceProvider.getLastPrices(bondModelMap, null);
         final List<BondModel> bondModels = bondEntityMapper.enrichBonds(bondModelMap, bondPrices);
 
         enrichByCoupons(bondModels);

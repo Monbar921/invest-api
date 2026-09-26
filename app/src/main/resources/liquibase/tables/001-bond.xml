@@ -32,9 +32,6 @@
             <column name="sector" type="varchar2(100)">
                 <constraints nullable="false"/>
             </column>
-            <column name="nominal_currency" type="varchar2(3)">
-                <constraints nullable="false"/>
-            </column>
             <column name="currency" type="varchar2(3)">
                 <constraints nullable="false"/>
             </column>
