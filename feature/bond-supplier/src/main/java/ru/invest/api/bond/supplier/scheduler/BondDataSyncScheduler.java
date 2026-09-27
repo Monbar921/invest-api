@@ -7,9 +7,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import ru.invest.api.bond.supplier.usecase.BondUseCase;
 import ru.invest.api.common.mapper.AuditMapper;
 import ru.invest.api.common.model.AuditModel;
+import ru.invest.api.common.usecase.BondSyncUseCase;
 import ru.invest.api.common.usecase.CouponSyncUseCase;
 import ru.invest.api.common.usecase.PriceSyncUseCase;
 
@@ -27,7 +27,7 @@ import static ru.invest.api.common.constants.SchedulerConstants.SCHEDULER_PROCES
 @RequiredArgsConstructor
 @ConditionalOnProperty(prefix = "ru.invest.api.stock.supplier.scheduler.sync", name = "enabled", havingValue = "true")
 public class BondDataSyncScheduler {
-    private final BondUseCase bondUseCase;
+    private final List<BondSyncUseCase> bondSyncUseCases;
     private final List<CouponSyncUseCase> couponSyncUseCases;
     private final List<PriceSyncUseCase> priceSyncUseCases;
     private final AuditMapper auditMapper;
@@ -45,7 +45,10 @@ public class BondDataSyncScheduler {
         log.info("Bond data sync scheduler started");
         final AuditModel audit = auditMapper.toCurrentAuditModel(SCHEDULER_PROCESS);
 
-        runStep("bond", bondStepEnabled, () -> bondUseCase.syncAll(audit));
+        runStep("bond", bondStepEnabled, () -> bondSyncUseCases
+                .stream()
+                .findAny()
+                .ifPresent(couponSyncUseCase -> couponSyncUseCase.syncAll(audit)));
         runStep("coupon", couponStepEnabled, () -> couponSyncUseCases
                 .stream()
                 .findAny()

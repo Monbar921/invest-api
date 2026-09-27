@@ -1,4 +1,4 @@
-package ru.invest.api.ui.service.exception;
+package ru.invest.api.ui.service.controller.exception;
 
 import io.github.resilience4j.bulkhead.BulkheadFullException;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;

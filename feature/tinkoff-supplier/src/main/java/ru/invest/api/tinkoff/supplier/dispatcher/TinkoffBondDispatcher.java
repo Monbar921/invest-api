@@ -9,4 +9,6 @@ public interface TinkoffBondDispatcher {
     List<BondModel> getForeignCurrencyBonds(BondParametersModel bondParameters);
 
     List<BondModel> getRubbleCurrencyBonds(BondParametersModel bondParameters);
+
+    List<BondModel> getAll(BondParametersModel bondParameters);
 }

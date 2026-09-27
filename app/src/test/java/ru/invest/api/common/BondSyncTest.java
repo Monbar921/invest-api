@@ -3,12 +3,12 @@ package ru.invest.api.common;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import ru.invest.api.AbstractInvestApplicationTest;
-import ru.invest.api.bond.supplier.usecase.BondUseCase;
 import ru.invest.api.common.entity.Bond;
 import ru.invest.api.common.entity.Price;
 import ru.invest.api.common.mapper.AuditMapper;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.repository.BondRepository;
+import ru.invest.api.common.usecase.BondSyncUseCase;
 import ru.invest.api.tinkoff.supplier.mapper.TinkoffBondApiMapper;
 import ru.invest.api.tinkoff.supplier.wrapper.InstrumentsGrpcRateLimitedWrapper;
 import ru.tinkoff.piapi.contract.v1.BondsResponse;
@@ -30,7 +30,7 @@ import static ru.invest.api.common.constants.SchedulerConstants.SCHEDULER_PROCES
 
 public class BondSyncTest extends AbstractInvestApplicationTest {
     @Autowired
-    private BondUseCase bondUseCase;
+    private BondSyncUseCase bondSyncUseCase;
     @Autowired
     private AuditMapper auditMapper;
     @Autowired
@@ -55,7 +55,7 @@ public class BondSyncTest extends AbstractInvestApplicationTest {
                         (first, second) -> first
                 ));
 
-        bondUseCase.syncAll(auditMapper.toCurrentAuditModel(SCHEDULER_PROCESS));
+        bondSyncUseCase.syncAll(auditMapper.toCurrentAuditModel(SCHEDULER_PROCESS));
 
         final List<Bond> actualBonds = bondRepository.findByUidIn(expectedByUid.keySet());
 

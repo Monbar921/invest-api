@@ -1,6 +1,5 @@
 package ru.invest.api.bond.supplier.usecase;
 
-import ru.invest.api.common.model.AuditModel;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.parameters.BondParametersModel;
 
@@ -11,5 +10,5 @@ public interface BondUseCase {
 
     List<BondModel> getRubbleCurrencyBonds(BondParametersModel bondParametersModel);
 
-    void syncAll(AuditModel auditModel);
+    List<BondModel> getAll(BondParametersModel bondParametersModel);
 }

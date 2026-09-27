@@ -18,9 +18,9 @@ import java.util.List;
 
 @Validated
 @RestController
-@RequestMapping("/internal/rest/bonds/foreign")
+@RequestMapping("/internal/rest/bonds")
 @RequiredArgsConstructor
-public class ForeignBondController {
+public class BondController {
     private final BondUseCase bondUseCase;
     private final BondParametersRequestMapper bondParametersRequestMapper;
     private final BondDtoMapper bondDtoMapper;
@@ -36,7 +36,25 @@ public class ForeignBondController {
             @RequestParam(required = false) @Positive(message = "batchLimit must be a positive number") final Integer batchLimit,
             @RequestBody(required = false) final BondParametersRequest bondParametersRequest) {
         return bondDtoMapper.toDto(
+                bondUseCase.getAll(
+                        bondParametersRequestMapper.toModel(batchLimit, bondParametersRequest)));
+    }
+
+    @PostMapping("/foreign")
+    public List<BondDto> getForeign(
+            @RequestParam(required = false) @Positive(message = "batchLimit must be a positive number") final Integer batchLimit,
+            @RequestBody(required = false) final BondParametersRequest bondParametersRequest) {
+        return bondDtoMapper.toDto(
                 bondUseCase.getForeignCurrencyBonds(
+                        bondParametersRequestMapper.toModel(batchLimit, bondParametersRequest)));
+    }
+
+    @PostMapping("/local")
+    public List<BondDto> getLocal(
+            @RequestParam(required = false) @Positive(message = "batchLimit must be a positive number") final Integer batchLimit,
+            @RequestBody(required = false) final BondParametersRequest bondParametersRequest) {
+        return bondDtoMapper.toDto(
+                bondUseCase.getRubbleCurrencyBonds(
                         bondParametersRequestMapper.toModel(batchLimit, bondParametersRequest)));
     }
 }
