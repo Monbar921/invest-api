@@ -11,6 +11,7 @@ import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.PriceModel;
 import ru.invest.api.common.usecase.PriceSyncUseCase;
 import ru.invest.api.tinkoff.supplier.provider.TinkoffPriceProvider;
+import ru.invest.api.tinkoff.supplier.usecase.CouponInterestUseCase;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondUseCase;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffPriceUseCase;
 
@@ -27,6 +28,7 @@ public class TinkoffPriceSyncUseCaseImpl implements PriceSyncUseCase {
     private final TinkoffPriceProvider tinkoffPriceProvider;
     private final TinkoffBondUseCase tinkoffBondUseCase;
     private final TinkoffPriceUseCase tinkoffPriceUseCase;
+    private final CouponInterestUseCase couponInterestUseCase;
 
     @Override
     public void syncAll(final AuditModel audit) {
@@ -54,5 +56,10 @@ public class TinkoffPriceSyncUseCaseImpl implements PriceSyncUseCase {
         final Map<String, PriceModel> prices = tinkoffPriceProvider.getLastPrices(bonds, audit);
 
         tinkoffPriceUseCase.saveCurrentPrices(prices);
+
+        // доходность купона считается от текущей цены, поэтому пересчитываем её после сохранения цен
+        if (MapUtils.isNotEmpty(prices)) {
+            couponInterestUseCase.recalculate(prices.keySet(), audit);
+        }
     }
 }
