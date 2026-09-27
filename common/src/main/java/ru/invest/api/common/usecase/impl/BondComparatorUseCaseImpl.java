@@ -56,9 +56,12 @@ public class BondComparatorUseCaseImpl implements BondComparatorUseCase {
             case NAME -> Comparator.comparing(
                     BondModel::getName,
                     Comparator.nullsLast(getOrder(bondSortOrder)));
+            // облигации в разных валютах сравниваются по рублёвому эквиваленту текущей цены
             case PRICE -> Comparator.comparing(
-                    bond -> bond.getPrice() != null && bond.getPrice().getCurrent() != null
-                            ? bond.getPrice().getCurrent().getQuantity() : null,
+                    bond -> bond.getPrice() != null ? bond.getPrice().getCurrentInRub() : null,
+                    Comparator.nullsLast(getOrder(bondSortOrder)));
+            case PERCENTAGE_PRICE -> Comparator.comparing(
+                    bond -> bond.getPrice() != null ? bond.getPrice().getPercentagePrice() : null,
                     Comparator.nullsLast(getOrder(bondSortOrder)));
         };
     }

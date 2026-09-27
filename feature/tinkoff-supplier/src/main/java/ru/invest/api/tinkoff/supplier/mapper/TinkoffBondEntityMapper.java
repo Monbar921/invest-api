@@ -21,7 +21,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
-@Mapper(uses = {DateTimeMapper.class, TinkoffPriceEntityMapper.class})
+@Mapper(uses = {DateTimeMapper.class, TinkoffPriceEntityMapper.class, TinkoffCouponMapper.class})
 @SuppressWarnings("checkstyle:AbstractClassName")
 public abstract class TinkoffBondEntityMapper {
     @Setter(onMethod_ = @Autowired)
@@ -54,7 +54,8 @@ public abstract class TinkoffBondEntityMapper {
     @Mapping(target = "name", source = "bond.name")
     @Mapping(target = "sector", source = "bond.sector")
     @Mapping(target = "riskLevel", source = "bond.riskLevel")
-    @Mapping(target = "coupon", ignore = true)
+    // в списках облигаций отдаём только доходность купона, без графика выплат
+    @Mapping(target = "coupon", source = "bond.coupon", qualifiedByName = "toShortModel")
     @Mapping(target = "maturityDate", source = "bond.maturityDate")
     public abstract BondModel toModel(Bond bond);
 

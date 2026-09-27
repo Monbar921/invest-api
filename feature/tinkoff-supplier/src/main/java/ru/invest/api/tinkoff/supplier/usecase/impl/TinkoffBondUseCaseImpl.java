@@ -31,7 +31,7 @@ public class TinkoffBondUseCaseImpl implements TinkoffBondUseCase {
     @Override
     @Transactional(readOnly = true)
     public List<BondModel> getAll() {
-        return tinkoffBondEntityMapper.toModel(bondRepository.findAll());
+        return tinkoffBondEntityMapper.toModel(bondRepository.findAllWithPriceAndCoupon());
     }
 
     @Override

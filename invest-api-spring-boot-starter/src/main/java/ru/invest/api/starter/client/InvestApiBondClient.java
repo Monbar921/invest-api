@@ -26,7 +26,7 @@ public interface InvestApiBondClient {
                          @RequestBody BondParametersRequest bondParametersRequest);
 
     /**
-     * Все облигации без фильтров, с сортировкой по умолчанию (по текущей цене по возрастанию).
+     * Все облигации без фильтров, с сортировкой по умолчанию (по текущей цене в рублях по возрастанию).
      */
     default List<BondDto> getAll(final Integer batchLimit) {
         return getAll(batchLimit, new BondParametersRequest());

@@ -10,4 +10,9 @@ public interface TinkoffBondCacheRepositoryUseCase {
     Map<String, BondModel> getRubbleCurrencyBonds();
 
     Map<String, BondModel> getBonds();
+
+    /**
+     * Сбрасывает кэш облигаций - вызывается после синхронизаций, чтобы пользователи сразу видели новые данные.
+     */
+    void evictAll();
 }

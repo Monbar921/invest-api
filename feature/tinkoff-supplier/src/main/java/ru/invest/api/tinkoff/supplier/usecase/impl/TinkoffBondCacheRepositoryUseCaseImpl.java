@@ -8,6 +8,7 @@ import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 import ru.invest.api.common.model.BondModel;
+import ru.invest.api.tinkoff.supplier.service.PriceConversionService;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondCacheRepositoryUseCase;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondUseCase;
 
@@ -15,6 +16,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -34,6 +36,7 @@ public class TinkoffBondCacheRepositoryUseCaseImpl implements TinkoffBondCacheRe
     private final CacheManager bondCacheManager;
 
     private final TinkoffBondUseCase tinkoffBondUseCase;
+    private final PriceConversionService priceConversionService;
 
     @Override
     public Map<String, BondModel> getForeignCurrencyBonds() {
@@ -54,6 +57,12 @@ public class TinkoffBondCacheRepositoryUseCaseImpl implements TinkoffBondCacheRe
         return getCachedAll();
     }
 
+    @Override
+    public void evictAll() {
+        Optional.ofNullable(bondCacheManager.getCache(BOND_REPOSITORY_CACHE_NAME))
+                .ifPresent(Cache::clear);
+    }
+
     private Map<String, BondModel> getCachedAll() {
         final Cache cache = bondCacheManager.getCache(BOND_REPOSITORY_CACHE_NAME);
         if (cache == null) {
@@ -68,6 +77,9 @@ public class TinkoffBondCacheRepositoryUseCaseImpl implements TinkoffBondCacheRe
         if (CollectionUtils.isEmpty(allBonds)) {
             return Collections.emptyMap();
         }
+
+        // фильтр и сортировка по цене сравнивают облигации в разных валютах через рублёвый эквивалент
+        priceConversionService.fillCurrentInRub(allBonds);
 
         return allBonds.stream()
                 .filter(Objects::nonNull)

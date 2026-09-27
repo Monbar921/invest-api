@@ -20,6 +20,17 @@ public interface BondRepository extends JpaRepository<Bond, Long> {
             """)
     Slice<Bond> findByNotFixedCouponAndEmptyCoupons(Pageable pageable);
 
+    /**
+     * Все облигации сразу с ценой и купоном: обратные OneToOne-связи Hibernate иначе грузит
+     * отдельным запросом на каждую облигацию.
+     */
+    @Query("""
+            select b from Bond b
+            left join fetch b.price
+            left join fetch b.coupon
+            """)
+    List<Bond> findAllWithPriceAndCoupon();
+
     List<Bond> findByUidIn(Set<String> tickers);
 
     Optional<Bond> findByUid(String uid);

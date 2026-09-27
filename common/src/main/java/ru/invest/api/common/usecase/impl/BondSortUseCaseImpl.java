@@ -7,7 +7,6 @@ import org.apache.commons.lang3.ObjectUtils;
 import org.springframework.stereotype.Service;
 import ru.invest.api.common.mapper.BondParametersMapper;
 import ru.invest.api.common.model.BondModel;
-import ru.invest.api.common.model.MoneyModel;
 import ru.invest.api.common.model.PriceModel;
 import ru.invest.api.common.model.enums.RiskLevel;
 import ru.invest.api.common.model.parameters.BondParametersModel;
@@ -15,6 +14,7 @@ import ru.invest.api.common.model.parameters.ValueRangeModel;
 import ru.invest.api.common.usecase.BondSortUseCase;
 
 import java.math.BigDecimal;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -40,9 +40,27 @@ public class BondSortUseCaseImpl implements BondSortUseCase {
                 .filter(bond -> filterByValueRange(bondParameters.getPercentagePrice(), getPercentagePrice(bond)))
                 .filter(bond -> filterByRiskLevel(bondParameters.getRiskLevels(), bond.getRiskLevel()))
                 .filter(bond -> filterByOfz(bondParameters.getIsOfz(), bond))
-                .sorted(actualizedParameters.getComparator())
+                .sorted(priceUnknownLast(bondParameters).thenComparing(actualizedParameters.getComparator()))
                 .limit(actualizedParameters.getBatchLimit())
                 .toList();
+    }
+
+    /**
+     * Облигации без цены проходят фильтр по цене (она ещё не синхронизирована), но при заданном фильтре
+     * должны идти после облигаций с подходящей ценой - иначе они заняли бы начало батча.
+     * Без фильтра по цене порядок не меняется.
+     */
+    private Comparator<BondModel> priceUnknownLast(final BondParametersModel bondParameters) {
+        return Comparator.comparing((BondModel bond) -> isFilteredPriceUnknown(bondParameters, bond));
+    }
+
+    private boolean isFilteredPriceUnknown(final BondParametersModel bondParameters, final BondModel bond) {
+        return isActive(bondParameters.getCurrentPrice()) && getCurrentPrice(bond) == null
+                || isActive(bondParameters.getPercentagePrice()) && getPercentagePrice(bond) == null;
+    }
+
+    private boolean isActive(final ValueRangeModel range) {
+        return range != null && !ObjectUtils.allNull(range.getMin(), range.getMax());
     }
 
     private boolean filterByOfz(final Boolean isOfz, final BondModel bond) {
@@ -63,7 +81,7 @@ public class BondSortUseCaseImpl implements BondSortUseCase {
     }
 
     private boolean filterByValueRange(final ValueRangeModel price, final BigDecimal comparedValue) {
-        if (price == null || ObjectUtils.allNull(price.getMin(), price.getMax())) {
+        if (!isActive(price)) {
             return true;
         }
 
@@ -75,10 +93,10 @@ public class BondSortUseCaseImpl implements BondSortUseCase {
                 && comparePrices(comparedValue, price.getMax(), -1);
     }
 
+    // фильтр по текущей цене задаётся в рублях, облигации в других валютах сравниваются по рублёвому эквиваленту
     private BigDecimal getCurrentPrice(final BondModel bondModel) {
         return Optional.ofNullable(bondModel.getPrice())
-                .map(PriceModel::getCurrent)
-                .map(MoneyModel::getQuantity)
+                .map(PriceModel::getCurrentInRub)
                 .orElse(null);
     }
 

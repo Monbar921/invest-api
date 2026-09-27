@@ -15,6 +15,7 @@ import ru.invest.api.common.model.ShortProductModel;
 import ru.invest.api.common.usecase.CouponSyncUseCase;
 import ru.invest.api.tinkoff.supplier.provider.TinkoffCouponProvider;
 import ru.invest.api.tinkoff.supplier.usecase.GetNeedToUpdateCouponsUseCase;
+import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondCacheRepositoryUseCase;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondUseCase;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffCouponUseCase;
 
@@ -40,6 +41,7 @@ public class TinkoffCouponSyncUseCaseImpl implements CouponSyncUseCase {
     private final TinkoffCouponUseCase tinkoffCouponUseCase;
     private final GetNeedToUpdateCouponsUseCase getNeedToUpdateCouponsUseCase;
     private final TinkoffBondUseCase tinkoffBondUseCase;
+    private final TinkoffBondCacheRepositoryUseCase tinkoffBondCacheRepositoryUseCase;
 
     @Qualifier(COUPON_EXECUTOR_SERVICE)
     private final ExecutorService couponExecutorService;
@@ -78,15 +80,19 @@ public class TinkoffCouponSyncUseCaseImpl implements CouponSyncUseCase {
         final Iterator<ShortProductModel> uidTickerIterator = validUidTickers.iterator();
         final Map<String, List<CouponDataModel>> couponBatch = new HashMap<>(BATCH_SIZE);
 
-        while (uidTickerIterator.hasNext()) {
-            final ShortProductModel uidTicker = uidTickerIterator.next();
-            couponBatch.put(uidTicker.getUid(), List.of());
+        try {
+            while (uidTickerIterator.hasNext()) {
+                final ShortProductModel uidTicker = uidTickerIterator.next();
+                couponBatch.put(uidTicker.getUid(), List.of());
 
-            if (couponBatch.size() == BATCH_SIZE || !uidTickerIterator.hasNext()) {
-                fetchCouponsAsyncAndGet(couponBatch, uidTickerMap, audit);
-                updateEntity(couponBatch);
-                couponBatch.clear();
+                if (couponBatch.size() == BATCH_SIZE || !uidTickerIterator.hasNext()) {
+                    fetchCouponsAsyncAndGet(couponBatch, uidTickerMap, audit);
+                    updateEntity(couponBatch);
+                    couponBatch.clear();
+                }
             }
+        } finally {
+            tinkoffBondCacheRepositoryUseCase.evictAll();
         }
     }
 

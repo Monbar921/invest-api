@@ -7,6 +7,7 @@ import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.Named;
 import org.mapstruct.ObjectFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import ru.invest.api.common.entity.Bond;
@@ -43,6 +44,13 @@ public abstract class TinkoffCouponMapper {
 
     @Mapping(target = "couponData", source = "couponData")
     public abstract CouponModel toModel(Coupon coupon);
+
+    /**
+     * Купон без графика выплат - для списков облигаций, где нужна только доходность.
+     */
+    @Named("toShortModel")
+    @Mapping(target = "couponData", ignore = true)
+    public abstract CouponModel toShortModel(Coupon coupon);
 
     @Mapping(target = "created", ignore = true)
     @Mapping(target = "updated", ignore = true)

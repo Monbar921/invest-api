@@ -50,12 +50,21 @@ public class CouponCalculationServiceImpl implements CouponCalculationService {
 
         final List<CouponDataModel> oneYearCoupons = getOneYearCoupons(couponData, couponModel.getQuantityPerYear());
 
-        final BigDecimal paymentSum = oneYearCoupons
+        final List<MoneyModel> payments = oneYearCoupons
                 .stream()
                 .map(CouponDataModel::getPrice)
                 .filter(Objects::nonNull)
                 .filter(price -> StringUtils.isNotBlank(price.getCurrency()) && price.getQuantity() != null)
                 .map(coupon -> convertToBondCurrency(coupon, bondPriceCurrency))
+                .toList();
+
+        // нет курса хотя бы для одной выплаты - доходность посчитать нельзя, без неё сумма была бы занижена
+        if (payments.contains(null)) {
+            return null;
+        }
+
+        final BigDecimal paymentSum = payments
+                .stream()
                 .map(MoneyModel::getQuantity)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
@@ -85,6 +94,9 @@ public class CouponCalculationServiceImpl implements CouponCalculationService {
 
         final CurrencyModel converted = currencyPriceUseCase.calculateAmount(
                 coupon.getCurrency(), targetCurrency, coupon.getQuantity());
+        if (converted == null) {
+            return null;
+        }
 
         return new MoneyModel()
                 .setQuantity(converted.getRate())

@@ -42,3 +42,13 @@ INSERT INTO price (id, bond_id, ticker, uid, nominal_price, nominal_currency, pr
 VALUES (6, 6, 'RU000A106Z77', '1c0a2f3e-0006-4000-8000-000000000006', 1000.00, 'cny', 1001.00, 'cny', '2026-09-24 15:30:02.649675', 'SYSTEM', null, null);
 INSERT INTO price (id, bond_id, ticker, uid, nominal_price, nominal_currency, price, currency, created_at, created_by, updated_at, updated_by)
 VALUES (7, 7, 'RU000A10ECY6', '1c0a2f3e-0007-4000-8000-000000000007', 1000.00, 'rub', null, null, '2026-09-24 15:30:02.649675', 'SYSTEM', null, null);
+
+-- доходность уже посчитана синхронизацией цен; у RU000A1080Y2, RU000A106Z77 и RU000A10ECY6 купонов нет
+INSERT INTO coupon (id, bond_id, ticker, uid, quantity_per_year, is_fixed_coupon, interest, created_at, created_by, updated_at, updated_by)
+VALUES (1, 1, 'SU26238RMFS4', '1c0a2f3e-0001-4000-8000-000000000001', 2, true, 7.05, '2026-09-24 15:30:02.649675', 'SYSTEM', null, null);
+INSERT INTO coupon (id, bond_id, ticker, uid, quantity_per_year, is_fixed_coupon, interest, created_at, created_by, updated_at, updated_by)
+VALUES (3, 3, 'RU000A10EHC1', '1c0a2f3e-0003-4000-8000-000000000003', 4, false, 25.10, '2026-09-24 15:30:02.649675', 'SYSTEM', null, null);
+INSERT INTO coupon (id, bond_id, ticker, uid, quantity_per_year, is_fixed_coupon, interest, created_at, created_by, updated_at, updated_by)
+VALUES (4, 4, 'RU000A10EQ34', '1c0a2f3e-0004-4000-8000-000000000004', 12, true, 18.50, '2026-09-24 15:30:02.649675', 'SYSTEM', null, null);
+INSERT INTO coupon (id, bond_id, ticker, uid, quantity_per_year, is_fixed_coupon, interest, created_at, created_by, updated_at, updated_by)
+VALUES (5, 5, 'RU000A105A95', '1c0a2f3e-0005-4000-8000-000000000005', 2, true, 6.20, '2026-09-24 15:30:02.649675', 'SYSTEM', null, null);

@@ -4,11 +4,15 @@ import feign.FeignException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.test.context.jdbc.Sql;
 import ru.invest.api.AbstractInvestApplicationTest;
+import ru.invest.api.cb.rf.supplier.client.feign.CbRfClient;
+import ru.invest.api.cb.rf.supplier.model.CurrencyDto;
+import ru.invest.api.cb.rf.supplier.model.CurrencyElementDto;
+import ru.invest.api.common.mapper.AuditMapper;
+import ru.invest.api.common.usecase.PriceSyncUseCase;
 import ru.invest.api.dto.bond.BondDto;
 import ru.invest.api.dto.bond.enums.RiskLevelDto;
 import ru.invest.api.dto.request.bond.BondParametersRequest;
@@ -17,6 +21,10 @@ import ru.invest.api.dto.request.bond.BondSortOrderRequest;
 import ru.invest.api.dto.request.bond.BondSortRequest;
 import ru.invest.api.dto.request.bond.ValueRangeRequest;
 import ru.invest.api.starter.client.InvestApiBondClient;
+import ru.invest.api.tinkoff.supplier.wrapper.MarketDataGrpcRateLimitedWrapper;
+import ru.tinkoff.piapi.contract.v1.GetLastPricesResponse;
+import ru.tinkoff.piapi.contract.v1.LastPrice;
+import ru.tinkoff.piapi.contract.v1.Quotation;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -33,8 +41,9 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static ru.invest.api.common.constants.CacheConstants.BOND_REPOSITORY_CACHE_MANAGER;
-import static ru.invest.api.common.constants.CacheConstants.BOND_REPOSITORY_CACHE_NAME;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
+import static ru.invest.api.common.constants.SchedulerConstants.SCHEDULER_PROCESS;
 
 /**
  * Пользователи работают с приложением только через BondController, поэтому все проверки идут через InvestApiBondClient -
@@ -50,34 +59,49 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
     private static final String RUB_HIGH = "RU000A10EHC1";
     // rub, LOW, цена 1005.00
     private static final String RUB_LOW = "RU000A10EQ34";
-    // usd, LOW, цена 980.00
+    // usd, LOW, цена 980.00 USD = 88 200 RUB
     private static final String USD_LOW = "RU000A105A95";
-    // cny, MODERATE, цена 1001.00
+    // cny, MODERATE, цена 1001.00 CNY = 12 512.50 RUB
     private static final String CNY_MODERATE = "RU000A106Z77";
     // rub, HIGH, текущей цены ещё нет
     private static final String RUB_WITHOUT_PRICE = "RU000A10ECY6";
 
     private static final int BAD_REQUEST = 400;
+    // курсы ЦБ: 1 USD = 90 RUB, 10 CNY = 125 RUB (у юаня номинал 10, как бывает у ЦБ)
+    private static final CurrencyElementDto USD_RATE = cbRfRate("USD", "1", "90,0");
+    private static final CurrencyElementDto CNY_RATE = cbRfRate("CNY", "10", "125,0");
 
     @Autowired
     private InvestApiBondClient investApiBondClient;
     @Autowired
-    @Qualifier(BOND_REPOSITORY_CACHE_MANAGER)
-    private CacheManager bondRepositoryCacheManager;
+    private PriceSyncUseCase priceSyncUseCase;
+    @Autowired
+    private AuditMapper auditMapper;
+    // тот же мок, что зарегистрирован через @MockitoBean в AbstractInvestApplicationTest
+    @Autowired
+    private MarketDataGrpcRateLimitedWrapper marketDataGrpcWrapper;
+
+    // те же моки, что зарегистрированы через @MockitoBean в AbstractInvestApplicationTest
+    @Autowired
+    private CbRfClient cbRfClient;
+    @Autowired
+    private List<CacheManager> cacheManagers;
 
     @BeforeEach
-    public void clearBondCache() {
-        // контроллер читает облигации через кэш - иначе он отдал бы данные предыдущих тестов
-        Optional.ofNullable(bondRepositoryCacheManager.getCache(BOND_REPOSITORY_CACHE_NAME))
-                .ifPresent(Cache::clear);
+    public void setUp() {
+        // контроллер читает облигации и курсы через кэши - иначе он отдал бы данные предыдущих тестов
+        cacheManagers.forEach(cacheManager -> cacheManager.getCacheNames()
+                .forEach(name -> Optional.ofNullable(cacheManager.getCache(name)).ifPresent(Cache::clear)));
+
+        mockCbRfRates(USD_RATE, CNY_RATE);
     }
 
     @Test
     public void getAllWithoutParametersSortsByCurrentPriceTest() {
         final List<BondDto> bonds = investApiBondClient.getAll(null);
 
-        // по умолчанию - по текущей цене по возрастанию, облигации без цены в конце
-        assertThat(tickers(bonds), contains(OFZ, RUB_MODERATE, RUB_HIGH, USD_LOW, CNY_MODERATE, RUB_LOW, RUB_WITHOUT_PRICE));
+        // по умолчанию - по текущей цене в рублях по возрастанию, облигации без цены в конце
+        assertThat(tickers(bonds), contains(OFZ, RUB_MODERATE, RUB_HIGH, RUB_LOW, CNY_MODERATE, USD_LOW, RUB_WITHOUT_PRICE));
     }
 
     @Test
@@ -99,6 +123,16 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
         assertThat(bond.getPrice().getNominal().getCurrency(), equalTo("rub"));
         assertThat(bond.getPrice().getCurrent().getQuantity(), comparesEqualTo(new BigDecimal("1005.00")));
         assertThat(bond.getPrice().getCurrent().getCurrency(), equalTo("rub"));
+
+        // купон отдаётся без графика выплат
+        assertThat(bond.getCoupon(), notNullValue());
+        assertThat(bond.getCoupon().getUid(), equalTo("1c0a2f3e-0004-4000-8000-000000000004"));
+        assertThat(bond.getCoupon().getInterest(), comparesEqualTo(new BigDecimal("18.50")));
+        assertThat(bond.getCoupon().getQuantityPerYear(), equalTo(12));
+        assertThat(bond.getCoupon().getCouponData(), nullValue());
+
+        // 1005.00 от номинала 1000.00
+        assertThat(bond.getPrice().getPercentagePrice(), comparesEqualTo(new BigDecimal("100.5")));
     }
 
     @Test
@@ -111,6 +145,36 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
 
         assertThat(bond.getPrice().getNominal().getQuantity(), comparesEqualTo(new BigDecimal("1000.00")));
         assertThat(bond.getPrice().getCurrent(), nullValue());
+        assertThat(bond.getPrice().getPercentagePrice(), nullValue());
+        assertThat(bond.getCoupon(), nullValue());
+    }
+
+    @Test
+    public void filterByPercentagePriceTest() {
+        final BondParametersRequest request = new BondParametersRequest();
+        request.setPercentagePrice(valueRange("95", "100"));
+
+        final List<BondDto> bonds = investApiBondClient.getAll(null, request);
+
+        // проценты от номинала не зависят от валюты: RUB_MODERATE 98.9474%, RUB_HIGH 95.05%, USD_LOW 98%;
+        // не проходят OFZ 61%, CNY_MODERATE 100.1%, RUB_LOW 100.5%; облигация без цены - в конце
+        assertThat(tickers(bonds), contains(RUB_MODERATE, RUB_HIGH, USD_LOW, RUB_WITHOUT_PRICE));
+    }
+
+    @Test
+    public void sortByPriceDescTest() {
+        final List<BondDto> bonds = investApiBondClient.getAll(null, sortedBy(sort(BondSortFieldRequest.PRICE, BondSortOrderRequest.DESC)));
+
+        // по цене в рублях: 88 200, 12 512.50, 1005, 950.50, 940, 610; облигация без цены - в конце и при DESC
+        assertThat(tickers(bonds), contains(USD_LOW, CNY_MODERATE, RUB_LOW, RUB_HIGH, RUB_MODERATE, OFZ, RUB_WITHOUT_PRICE));
+    }
+
+    @Test
+    public void sortByPercentagePriceTest() {
+        final List<BondDto> bonds = investApiBondClient.getAll(null, sortedBy(sort(BondSortFieldRequest.PERCENTAGE_PRICE, BondSortOrderRequest.ASC)));
+
+        // 61%, 95.05%, 98%, 98.9474%, 100.1%, 100.5%; облигация без цены - в конце
+        assertThat(tickers(bonds), contains(OFZ, RUB_HIGH, USD_LOW, RUB_MODERATE, CNY_MODERATE, RUB_LOW, RUB_WITHOUT_PRICE));
     }
 
     @Test
@@ -132,7 +196,22 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
     public void getForeignTest() {
         final List<BondDto> bonds = investApiBondClient.getForeign(null);
 
+        // 12 512.50 RUB за CNY-облигацию меньше, чем 88 200 RUB за USD-облигацию
+        assertThat(tickers(bonds), contains(CNY_MODERATE, USD_LOW));
+    }
+
+    @Test
+    public void foreignBondWithoutRateIsTreatedAsWithoutPriceTest() {
+        // ЦБ не вернул курс юаня, запасной источник курсов (budget.org) тоже ничего не дал
+        mockCbRfRates(USD_RATE);
+
+        final List<BondDto> bonds = investApiBondClient.getForeign(null);
+
         assertThat(tickers(bonds), contains(USD_LOW, CNY_MODERATE));
+        // в ответе цена остаётся в исходной валюте
+        final BondDto cnyBond = findByTicker(bonds, CNY_MODERATE);
+        assertThat(cnyBond.getPrice().getCurrent().getQuantity(), comparesEqualTo(new BigDecimal("1001.00")));
+        assertThat(cnyBond.getPrice().getCurrent().getCurrency(), equalTo("cny"));
     }
 
     @Test
@@ -149,8 +228,68 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
 
         final List<BondDto> bonds = investApiBondClient.getAll(null, request);
 
+        // диапазон в рублях: USD-облигация (88 200 RUB) не проходит, хотя её цена в долларах 980;
         // облигацию без текущей цены фильтр по цене не отсекает - её цена ещё неизвестна
-        assertThat(tickers(bonds), contains(RUB_MODERATE, RUB_HIGH, USD_LOW, RUB_WITHOUT_PRICE));
+        assertThat(tickers(bonds), contains(RUB_MODERATE, RUB_HIGH, RUB_WITHOUT_PRICE));
+    }
+
+    @Test
+    public void filterByCurrentPriceInRubForForeignBondTest() {
+        final BondParametersRequest request = new BondParametersRequest();
+        request.setCurrentPrice(valueRange("10000", "20000"));
+
+        final List<BondDto> bonds = investApiBondClient.getAll(null, request);
+
+        assertThat(tickers(bonds), contains(CNY_MODERATE, RUB_WITHOUT_PRICE));
+    }
+
+    @Test
+    public void filterByCurrentPricePutsUnknownPriceLastForAnySortTest() {
+        final BondParametersRequest request = sortedBy(sort(BondSortFieldRequest.TICKER, BondSortOrderRequest.ASC));
+        request.setCurrentPrice(valueRange("900", "1000"));
+
+        final List<BondDto> bonds = investApiBondClient.getAll(null, request);
+
+        // по тикеру облигация без цены (RU000A10ECY6) стояла бы второй, но при фильтре по цене она уходит в конец
+        assertThat(tickers(bonds), contains(RUB_MODERATE, RUB_HIGH, RUB_WITHOUT_PRICE));
+    }
+
+    @Test
+    public void filterByCurrentPriceWithBatchLimitSkipsUnknownPriceTest() {
+        final BondParametersRequest request = sortedBy(sort(BondSortFieldRequest.TICKER, BondSortOrderRequest.ASC));
+        request.setCurrentPrice(valueRange("900", "1000"));
+
+        final List<BondDto> bonds = investApiBondClient.getAll(2, request);
+
+        assertThat(tickers(bonds), contains(RUB_MODERATE, RUB_HIGH));
+    }
+
+    @Test
+    public void sortByCouponInterestDescTest() {
+        final List<BondDto> bonds = investApiBondClient.getAll(null, sortedBy(
+                sort(BondSortFieldRequest.COUPON_INTEREST, BondSortOrderRequest.DESC),
+                sort(BondSortFieldRequest.TICKER, BondSortOrderRequest.ASC)));
+
+        // облигации без купона - в конце, между собой по тикеру
+        assertThat(tickers(bonds), contains(RUB_HIGH, RUB_LOW, OFZ, USD_LOW, CNY_MODERATE, RUB_MODERATE, RUB_WITHOUT_PRICE));
+    }
+
+    @Test
+    public void priceSyncIsVisibleWithoutWaitingForCacheTest() {
+        // первый запрос кладёт облигации в кэш
+        final BondDto before = findByTicker(investApiBondClient.getAll(null), RUB_LOW);
+        assertThat(before.getPrice().getCurrent().getQuantity(), comparesEqualTo(new BigDecimal("1005.00")));
+
+        when(marketDataGrpcWrapper.getLastPrices(any())).thenReturn(GetLastPricesResponse.newBuilder()
+                .addLastPrices(LastPrice.newBuilder()
+                        .setInstrumentUid(before.getUid())
+                        .setPrice(Quotation.newBuilder().setUnits(99)))
+                .build());
+        priceSyncUseCase.syncByTicker(RUB_LOW, auditMapper.toCurrentAuditModel(SCHEDULER_PROCESS));
+
+        // синхронизация сбросила кэш - пользователь сразу видит новую цену: 99% от номинала 1000
+        final BondDto after = findByTicker(investApiBondClient.getAll(null), RUB_LOW);
+        assertThat(after.getPrice().getCurrent().getQuantity(), comparesEqualTo(new BigDecimal("990.00")));
     }
 
     @Test
@@ -160,7 +299,7 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
 
         final List<BondDto> bonds = investApiBondClient.getAll(null, request);
 
-        assertThat(tickers(bonds), contains(OFZ, USD_LOW, RUB_LOW));
+        assertThat(tickers(bonds), contains(OFZ, RUB_LOW, USD_LOW));
     }
 
     @Test
@@ -215,6 +354,27 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
         final List<BondDto> bonds = investApiBondClient.getLocal(2, request);
 
         assertThat(tickers(bonds), contains(RUB_MODERATE, RUB_LOW));
+    }
+
+    private void mockCbRfRates(final CurrencyElementDto... rates) {
+        final CurrencyDto currencyDto = new CurrencyDto();
+        currencyDto.setCurrencies(List.of(rates));
+        when(cbRfClient.getCurrencyRates(any())).thenReturn(currencyDto);
+    }
+
+    private static CurrencyElementDto cbRfRate(final String charCode, final String nominal, final String rubles) {
+        final CurrencyElementDto rate = new CurrencyElementDto();
+        rate.setCharCode(charCode);
+        rate.setNominal(new BigDecimal(nominal));
+        rate.setRate(new BigDecimal(rubles.replace(',', '.')));
+        return rate;
+    }
+
+    private BondDto findByTicker(final List<BondDto> bonds, final String ticker) {
+        return bonds.stream()
+                .filter(bond -> ticker.equals(bond.getTicker()))
+                .findFirst()
+                .orElseThrow();
     }
 
     private List<String> tickers(final List<BondDto> bonds) {

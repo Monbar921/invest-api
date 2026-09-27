@@ -20,6 +20,11 @@ public class CurrencyPriceUseCaseImpl implements CurrencyPriceUseCase {
     @Override
     public CurrencyModel calculateAmount(final String baseCurrency, final String targetCurrency, final BigDecimal amount) {
         final CurrencyModel currencyModel = currencyMapper.clone(currencyProvider.getCurrency(baseCurrency, targetCurrency));
+        // курс не нашёлся ни у ЦБ, ни у budget.org
+        if (currencyModel == null || currencyModel.getRate() == null) {
+            return null;
+        }
+
         final BigDecimal newAmount = Optional.ofNullable(amount)
                 .map(num -> num.multiply(currencyModel.getRate()))
                 .orElse(null);
