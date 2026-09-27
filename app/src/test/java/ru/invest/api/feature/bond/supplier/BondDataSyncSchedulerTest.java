@@ -1,4 +1,4 @@
-package ru.invest.api;
+package ru.invest.api.feature.bond.supplier;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

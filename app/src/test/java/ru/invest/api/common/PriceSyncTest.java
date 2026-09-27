@@ -1,9 +1,10 @@
-package ru.invest.api;
+package ru.invest.api.common;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.jdbc.Sql;
+import ru.invest.api.AbstractInvestApplicationTest;
 import ru.invest.api.common.entity.Bond;
 import ru.invest.api.common.entity.Coupon;
 import ru.invest.api.common.entity.Price;

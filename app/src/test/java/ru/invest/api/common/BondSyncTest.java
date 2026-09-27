@@ -1,7 +1,8 @@
-package ru.invest.api;
+package ru.invest.api.common;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import ru.invest.api.AbstractInvestApplicationTest;
 import ru.invest.api.bond.supplier.usecase.BondUseCase;
 import ru.invest.api.common.entity.Bond;
 import ru.invest.api.common.entity.Price;

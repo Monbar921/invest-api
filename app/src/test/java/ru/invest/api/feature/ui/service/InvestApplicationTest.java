@@ -1,8 +1,9 @@
-package ru.invest.api;
+package ru.invest.api.feature.ui.service;
 
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import ru.invest.api.AbstractInvestApplicationTest;
 import ru.invest.api.bond.supplier.usecase.BondUseCase;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.enums.RiskLevel;
