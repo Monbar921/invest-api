@@ -23,4 +23,13 @@ public interface CouponRepository extends JpaRepository<Coupon, Long> {
                     where c.uid is not null and c.uid in :uids
             """)
     List<Coupon> findByUidIn(Set<String> uids);
+
+    @Query("""
+                select distinct c from Coupon c
+                    join fetch c.bond b
+                    left join fetch b.price
+                    left join fetch c.couponData
+                    where c.uid in :uids
+            """)
+    List<Coupon> findWithPriceAndCouponDataByUidIn(Set<String> uids);
 }

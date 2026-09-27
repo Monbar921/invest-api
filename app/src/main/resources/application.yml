@@ -13,12 +13,20 @@ ru:
       stock:
         supplier:
           scheduler:
-            bond:
+            # ночная цепочка: облигации -> купоны -> цены + доходность купонов
+            sync:
               enabled: false
               cron: "0 0 3 * * *"
-            coupon:
+              zone: Europe/Moscow
+              steps:
+                bond: true
+                coupon: true
+                price: true
+            # частое обновление цен и доходности в торговые часы
+            price:
               enabled: false
-              cron: "0 30 3 * * *"
+              cron: "0 */15 7-23 * * MON-FRI"
+              zone: Europe/Moscow
 
 spring:
   cache:

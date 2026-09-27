@@ -12,10 +12,10 @@ ru:
       stock:
         supplier:
           scheduler:
-            bond:
+            sync:
               enabled: false
               cron: "0 0 0 * * ?"
-            coupon:
+            price:
               enabled: false
               cron: "0 0 0 * * ?"
 spring:
