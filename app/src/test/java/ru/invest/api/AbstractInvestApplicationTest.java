@@ -17,10 +17,10 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 import ru.invest.api.budget.org.supplier.client.feign.BudgetOrgClient;
 import ru.invest.api.cb.rf.supplier.client.feign.CbRfClient;
 import ru.invest.api.config.InvestApiTestConfiguration;
+import ru.invest.api.tinkoff.supplier.wrapper.InstrumentsGrpcRateLimitedWrapper;
+import ru.invest.api.tinkoff.supplier.wrapper.MarketDataGrpcRateLimitedWrapper;
 import ru.tinkoff.piapi.contract.v1.BondsResponse;
 import ru.tinkoff.piapi.contract.v1.GetBondCouponsResponse;
-import ru.tinkoff.piapi.contract.v1.InstrumentsServiceGrpc;
-import ru.tinkoff.piapi.contract.v1.MarketDataServiceGrpc;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.nio.charset.StandardCharsets;
@@ -37,9 +37,9 @@ public abstract class AbstractInvestApplicationTest {
     @MockitoBean
     private CbRfClient cbRfClient;
     @MockitoBean
-    private InstrumentsServiceGrpc.InstrumentsServiceBlockingStub instrumentsServiceBlockingStub;
+    private InstrumentsGrpcRateLimitedWrapper instrumentsGrpcWrapper;
     @MockitoBean
-    private MarketDataServiceGrpc.MarketDataServiceBlockingStub marketDataServiceBlockingStub;
+    private MarketDataGrpcRateLimitedWrapper marketDataGrpcWrapper;
 
     public static final PostgreSQLContainer postgreSQLContainer = new PostgreSQLContainer("postgres:17.6")
             .withDatabaseName("invest")

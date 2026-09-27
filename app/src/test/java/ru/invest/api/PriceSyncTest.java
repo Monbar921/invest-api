@@ -16,11 +16,11 @@ import ru.invest.api.common.repository.PriceRepository;
 import ru.invest.api.common.usecase.CouponSyncUseCase;
 import ru.invest.api.common.usecase.PriceSyncUseCase;
 import ru.invest.api.tinkoff.supplier.mapper.TinkoffMoneyApiMapper;
+import ru.invest.api.tinkoff.supplier.wrapper.InstrumentsGrpcRateLimitedWrapper;
+import ru.invest.api.tinkoff.supplier.wrapper.MarketDataGrpcRateLimitedWrapper;
 import ru.tinkoff.piapi.contract.v1.GetBondCouponsResponse;
 import ru.tinkoff.piapi.contract.v1.GetLastPricesResponse;
-import ru.tinkoff.piapi.contract.v1.InstrumentsServiceGrpc;
 import ru.tinkoff.piapi.contract.v1.LastPrice;
-import ru.tinkoff.piapi.contract.v1.MarketDataServiceGrpc;
 import ru.tinkoff.piapi.contract.v1.Quotation;
 
 import java.math.BigDecimal;
@@ -60,9 +60,9 @@ public class PriceSyncTest extends AbstractInvestApplicationTest {
     @Autowired
     private CouponRepository couponRepository;
     @Autowired
-    private InstrumentsServiceGrpc.InstrumentsServiceBlockingStub instrumentsServiceBlockingStub;
+    private InstrumentsGrpcRateLimitedWrapper instrumentsGrpcWrapper;
     @Autowired
-    private MarketDataServiceGrpc.MarketDataServiceBlockingStub marketDataServiceBlockingStub;
+    private MarketDataGrpcRateLimitedWrapper marketDataGrpcWrapper;
 
     private Bond bond;
     private AuditModel audit;
@@ -73,10 +73,10 @@ public class PriceSyncTest extends AbstractInvestApplicationTest {
         audit = auditMapper.toCurrentAuditModel(SCHEDULER_PROCESS);
 
         // доходность считается по выплатам купонов, поэтому сначала загружаем их
-        when(instrumentsServiceBlockingStub.getBondCoupons(any())).thenReturn(loadCouponFixture());
+        when(instrumentsGrpcWrapper.getBondCoupons(any())).thenReturn(loadCouponFixture());
         couponSyncUseCase.syncByTicker(TICKER, audit);
 
-        when(marketDataServiceBlockingStub.getLastPrices(any())).thenReturn(GetLastPricesResponse.newBuilder()
+        when(marketDataGrpcWrapper.getLastPrices(any())).thenReturn(GetLastPricesResponse.newBuilder()
                 .addLastPrices(LastPrice.newBuilder()
                         .setInstrumentUid(bond.getUid())
                         .setPrice(Quotation.newBuilder()

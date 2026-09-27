@@ -13,8 +13,8 @@ import ru.invest.api.common.repository.BondRepository;
 import ru.invest.api.common.repository.CouponRepository;
 import ru.invest.api.common.usecase.CouponSyncUseCase;
 import ru.invest.api.tinkoff.supplier.mapper.TinkoffCouponApiMapper;
+import ru.invest.api.tinkoff.supplier.wrapper.InstrumentsGrpcRateLimitedWrapper;
 import ru.tinkoff.piapi.contract.v1.GetBondCouponsResponse;
-import ru.tinkoff.piapi.contract.v1.InstrumentsServiceGrpc;
 
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -44,14 +44,14 @@ public class CouponSyncTest extends AbstractInvestApplicationTest {
     @Autowired
     private CouponRepository couponRepository;
     @Autowired
-    private InstrumentsServiceGrpc.InstrumentsServiceBlockingStub instrumentsServiceBlockingStub;
+    private InstrumentsGrpcRateLimitedWrapper instrumentsGrpcWrapper;
 
     @Test
     @Sql(scripts = "/sql/bonds-and-coupons-RU000A10EQ34.sql")
     public void syncAllCouponsTest() {
         final GetBondCouponsResponse fixture = loadCouponFixture();
 
-        when(instrumentsServiceBlockingStub.getBondCoupons(any()))
+        when(instrumentsGrpcWrapper.getBondCoupons(any()))
                 .thenReturn(fixture);
 
         final Bond bond = bondRepository.findByTicker(TICKER).orElseThrow();
@@ -75,7 +75,7 @@ public class CouponSyncTest extends AbstractInvestApplicationTest {
     public void syncByTickerCouponsTest() {
         final GetBondCouponsResponse fixture = loadCouponFixture();
 
-        when(instrumentsServiceBlockingStub.getBondCoupons(any()))
+        when(instrumentsGrpcWrapper.getBondCoupons(any()))
                 .thenReturn(fixture);
 
         final Bond bond = bondRepository.findByTicker(TICKER).orElseThrow();

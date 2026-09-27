@@ -2,10 +2,27 @@ invest:
   enabled: true
   connector:
     token: ${TOKEN}
+    # retry из SDK: повторяет только RESOURCE_EXHAUSTED, ждёт до сброса лимита (x-ratelimit-reset)
+    connection:
+      retry:
+        max-attempts: 3
+        wait-duration: 2000
+  # клиентские лимиты по методам, лимиты сервера: developer.tbank.ru/invest/intro/intro/limits
   rate-limiter:
-    requests-per-second: 10
-    requests-per-minute: 200
-    timeout-ms: 30000
+    bond-coupons:
+      requests: 3
+      period: 1s
+    bonds:
+      requests: 1
+      period: 5s
+    last-prices:
+      requests: 9
+      period: 1s
+    default-limit:
+      requests: 1
+      period: 1s
+    timeout: 60s
+    max-concurrent-calls: 25
 
 ru:
   invest:

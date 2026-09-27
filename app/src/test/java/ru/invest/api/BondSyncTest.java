@@ -9,8 +9,8 @@ import ru.invest.api.common.mapper.AuditMapper;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.repository.BondRepository;
 import ru.invest.api.tinkoff.supplier.mapper.TinkoffBondApiMapper;
+import ru.invest.api.tinkoff.supplier.wrapper.InstrumentsGrpcRateLimitedWrapper;
 import ru.tinkoff.piapi.contract.v1.BondsResponse;
-import ru.tinkoff.piapi.contract.v1.InstrumentsServiceGrpc;
 
 import java.util.List;
 import java.util.Map;
@@ -37,13 +37,13 @@ public class BondSyncTest extends AbstractInvestApplicationTest {
     @Autowired
     private BondRepository bondRepository;
     @Autowired
-    private InstrumentsServiceGrpc.InstrumentsServiceBlockingStub instrumentsServiceBlockingStub;
+    private InstrumentsGrpcRateLimitedWrapper instrumentsGrpcWrapper;
 
     @Test
     public void syncAllBondsTest() {
         final BondsResponse fixture = loadFixture();
 
-        when(instrumentsServiceBlockingStub.bonds(any()))
+        when(instrumentsGrpcWrapper.bonds(any()))
                 .thenReturn(fixture);
 
         final Map<String, BondModel> expectedByUid = fixture.getInstrumentsList()
