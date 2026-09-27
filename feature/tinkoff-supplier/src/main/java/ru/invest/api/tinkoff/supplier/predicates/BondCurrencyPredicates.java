@@ -4,7 +4,6 @@ import ru.tinkoff.piapi.contract.v1.Bond;
 import ru.tinkoff.piapi.contract.v1.MoneyValue;
 
 import java.util.Optional;
-import java.util.Set;
 import java.util.function.Predicate;
 
 import static ru.invest.api.tinkoff.supplier.constants.Constants.RU_CURRENCIES;

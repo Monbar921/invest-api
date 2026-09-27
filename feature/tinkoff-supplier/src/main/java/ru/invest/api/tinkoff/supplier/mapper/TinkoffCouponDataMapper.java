@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Mapper(uses = {MoneyMapper.class, DateTimeMapper.class})
+@SuppressWarnings("checkstyle:AbstractClassName")
 public abstract class TinkoffCouponDataMapper {
     @Setter(onMethod_ = @Autowired)
     private TinkoffMoneyApiMapper tinkoffMoneyApiMapper;

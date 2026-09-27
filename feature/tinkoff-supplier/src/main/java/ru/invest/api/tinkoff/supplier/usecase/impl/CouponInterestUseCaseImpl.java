@@ -48,6 +48,17 @@ public class CouponInterestUseCaseImpl implements CouponInterestUseCase {
                         status -> recalculateBatch(new HashSet<>(batch), audit)));
     }
 
+    private void recalculate(final Coupon coupon, final Audit updated) {
+        // расчёту нужна только текущая цена облигации, остальное берётся из купона
+        final BondModel bondModel = new BondModel()
+                .setPrice(tinkoffPriceEntityMapper.toModel(coupon.getBond().getPrice()));
+
+        final BigDecimal interest = couponCalculationService.calculateInterest(tinkoffCouponMapper.toModel(coupon), bondModel);
+
+        coupon.setInterest(interest)
+                .setUpdated(updated);
+    }
+
     private void recalculateBatch(final Set<String> uids, final AuditModel audit) {
         final List<Coupon> coupons = couponRepository.findWithPriceAndCouponDataByUidIn(uids);
         final Audit updated = auditMapper.toEntity(audit);
@@ -57,23 +68,5 @@ public class CouponInterestUseCaseImpl implements CouponInterestUseCase {
                 .forEach(coupon -> recalculate(coupon, updated));
 
         couponRepository.saveAll(coupons);
-    }
-
-    private void recalculate(final Coupon coupon, final Audit updated) {
-        // расчёту нужна только текущая цена облигации, остальное берётся из купона
-        final BondModel bondModel = new BondModel()
-                .setPrice(tinkoffPriceEntityMapper.toModel(coupon.getBond().getPrice()));
-
-        final BigDecimal interest;
-        try {
-            interest = couponCalculationService.calculateInterest(tinkoffCouponMapper.toModel(coupon), bondModel);
-        } catch (final RuntimeException e) {
-            // например, недоступен курс для конвертации валюты купона - оставляем прежнее значение до следующего прогона
-            log.error("Failed to calculate interest for bond uid={}", coupon.getUid(), e);
-            return;
-        }
-
-        coupon.setInterest(interest)
-                .setUpdated(updated);
     }
 }

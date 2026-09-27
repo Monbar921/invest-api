@@ -6,7 +6,7 @@ import ru.invest.api.common.model.MoneyModel;
 import java.math.BigDecimal;
 
 @Mapper
-public abstract class MoneyMapper {
+public interface MoneyMapper {
 
-    public abstract MoneyModel toModel(String currency, BigDecimal quantity);
+    MoneyModel toModel(String currency, BigDecimal quantity);
 }

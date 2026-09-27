@@ -58,6 +58,7 @@ public class BondDataSyncScheduler {
         log.info("Bond data sync scheduler finished");
     }
 
+    @SuppressWarnings("checkstyle:IllegalCatch")
     private void runStep(final String step, final boolean enabled, final Runnable action) {
         if (!enabled) {
             log.info("Bond data sync step '{}' is disabled, skipped", step);

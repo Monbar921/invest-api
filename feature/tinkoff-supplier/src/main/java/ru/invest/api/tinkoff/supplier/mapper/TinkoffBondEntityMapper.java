@@ -22,6 +22,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 @Mapper(uses = {DateTimeMapper.class, TinkoffPriceEntityMapper.class})
+@SuppressWarnings("checkstyle:AbstractClassName")
 public abstract class TinkoffBondEntityMapper {
     @Setter(onMethod_ = @Autowired)
     private AuditMapper auditMapper;

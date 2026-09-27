@@ -6,6 +6,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 
 @Mapper
+@SuppressWarnings("checkstyle:AbstractClassName")
 public abstract class BigDecimalMapper {
     private static final int SCALE = 9;
     private static final BigDecimal NANO_DIVISOR = BigDecimal.valueOf(1_000_000_000);

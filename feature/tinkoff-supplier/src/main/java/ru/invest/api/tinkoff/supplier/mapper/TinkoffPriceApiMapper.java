@@ -19,6 +19,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 
 @Mapper(uses = {TinkoffMoneyApiMapper.class})
+@SuppressWarnings("checkstyle:AbstractClassName")
 public abstract class TinkoffPriceApiMapper {
     private static final BigDecimal PERCENTAGE = BigDecimal.valueOf(100.0);
     private static final int SCALE = 10;

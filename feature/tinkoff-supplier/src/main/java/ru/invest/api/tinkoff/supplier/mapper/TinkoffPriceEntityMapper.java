@@ -21,6 +21,7 @@ import ru.invest.api.common.model.PriceModel;
 import java.util.Optional;
 
 @Mapper(uses = {AuditMapper.class})
+@SuppressWarnings("checkstyle:AbstractClassName")
 public abstract class TinkoffPriceEntityMapper {
     @Setter(onMethod_ = @Autowired)
     private AuditMapper auditMapper;

@@ -23,6 +23,7 @@ import java.util.Optional;
 import java.util.function.Function;
 
 @Mapper(nullValueMappingStrategy = NullValueMappingStrategy.RETURN_DEFAULT)
+@SuppressWarnings("checkstyle:AbstractClassName")
 public abstract class BondParametersMapper {
     private static final int DEFAULT_BATCH_LIMIT = 100;
 

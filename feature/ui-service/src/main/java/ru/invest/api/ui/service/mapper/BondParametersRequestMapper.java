@@ -11,6 +11,7 @@ import ru.invest.api.dto.request.bond.BondParametersRequest;
 import ru.invest.api.dto.request.bond.ValueRangeRequest;
 
 @Mapper
+@SuppressWarnings("checkstyle:AbstractClassName")
 public abstract class BondParametersRequestMapper {
     @Setter(onMethod_ = @Autowired)
     private BondParametersMapper bondParametersMapper;

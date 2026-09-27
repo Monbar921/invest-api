@@ -28,6 +28,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Mapper(uses = TinkoffCouponDataMapper.class)
+@SuppressWarnings("checkstyle:AbstractClassName")
 public abstract class TinkoffCouponMapper {
     private static final String BOND_NOT_FOUND_MESSAGE = "Bond not found for ticker %s";
 

@@ -15,7 +15,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.Callable;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -58,19 +57,10 @@ public class TinkoffBondCacheRepositoryUseCaseImpl implements TinkoffBondCacheRe
     private Map<String, BondModel> getCachedAll() {
         final Cache cache = bondCacheManager.getCache(BOND_REPOSITORY_CACHE_NAME);
         if (cache == null) {
-            return load(this::loadAllBonds);
+            return loadAllBonds();
         }
 
         return cache.get(ALL_BONDS_KEY, this::loadAllBonds);
-    }
-
-
-    private Map<String, BondModel> load(final Callable<Map<String, BondModel>> loader) {
-        try {
-            return loader.call();
-        } catch (final Exception e) {
-            throw new IllegalStateException("Unable to load bonds", e);
-        }
     }
 
     private Map<String, BondModel> loadAllBonds() {

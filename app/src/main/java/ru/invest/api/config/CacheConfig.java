@@ -27,6 +27,7 @@ import static ru.invest.api.common.constants.CacheConstants.PRICE_CACHE_NAME;
 
 @Configuration
 @EnableCaching
+@SuppressWarnings("checkstyle:MagicNumber")
 public class CacheConfig {
     @Bean
     @Primary

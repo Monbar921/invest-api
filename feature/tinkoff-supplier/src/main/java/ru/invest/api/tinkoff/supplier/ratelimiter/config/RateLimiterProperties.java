@@ -21,6 +21,7 @@ import java.time.Duration;
 @Data
 @Component
 @ConfigurationProperties(prefix = "invest.rate-limiter")
+@SuppressWarnings("checkstyle:MagicNumber")
 public class RateLimiterProperties {
     /**
      * InstrumentsService/GetBondCoupons: 3 в секунду = 180 в минуту (лимит сервиса - 200)

@@ -12,6 +12,7 @@ import ru.tinkoff.piapi.contract.v1.MoneyValue;
 import java.math.BigDecimal;
 
 @Mapper
+@SuppressWarnings("checkstyle:AbstractClassName")
 public abstract class TinkoffMoneyApiMapper {
 
     @Setter(onMethod_ = {@Autowired})

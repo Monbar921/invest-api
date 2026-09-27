@@ -10,8 +10,10 @@ import static ru.invest.api.tinkoff.supplier.constants.Constants.COUPON_EXECUTOR
 
 @Configuration
 public class ExecutorServiceConfig {
+    private static final int COUPON_EXECUTOR_SERVICE_POOL_SIZE = 10;
+
     @Bean(COUPON_EXECUTOR_SERVICE)
     public ExecutorService couponExecutorService() {
-        return Executors.newFixedThreadPool(10);
+        return Executors.newFixedThreadPool(COUPON_EXECUTOR_SERVICE_POOL_SIZE);
     }
 }

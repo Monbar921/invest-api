@@ -1,7 +1,6 @@
 package ru.invest.api.tinkoff.supplier.provider.impl;
 
 import lombok.RequiredArgsConstructor;
-import lombok.SneakyThrows;
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -14,8 +13,6 @@ import ru.tinkoff.piapi.contract.v1.BondsResponse;
 import ru.tinkoff.piapi.contract.v1.InstrumentStatus;
 import ru.tinkoff.piapi.contract.v1.InstrumentsRequest;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -55,18 +52,6 @@ public class TinkoffBondProviderImpl implements TinkoffBondProvider {
                 .bonds(bondsRequest);
 
         return response.getInstrumentsList();
-    }
-
-    @SneakyThrows
-    private void dumpFixture(final List<Bond> originalBonds)  {
-        final BondsResponse response = BondsResponse.newBuilder()
-                .addAllInstruments(originalBonds.stream().limit(20).toList())
-                .build();
-
-        Files.writeString(
-                Path.of("app/src/test/resources/fixtures/bonds-response.pbtxt"),
-                com.google.protobuf.TextFormat.printer().printToString(response)
-        );
     }
 
     private <T> List<Bond> filterDuplicates(final List<Bond> bonds, final Function<Bond, T> duplicateFieldGetter) {
