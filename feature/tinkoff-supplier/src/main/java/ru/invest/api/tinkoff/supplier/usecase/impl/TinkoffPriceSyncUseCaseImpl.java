@@ -2,26 +2,20 @@ package ru.invest.api.tinkoff.supplier.usecase.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import ru.invest.api.common.annotation.Active;
 import ru.invest.api.common.model.AuditModel;
 import ru.invest.api.common.model.BondModel;
-import ru.invest.api.common.model.CouponDataModel;
-import ru.invest.api.common.model.ShortProductModel;
+import ru.invest.api.common.model.PriceModel;
 import ru.invest.api.common.usecase.PriceSyncUseCase;
-import ru.invest.api.tinkoff.supplier.provider.TinkoffCouponProvider;
 import ru.invest.api.tinkoff.supplier.provider.TinkoffPriceProvider;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondUseCase;
+import ru.invest.api.tinkoff.supplier.usecase.TinkoffPriceUseCase;
 
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -32,6 +26,7 @@ import java.util.stream.Collectors;
 public class TinkoffPriceSyncUseCaseImpl implements PriceSyncUseCase {
     private final TinkoffPriceProvider tinkoffPriceProvider;
     private final TinkoffBondUseCase tinkoffBondUseCase;
+    private final TinkoffPriceUseCase tinkoffPriceUseCase;
 
     @Override
     public void syncAll(final AuditModel audit) {
@@ -56,6 +51,8 @@ public class TinkoffPriceSyncUseCaseImpl implements PriceSyncUseCase {
             return;
         }
 
-        tinkoffPriceProvider.getLastPrices(bonds, audit);
+        final Map<String, PriceModel> prices = tinkoffPriceProvider.getLastPrices(bonds, audit);
+
+        tinkoffPriceUseCase.saveCurrentPrices(prices);
     }
 }

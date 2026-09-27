@@ -1,4 +1,4 @@
-package ru.invest.api.ui.service.controller;
+package ru.invest.api.ui.service.controller.maintenance;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;

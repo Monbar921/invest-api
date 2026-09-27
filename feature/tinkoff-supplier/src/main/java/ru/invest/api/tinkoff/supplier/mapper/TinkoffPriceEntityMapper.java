@@ -3,6 +3,7 @@ package ru.invest.api.tinkoff.supplier.mapper;
 import lombok.Setter;
 import org.apache.commons.lang3.ObjectUtils;
 import org.mapstruct.AfterMapping;
+import org.mapstruct.BeanMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
@@ -39,6 +40,12 @@ public abstract class TinkoffPriceEntityMapper {
     @Mapping(target = "nominalCurrency", source = "bondModel.price.nominal.currency")
     public abstract Price toEntity(Bond bond, BondModel bondModel);
 
+    // синхронизация цен меняет только текущую цену, номинал и привязка к облигации остаются как есть
+    @BeanMapping(ignoreByDefault = true)
+    @Mapping(target = "price", source = "current.quantity")
+    @Mapping(target = "currency", source = "current.currency")
+    public abstract void updateCurrentPrice(PriceModel priceModel, @MappingTarget Price price);
+
     @Mapping(target = "logged", ignore = true)
     @Mapping(target = "percentagePrice", ignore = true)
     @Mapping(target = "nominal", source = "entity", qualifiedByName = "toNominal")
@@ -67,6 +74,11 @@ public abstract class TinkoffPriceEntityMapper {
     protected Price objectFactory(final Bond bond) {
         return Optional.ofNullable(bond.getPrice())
                 .orElseGet(Price::new);
+    }
+
+    @AfterMapping
+    protected void afterCurrentPriceMapping(@MappingTarget final Price price, final PriceModel priceModel) {
+        price.setUpdated(auditMapper.toEntity(priceModel.getLogged()));
     }
 
     @AfterMapping
