@@ -10,26 +10,27 @@ import java.util.function.Predicate;
 import static ru.invest.api.tinkoff.supplier.constants.Constants.RU_CURRENCIES;
 
 public interface BondModelCurrencyPredicates {
+    // Set.of(...).contains(null) бросает NPE, а у облигации без синхронизированной цены валюты нет
     Predicate<BondModel> RUBBLE_CURRENCY_PREDICATE = bond -> {
-        final String currency = Optional.ofNullable(bond)
+        final boolean isRubbleCurrentPrice = Optional.ofNullable(bond)
                 .map(BondModel::getPrice)
                 .map(PriceModel::getCurrent)
                 .map(MoneyModel::getCurrency)
                 .map(String::toUpperCase)
-                .orElse(null);
+                .filter(RU_CURRENCIES::contains)
+                .isPresent();
 
-        if (RU_CURRENCIES.contains(currency)) {
+        if (isRubbleCurrentPrice) {
             return true;
         }
 
-        final String nominalCurrency = Optional.ofNullable(bond)
+        return Optional.ofNullable(bond)
                 .map(BondModel::getPrice)
                 .map(PriceModel::getNominal)
                 .map(MoneyModel::getCurrency)
                 .map(String::toUpperCase)
-                .orElse(null);
-
-        return RU_CURRENCIES.contains(nominalCurrency);
+                .filter(RU_CURRENCIES::contains)
+                .isPresent();
     };
 
     Predicate<BondModel> FOREIGN_CURRENCY_PREDICATE = bond -> !RUBBLE_CURRENCY_PREDICATE.test(bond);
