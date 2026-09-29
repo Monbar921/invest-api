@@ -1,5 +1,6 @@
 package ru.invest.api.common;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.jdbc.Sql;
@@ -46,6 +47,12 @@ public class CouponSyncTest extends AbstractInvestApplicationTest {
     private CouponRepository couponRepository;
     @Autowired
     private InstrumentsGrpcRateLimitedWrapper instrumentsGrpcWrapper;
+
+    @BeforeEach
+    @Sql("/sql/clean-up.sql")
+    public void setUp(){
+
+    }
 
     @Test
     @Sql(scripts = "/sql/bonds-and-coupons-RU000A10EQ34.sql")

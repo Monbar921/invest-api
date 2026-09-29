@@ -69,6 +69,7 @@ public class PriceSyncTest extends AbstractInvestApplicationTest {
     private AuditModel audit;
 
     @BeforeEach
+    @Sql("/sql/clean-up.sql")
     public void setUp() {
         bond = bondRepository.findByTicker(TICKER).orElseThrow();
         audit = auditMapper.toCurrentAuditModel(SCHEDULER_PROCESS);

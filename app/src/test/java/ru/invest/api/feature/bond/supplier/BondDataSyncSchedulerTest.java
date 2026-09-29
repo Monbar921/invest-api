@@ -3,6 +3,7 @@ package ru.invest.api.feature.bond.supplier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
+import org.springframework.test.context.jdbc.Sql;
 import ru.invest.api.bond.supplier.scheduler.BondDataSyncScheduler;
 import ru.invest.api.common.mapper.AuditMapper;
 import ru.invest.api.common.model.AuditModel;
@@ -29,6 +30,7 @@ public class BondDataSyncSchedulerTest {
     private final AuditModel audit = new AuditModel().setCommittedBy(SCHEDULER_PROCESS);
 
     @BeforeEach
+    @Sql("/sql/clean-up.sql")
     public void setUp() {
         when(auditMapper.toCurrentAuditModel(SCHEDULER_PROCESS)).thenReturn(audit);
     }
