@@ -2,7 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: invest-api
-  namespace: invest-api
   labels:
     app: invest-api
 spec:
@@ -27,7 +26,7 @@ spec:
 
       containers:
         - name: invest-api
-          # Образ подставляет CD-пайплайн (.github/workflows/ci-cd.yml) перед kubectl apply
+          # тег задаётся в overlays/<окружение>/kustomization.yaml (images.newTag)
           image: ghcr.io/monbar921/invest-api:latest
           imagePullPolicy: Always
           ports:
@@ -39,7 +38,7 @@ spec:
             - configMapRef:
                 name: invest-api-config
 
-          # Секреты: токен Т-Банка и подключение к БД (синхронизирует CD-пайплайн из секретов GitHub)
+          # Секреты: токен Т-Банка и подключение к БД (создаются руками в namespace окружения, см. k8s/README.md)
           env:
             - name: TOKEN
               valueFrom:

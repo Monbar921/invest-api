@@ -1,0 +1,31 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: invest-api-prod
+
+resources:
+  - namespace.yaml
+  - ../../base
+
+# Тег образа из ghcr.io: short sha коммита (например cac52c3) или имя ветки/latest.
+# С sha деплой воспроизводим, а apply сам раскатывает новую версию; с тегом ветки нужен rollout restart
+images:
+  - name: ghcr.io/monbar921/invest-api
+    newTag: latest
+
+# Отличия конфига окружения от base/config.env, например:
+#   literals:
+#     - RU_INVEST_API_STOCK_SUPPLIER_SCHEDULER_PRICE_ENABLED=false
+configMapGenerator:
+  - name: invest-api-config
+    behavior: merge
+    literals: []
+
+patches:
+  - target:
+      kind: Ingress
+      name: invest-api
+    patch: |-
+      - op: replace
+        path: /spec/rules/0/host
+        value: invest-api.example.com

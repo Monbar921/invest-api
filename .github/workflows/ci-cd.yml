@@ -3,7 +3,8 @@ name: CI/CD
 # Логика по веткам:
 #   pull request в master/develop/uat -> сборка, checkstyle и тесты
 #   push в develop/uat                -> + образ в ghcr.io (теги: <short sha>, <ветка>)
-#   push в master                     -> + образ (дополнительно тег latest) + деплой в Kubernetes
+#   push в master                     -> + образ (дополнительно тег latest)
+# Деплой в Kubernetes ручной, см. k8s/README.md
 on:
   push:
     branches: [ "master", "develop", "uat" ]
@@ -75,9 +76,6 @@ jobs:
       contents: read
       packages: write
 
-    outputs:
-      image: ${{ steps.name.outputs.image }}
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -94,7 +92,6 @@ jobs:
         run: |
           name="${REGISTRY}/${GITHUB_REPOSITORY,,}"
           echo "name=${name}" >> "$GITHUB_OUTPUT"
-          echo "image=${name}:${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
 
       - name: Docker metadata
         id: meta
@@ -126,84 +123,3 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  deploy:
-    name: Deploy to Kubernetes
-    needs: image
-    if: github.ref == 'refs/heads/master'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    # в настройках репозитория можно включить для окружения ручное подтверждение деплоя
-    environment: production
-    # деплои не отменяют друг друга и идут строго по очереди
-    concurrency:
-      group: deploy-production
-      cancel-in-progress: false
-
-    env:
-      NAMESPACE: invest-api
-      IMAGE: ${{ needs.image.outputs.image }}
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup kubectl
-        uses: azure/setup-kubectl@v4
-
-      - name: Configure kubeconfig
-        env:
-          KUBECONFIG_B64: ${{ secrets.KUBECONFIG }}
-        run: |
-          mkdir -p ~/.kube
-          echo "$KUBECONFIG_B64" | base64 -d > ~/.kube/config
-          chmod 600 ~/.kube/config
-
-      - name: Apply namespace and config
-        run: |
-          kubectl apply -f k8s/namespace.yaml
-          kubectl apply -f k8s/configmap.yaml
-
-      # секреты живут в GitHub и при каждом деплое синхронизируются в кластер
-      - name: Sync secrets
-        env:
-          TINKOFF_TOKEN: ${{ secrets.TINKOFF_TOKEN }}
-          DB_URL: ${{ secrets.DB_URL }}
-          DB_USERNAME: ${{ secrets.DB_USERNAME }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          GHCR_PULL_TOKEN: ${{ secrets.GHCR_PULL_TOKEN }}
-        run: |
-          kubectl create secret generic invest-api-secret \
-            --namespace "$NAMESPACE" \
-            --from-literal=TOKEN="$TINKOFF_TOKEN" \
-            --from-literal=DB_URL="$DB_URL" \
-            --from-literal=DB_USERNAME="$DB_USERNAME" \
-            --from-literal=DB_PASSWORD="$DB_PASSWORD" \
-            --dry-run=client -o yaml | kubectl apply -f -
-
-          # образ в ghcr.io приватный: кластеру нужен токен с правом read:packages
-          if [ -n "$GHCR_PULL_TOKEN" ]; then
-            kubectl create secret docker-registry ghcr-secret \
-              --namespace "$NAMESPACE" \
-              --docker-server=ghcr.io \
-              --docker-username="${{ github.repository_owner }}" \
-              --docker-password="$GHCR_PULL_TOKEN" \
-              --dry-run=client -o yaml | kubectl apply -f -
-          fi
-
-      - name: Apply service and ingress
-        run: |
-          kubectl apply -f k8s/service.yaml
-          kubectl apply -f k8s/ingress.yaml
-
-      # образ подставляется в манифест до apply - одна раскатка вместо двух
-      - name: Deploy image ${{ env.IMAGE }}
-        run: |
-          sed -E "s|^(\s*image:).*|\1 ${IMAGE}|" k8s/deployment.yaml | kubectl apply -f -
-          kubectl rollout status deployment/invest-api --namespace "$NAMESPACE" --timeout=300s
-
-      - name: Diagnostics
-        if: failure()
-        run: |
-          kubectl get pods --namespace "$NAMESPACE" -l app=invest-api -o wide || true
-          kubectl describe deployment invest-api --namespace "$NAMESPACE" || true
-          kubectl logs --namespace "$NAMESPACE" -l app=invest-api --tail=100 --all-containers || true

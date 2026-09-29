@@ -42,3 +42,5 @@ build/
 
 ### Mac OS ###
 .DS_Store
+# заполненный секрет для ручного деплоя, см. k8s/secret.example.yaml
+k8s/secret.yaml
