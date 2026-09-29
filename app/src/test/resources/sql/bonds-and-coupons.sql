@@ -163,3 +163,8 @@ INSERT INTO price (id, bond_id, ticker, uid, nominal_price, nominal_currency, pr
 VALUES (19, 19, 'RU000A10ECY6', '3b3fda48-20b1-4679-be84-35bfa1117efa', 1000.00, 'rub', null, null, '2026-09-24 15:30:02.649675', 'SYSTEM', null, null);
 INSERT INTO price (id, bond_id, ticker, uid, nominal_price, nominal_currency, price, currency, created_at, created_by, updated_at, updated_by)
 VALUES (20, 20, 'SU52003RMFS9', '788ced35-f059-4bb1-b9b0-262aee0a2d8b', 1608.87, 'rub', null, null, '2026-09-24 15:30:02.649675', 'SYSTEM', null, null);
+
+-- id выше заданы явно и последовательности не сдвигают - подтягиваем их, чтобы следующие вставки не упёрлись в bond_pkey
+SELECT setval(pg_get_serial_sequence('bond', 'id'), (SELECT max(id) FROM bond));
+SELECT setval(pg_get_serial_sequence('coupon', 'id'), (SELECT max(id) FROM coupon));
+SELECT setval(pg_get_serial_sequence('price', 'id'), (SELECT max(id) FROM price));

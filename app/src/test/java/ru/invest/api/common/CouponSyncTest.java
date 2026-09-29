@@ -49,7 +49,6 @@ public class CouponSyncTest extends AbstractInvestApplicationTest {
     private InstrumentsGrpcRateLimitedWrapper instrumentsGrpcWrapper;
 
     @BeforeEach
-    @Sql("/sql/clean-up.sql")
     public void setUp(){
 
     }

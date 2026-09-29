@@ -88,7 +88,6 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
     private List<CacheManager> cacheManagers;
 
     @BeforeEach
-    @Sql("/sql/clean-up.sql")
     public void setUp() {
         // контроллер читает облигации и курсы через кэши - иначе он отдал бы данные предыдущих тестов
         cacheManagers.forEach(cacheManager -> cacheManager.getCacheNames()

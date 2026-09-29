@@ -52,3 +52,8 @@ INSERT INTO coupon (id, bond_id, ticker, uid, quantity_per_year, is_fixed_coupon
 VALUES (4, 4, 'RU000A10EQ34', '1c0a2f3e-0004-4000-8000-000000000004', 12, true, 18.50, '2026-09-24 15:30:02.649675', 'SYSTEM', null, null);
 INSERT INTO coupon (id, bond_id, ticker, uid, quantity_per_year, is_fixed_coupon, interest, created_at, created_by, updated_at, updated_by)
 VALUES (5, 5, 'RU000A105A95', '1c0a2f3e-0005-4000-8000-000000000005', 2, true, 6.20, '2026-09-24 15:30:02.649675', 'SYSTEM', null, null);
+
+-- id выше заданы явно и последовательности не сдвигают - подтягиваем их, чтобы следующие вставки не упёрлись в bond_pkey
+SELECT setval(pg_get_serial_sequence('bond', 'id'), (SELECT max(id) FROM bond));
+SELECT setval(pg_get_serial_sequence('coupon', 'id'), (SELECT max(id) FROM coupon));
+SELECT setval(pg_get_serial_sequence('price', 'id'), (SELECT max(id) FROM price));

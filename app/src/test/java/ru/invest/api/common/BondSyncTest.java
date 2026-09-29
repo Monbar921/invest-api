@@ -30,6 +30,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static ru.invest.api.common.constants.SchedulerConstants.SCHEDULER_PROCESS;
 
+@Sql("/sql/clean-up.sql")
 public class BondSyncTest extends AbstractInvestApplicationTest {
     @Autowired
     private BondSyncUseCase bondSyncUseCase;
@@ -44,7 +45,6 @@ public class BondSyncTest extends AbstractInvestApplicationTest {
 
 
     @BeforeEach
-    @Sql("/sql/clean-up.sql")
     public void setUp(){
 
     }
