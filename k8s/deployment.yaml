@@ -27,8 +27,8 @@ spec:
 
       containers:
         - name: invest-api
-          # Образ подставляется CD-пайплайном через kubectl set image
-          image: ghcr.io/OWNER/invest-api:latest
+          # Образ подставляет CD-пайплайн (.github/workflows/ci-cd.yml) перед kubectl apply
+          image: ghcr.io/monbar921/invest-api:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
@@ -39,13 +39,28 @@ spec:
             - configMapRef:
                 name: invest-api-config
 
-          # Секрет (TOKEN)
+          # Секреты: токен Т-Банка и подключение к БД (синхронизирует CD-пайплайн из секретов GitHub)
           env:
             - name: TOKEN
               valueFrom:
                 secretKeyRef:
                   name: invest-api-secret
                   key: TOKEN
+            - name: SPRING_DATASOURCE_HIKARI_JDBC_URL
+              valueFrom:
+                secretKeyRef:
+                  name: invest-api-secret
+                  key: DB_URL
+            - name: SPRING_DATASOURCE_HIKARI_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: invest-api-secret
+                  key: DB_USERNAME
+            - name: SPRING_DATASOURCE_HIKARI_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: invest-api-secret
+                  key: DB_PASSWORD
 
           resources:
             requests:

@@ -1,0 +1,209 @@
+name: CI/CD
+
+# Логика по веткам:
+#   pull request в master/develop/uat -> сборка, checkstyle и тесты
+#   push в develop/uat                -> + образ в ghcr.io (теги: <short sha>, <ветка>)
+#   push в master                     -> + образ (дополнительно тег latest) + деплой в Kubernetes
+on:
+  push:
+    branches: [ "master", "develop", "uat" ]
+  pull_request:
+    branches: [ "master", "develop", "uat" ]
+  workflow_dispatch:
+
+# новый push в ту же ветку/PR отменяет незавершённую сборку предыдущего
+concurrency:
+  group: ci-cd-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  REGISTRY: ghcr.io
+  JAVA_VERSION: "25"
+
+jobs:
+  build:
+    name: Build & test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # setup-java заодно пишет ~/.m2/toolchains.xml, который нужен maven-toolchains-plugin
+      - name: Setup JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: maven
+
+      # checkstyle (validate), тесты (Testcontainers использует Docker раннера)
+      # и раскладка для образа в app/target/dockerbuild (package)
+      - name: Build, checkstyle and tests
+        run: mvn -B -ntp verify
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: "**/target/surefire-reports/"
+          retention-days: 7
+
+      - name: Upload image layout
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dockerbuild
+          path: app/target/dockerbuild/
+          if-no-files-found: error
+          retention-days: 3
+
+  image:
+    name: Build & push image
+    needs: build
+    if: >-
+      github.event_name != 'pull_request' &&
+      contains(fromJSON('["refs/heads/master", "refs/heads/develop", "refs/heads/uat"]'), github.ref)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+
+    outputs:
+      image: ${{ steps.name.outputs.image }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download image layout
+        uses: actions/download-artifact@v4
+        with:
+          name: dockerbuild
+          path: app/target/dockerbuild
+
+      # ghcr.io принимает имена только в нижнем регистре
+      - name: Image name
+        id: name
+        run: |
+          name="${REGISTRY}/${GITHUB_REPOSITORY,,}"
+          echo "name=${name}" >> "$GITHUB_OUTPUT"
+          echo "image=${name}:${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.name.outputs.name }}
+          tags: |
+            type=sha,prefix=,format=short
+            type=ref,event=branch
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/master' }}
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy to Kubernetes
+    needs: image
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # в настройках репозитория можно включить для окружения ручное подтверждение деплоя
+    environment: production
+    # деплои не отменяют друг друга и идут строго по очереди
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+
+    env:
+      NAMESPACE: invest-api
+      IMAGE: ${{ needs.image.outputs.image }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Configure kubeconfig
+        env:
+          KUBECONFIG_B64: ${{ secrets.KUBECONFIG }}
+        run: |
+          mkdir -p ~/.kube
+          echo "$KUBECONFIG_B64" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Apply namespace and config
+        run: |
+          kubectl apply -f k8s/namespace.yaml
+          kubectl apply -f k8s/configmap.yaml
+
+      # секреты живут в GitHub и при каждом деплое синхронизируются в кластер
+      - name: Sync secrets
+        env:
+          TINKOFF_TOKEN: ${{ secrets.TINKOFF_TOKEN }}
+          DB_URL: ${{ secrets.DB_URL }}
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          GHCR_PULL_TOKEN: ${{ secrets.GHCR_PULL_TOKEN }}
+        run: |
+          kubectl create secret generic invest-api-secret \
+            --namespace "$NAMESPACE" \
+            --from-literal=TOKEN="$TINKOFF_TOKEN" \
+            --from-literal=DB_URL="$DB_URL" \
+            --from-literal=DB_USERNAME="$DB_USERNAME" \
+            --from-literal=DB_PASSWORD="$DB_PASSWORD" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+          # образ в ghcr.io приватный: кластеру нужен токен с правом read:packages
+          if [ -n "$GHCR_PULL_TOKEN" ]; then
+            kubectl create secret docker-registry ghcr-secret \
+              --namespace "$NAMESPACE" \
+              --docker-server=ghcr.io \
+              --docker-username="${{ github.repository_owner }}" \
+              --docker-password="$GHCR_PULL_TOKEN" \
+              --dry-run=client -o yaml | kubectl apply -f -
+          fi
+
+      - name: Apply service and ingress
+        run: |
+          kubectl apply -f k8s/service.yaml
+          kubectl apply -f k8s/ingress.yaml
+
+      # образ подставляется в манифест до apply - одна раскатка вместо двух
+      - name: Deploy image ${{ env.IMAGE }}
+        run: |
+          sed -E "s|^(\s*image:).*|\1 ${IMAGE}|" k8s/deployment.yaml | kubectl apply -f -
+          kubectl rollout status deployment/invest-api --namespace "$NAMESPACE" --timeout=300s
+
+      - name: Diagnostics
+        if: failure()
+        run: |
+          kubectl get pods --namespace "$NAMESPACE" -l app=invest-api -o wide || true
+          kubectl describe deployment invest-api --namespace "$NAMESPACE" || true
+          kubectl logs --namespace "$NAMESPACE" -l app=invest-api --tail=100 --all-containers || true

@@ -10,13 +10,15 @@ RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 WORKDIR /app
 USER appuser
 
-# JAR кладётся CD-пайплайном перед docker build
-COPY app/target/app-*.jar app.jar
+# Раскладку собирает `mvn package` в app/target/dockerbuild (см. maven-dependency-plugin и maven-antrun-plugin в pom.xml):
+#   ext - сторонние библиотеки: меняются редко, поэтому идут отдельным слоем раньше и берутся из кэша
+#   lib - модули проекта и сам app: меняются почти в каждой сборке
+COPY app/target/dockerbuild/ext/ ext/
+COPY app/target/dockerbuild/lib/ lib/
 
 EXPOSE 8080
 
 ENTRYPOINT ["java", \
-  "-XX:+UseContainerSupport", \
   "-XX:MaxRAMPercentage=75.0", \
-  "-Djava.security.egd=file:/dev/./urandom", \
-  "-jar", "app.jar"]
+  "-cp", "/app/lib/*:/app/ext/*", \
+  "ru.invest.api.InvestApplication"]

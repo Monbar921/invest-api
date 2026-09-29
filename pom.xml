@@ -217,7 +217,7 @@
                                 <goal>copy-dependencies</goal>
                             </goals>
                             <configuration>
-                                <includeGroupIds>aero.s7,ru.s7</includeGroupIds>
+                                <includeGroupIds>ru.invest.api</includeGroupIds>
                                 <outputDirectory>${docker.build.directory}/lib</outputDirectory>
                                 <includeScope>runtime</includeScope>
                             </configuration>
