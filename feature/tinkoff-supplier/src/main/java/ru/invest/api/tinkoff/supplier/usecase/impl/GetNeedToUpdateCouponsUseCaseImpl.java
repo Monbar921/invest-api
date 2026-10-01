@@ -50,7 +50,7 @@ public class GetNeedToUpdateCouponsUseCaseImpl implements GetNeedToUpdateCoupons
                         );
             }
 
-            pageable = bondSlice.getPageable();
+            pageable = bondSlice.nextPageable();
         } while (bondSlice.hasNext());
 
         return uidTickers

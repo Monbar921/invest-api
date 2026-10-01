@@ -80,6 +80,7 @@ public class TinkoffCouponSyncUseCaseImpl implements CouponSyncUseCase {
         final Iterator<ShortProductModel> uidTickerIterator = validUidTickers.iterator();
         final Map<String, List<CouponDataModel>> couponBatch = new HashMap<>(BATCH_SIZE);
 
+        log.info("Processing coupons, total size is {}", validUidTickers.size());
         try {
             while (uidTickerIterator.hasNext()) {
                 final ShortProductModel uidTicker = uidTickerIterator.next();
