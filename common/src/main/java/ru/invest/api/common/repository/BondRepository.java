@@ -36,4 +36,16 @@ public interface BondRepository extends JpaRepository<Bond, Long> {
     Optional<Bond> findByUid(String uid);
 
     Optional<Bond> findByTicker(String ticker);
+
+    /**
+     * Облигация с ценой, купоном и графиком выплат - для карточки облигации.
+     */
+    @Query("""
+            select b from Bond b
+            left join fetch b.price
+            left join fetch b.coupon c
+            left join fetch c.couponData
+            where b.ticker = :ticker
+            """)
+    Optional<Bond> findWithCouponDataByTicker(String ticker);
 }

@@ -4,6 +4,7 @@ import feign.FeignException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.test.context.jdbc.Sql;
@@ -14,7 +15,9 @@ import ru.invest.api.cb.rf.supplier.model.CurrencyElementDto;
 import ru.invest.api.common.mapper.AuditMapper;
 import ru.invest.api.common.usecase.PriceSyncUseCase;
 import ru.invest.api.dto.bond.BondDto;
+import ru.invest.api.dto.bond.CouponDataDto;
 import ru.invest.api.dto.bond.enums.RiskLevelDto;
+import ru.invest.api.dto.page.PageDto;
 import ru.invest.api.dto.request.bond.BondParametersRequest;
 import ru.invest.api.dto.request.bond.BondSortFieldRequest;
 import ru.invest.api.dto.request.bond.BondSortOrderRequest;
@@ -27,6 +30,10 @@ import ru.tinkoff.piapi.contract.v1.LastPrice;
 import ru.tinkoff.piapi.contract.v1.Quotation;
 
 import java.math.BigDecimal;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -37,7 +44,9 @@ import static org.hamcrest.Matchers.comparesEqualTo;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -67,6 +76,11 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
     private static final String RUB_WITHOUT_PRICE = "RU000A10ECY6";
 
     private static final int BAD_REQUEST = 400;
+    private static final int FORBIDDEN = 403;
+    private static final int NOT_FOUND = 404;
+    // origin UI из ru.invest.api.cors.allowed-origins в тестовом application.yml
+    private static final String ALLOWED_ORIGIN = "http://localhost:5173";
+    private static final String ACCESS_CONTROL_ALLOW_ORIGIN = "Access-Control-Allow-Origin";
     // курсы ЦБ: 1 USD = 90 RUB, 10 CNY = 125 RUB (у юаня номинал 10, как бывает у ЦБ)
     private static final CurrencyElementDto USD_RATE = cbRfRate("USD", "1", "90,0");
     private static final CurrencyElementDto CNY_RATE = cbRfRate("CNY", "10", "125,0");
@@ -86,6 +100,8 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
     private CbRfClient cbRfClient;
     @Autowired
     private List<CacheManager> cacheManagers;
+    @Value("${server.port}")
+    private int serverPort;
 
     @BeforeEach
     public void setUp() {
@@ -354,6 +370,151 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
         final List<BondDto> bonds = investApiBondClient.getLocal(2, request);
 
         assertThat(tickers(bonds), contains(RUB_MODERATE, RUB_LOW));
+    }
+
+    @Test
+    public void getAllPageSplitsSortedBondsTest() {
+        final PageDto<BondDto> first = investApiBondClient.getAllPage(0, 3, new BondParametersRequest());
+        final PageDto<BondDto> second = investApiBondClient.getAllPage(1, 3, new BondParametersRequest());
+        final PageDto<BondDto> last = investApiBondClient.getAllPage(2, 3, new BondParametersRequest());
+
+        // тот же порядок, что у getAll без параметров, разрезанный по 3
+        assertThat(tickers(first.getContent()), contains(OFZ, RUB_MODERATE, RUB_HIGH));
+        assertThat(tickers(second.getContent()), contains(RUB_LOW, CNY_MODERATE, USD_LOW));
+        assertThat(tickers(last.getContent()), contains(RUB_WITHOUT_PRICE));
+
+        assertThat(second.getPage(), equalTo(1));
+        assertThat(second.getSize(), equalTo(3));
+        assertThat(second.getTotalElements(), equalTo(7L));
+        assertThat(second.getTotalPages(), equalTo(3));
+    }
+
+    @Test
+    public void getAllPageDefaultsTest() {
+        final PageDto<BondDto> page = investApiBondClient.getAllPage(null, null, new BondParametersRequest());
+
+        assertThat(page.getPage(), equalTo(0));
+        assertThat(page.getSize(), equalTo(50));
+        assertThat(page.getContent(), hasSize(7));
+    }
+
+    @Test
+    public void getAllPageCountsOnlyFilteredBondsTest() {
+        final BondParametersRequest request = new BondParametersRequest();
+        request.setRiskLevels(List.of(RiskLevelDto.RISK_LEVEL_LOW));
+
+        final PageDto<BondDto> page = investApiBondClient.getAllPage(1, 2, request);
+
+        // LOW: OFZ, RUB_LOW, USD_LOW - на второй странице остаётся одна
+        assertThat(tickers(page.getContent()), contains(USD_LOW));
+        assertThat(page.getTotalElements(), equalTo(3L));
+        assertThat(page.getTotalPages(), equalTo(2));
+    }
+
+    @Test
+    public void getAllPageBeyondLastIsEmptyTest() {
+        final PageDto<BondDto> page = investApiBondClient.getAllPage(5, 3, new BondParametersRequest());
+
+        assertThat(page.getContent(), empty());
+        assertThat(page.getTotalElements(), equalTo(7L));
+    }
+
+    @Test
+    public void getAllPageIsNotLimitedByDefaultBatchLimitTest() {
+        // batchLimit по умолчанию (100) ограничивает только списочные эндпоинты: страница считает всю выдачу
+        final PageDto<BondDto> page = investApiBondClient.getAllPage(0, 1, sortedBy(sort(BondSortFieldRequest.TICKER, BondSortOrderRequest.DESC)));
+
+        assertThat(tickers(page.getContent()), contains(OFZ));
+        assertThat(page.getTotalElements(), equalTo(7L));
+    }
+
+    @Test
+    public void getForeignAndLocalPagesTest() {
+        final PageDto<BondDto> foreign = investApiBondClient.getForeignPage(0, 10, new BondParametersRequest());
+        final PageDto<BondDto> local = investApiBondClient.getLocalPage(0, 2, new BondParametersRequest());
+
+        assertThat(tickers(foreign.getContent()), contains(CNY_MODERATE, USD_LOW));
+        assertThat(foreign.getTotalElements(), equalTo(2L));
+        assertThat(tickers(local.getContent()), contains(OFZ, RUB_MODERATE));
+        assertThat(local.getTotalElements(), equalTo(5L));
+    }
+
+    @Test
+    public void getAllPageInvalidParametersAreRejectedTest() {
+        final FeignException negativePage = assertThrows(FeignException.class,
+                () -> investApiBondClient.getAllPage(-1, 10, new BondParametersRequest()));
+        final FeignException tooBigSize = assertThrows(FeignException.class,
+                () -> investApiBondClient.getAllPage(0, 501, new BondParametersRequest()));
+
+        assertThat(negativePage.status(), equalTo(BAD_REQUEST));
+        assertThat(negativePage.contentUTF8(), containsString("page must not be negative"));
+        assertThat(tooBigSize.status(), equalTo(BAD_REQUEST));
+        assertThat(tooBigSize.contentUTF8(), containsString("size must not exceed 500"));
+    }
+
+    @Test
+    public void getByTickerReturnsCouponScheduleTest() {
+        final BondDto bond = investApiBondClient.getByTicker(RUB_LOW);
+
+        assertThat(bond.getName(), equalTo("Авто Финанс Банк БО-001Р-18"));
+        assertThat(bond.getPrice().getCurrent().getQuantity(), comparesEqualTo(new BigDecimal("1005.00")));
+        assertThat(bond.getPrice().getPercentagePrice(), comparesEqualTo(new BigDecimal("100.5")));
+        assertThat(bond.getCoupon().getInterest(), comparesEqualTo(new BigDecimal("18.50")));
+
+        // в фикстуре выплаты вставлены не по порядку - карточка отдаёт их по дате выплаты
+        final List<CouponDataDto> couponData = bond.getCoupon().getCouponData();
+        assertThat(couponData.stream().map(data -> data.getPaymentDate().getMonthValue()).toList(), contains(10, 11, 12));
+        assertThat(couponData.getLast().getPrice().getQuantity(), comparesEqualTo(new BigDecimal("15.71")));
+        assertThat(couponData.getLast().getPrice().getCurrency(), equalTo("rub"));
+    }
+
+    @Test
+    public void getByTickerWithoutCouponTest() {
+        final BondDto bond = investApiBondClient.getByTicker(RUB_WITHOUT_PRICE);
+
+        assertThat(bond.getCoupon(), nullValue());
+        assertThat(bond.getPrice().getCurrent(), nullValue());
+    }
+
+    @Test
+    public void getByUnknownTickerIsNotFoundTest() {
+        final FeignException exception = assertThrows(FeignException.class, () -> investApiBondClient.getByTicker("UNKNOWN"));
+
+        assertThat(exception.status(), equalTo(NOT_FOUND));
+    }
+
+    @Test
+    public void corsAllowsConfiguredOriginForBondsTest() throws Exception {
+        final HttpResponse<Void> response = preflight("/internal/rest/bonds/all/page", ALLOWED_ORIGIN);
+
+        assertThat(response.headers().firstValue(ACCESS_CONTROL_ALLOW_ORIGIN), equalTo(Optional.of(ALLOWED_ORIGIN)));
+    }
+
+    @Test
+    public void corsRejectsOtherOriginTest() throws Exception {
+        final HttpResponse<Void> response = preflight("/internal/rest/bonds/all/page", "http://evil.example.com");
+
+        assertThat(response.statusCode(), equalTo(FORBIDDEN));
+        assertThat(response.headers().firstValue(ACCESS_CONTROL_ALLOW_ORIGIN), equalTo(Optional.empty()));
+    }
+
+    @Test
+    public void corsIsNotOpenForMaintenanceTest() throws Exception {
+        final HttpResponse<Void> response = preflight("/internal/rest/maintenance/bond/sync-all", ALLOWED_ORIGIN);
+
+        assertThat(response.headers().firstValue(ACCESS_CONTROL_ALLOW_ORIGIN), equalTo(Optional.empty()));
+    }
+
+    private HttpResponse<Void> preflight(final String path, final String origin) throws Exception {
+        final HttpRequest request = HttpRequest.newBuilder(URI.create("http://localhost:" + serverPort + path))
+                .method("OPTIONS", HttpRequest.BodyPublishers.noBody())
+                .header("Origin", origin)
+                .header("Access-Control-Request-Method", "POST")
+                .build();
+
+        try (HttpClient client = HttpClient.newHttpClient()) {
+            return client.send(request, HttpResponse.BodyHandlers.discarding());
+        }
     }
 
     private void mockCbRfRates(final CurrencyElementDto... rates) {

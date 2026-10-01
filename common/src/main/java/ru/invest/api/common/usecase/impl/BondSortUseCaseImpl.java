@@ -18,6 +18,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static ru.invest.api.common.predicates.BondModelPredicates.OFZ_PREDICATE;
 
@@ -34,15 +35,28 @@ public class BondSortUseCaseImpl implements BondSortUseCase {
 
         final BondParametersModel actualizedParameters = bondParametersMapper.toModel(bondParameters);
 
+        return filterAndSort(actualizedParameters, bonds)
+                .limit(actualizedParameters.getBatchLimit())
+                .toList();
+    }
+
+    @Override
+    public List<BondModel> getAllFilteredBonds(final BondParametersModel bondParameters, final List<BondModel> bonds) {
+        if (CollectionUtils.isEmpty(bonds)) {
+            return List.of();
+        }
+
+        return filterAndSort(bondParametersMapper.toModel(bondParameters), bonds).toList();
+    }
+
+    private Stream<BondModel> filterAndSort(final BondParametersModel bondParameters, final List<BondModel> bonds) {
         return bonds.stream()
                 .filter(Objects::nonNull)
                 .filter(bond -> filterByValueRange(bondParameters.getCurrentPrice(), getCurrentPrice(bond)))
                 .filter(bond -> filterByValueRange(bondParameters.getPercentagePrice(), getPercentagePrice(bond)))
                 .filter(bond -> filterByRiskLevel(bondParameters.getRiskLevels(), bond.getRiskLevel()))
                 .filter(bond -> filterByOfz(bondParameters.getIsOfz(), bond))
-                .sorted(priceUnknownLast(bondParameters).thenComparing(actualizedParameters.getComparator()))
-                .limit(actualizedParameters.getBatchLimit())
-                .toList();
+                .sorted(priceUnknownLast(bondParameters).thenComparing(bondParameters.getComparator()));
     }
 
     /**

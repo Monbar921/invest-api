@@ -3,9 +3,11 @@ package ru.invest.api.tinkoff.supplier.mapper;
 import lombok.Setter;
 import org.apache.commons.collections4.MapUtils;
 import org.mapstruct.AfterMapping;
+import org.mapstruct.InheritConfiguration;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
+import org.mapstruct.Named;
 import org.mapstruct.ObjectFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import ru.invest.api.common.entity.Audit;
@@ -60,6 +62,14 @@ public abstract class TinkoffBondEntityMapper {
     public abstract BondModel toModel(Bond bond);
 
     public abstract List<BondModel> toModel(List<Bond> bonds);
+
+    /**
+     * Облигация с полным купоном, включая график выплат - для карточки облигации.
+     */
+    @Named("toDetailedModel")
+    @InheritConfiguration(name = "toModel")
+    @Mapping(target = "coupon", source = "bond.coupon")
+    public abstract BondModel toDetailedModel(Bond bond);
 
 
     public List<BondModel> enrichBonds(final Map<String, BondModel> bonds,

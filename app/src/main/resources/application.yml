@@ -27,17 +27,20 @@ invest:
 ru:
   invest:
     api:
+      # адреса UI, которым можно ходить в API облигаций из браузера (через запятую в RU_INVEST_API_CORS_ALLOWED_ORIGINS)
+      cors:
+        allowed-origins: http://localhost:5173
       stock:
         supplier:
           scheduler:
             # ночная цепочка: облигации -> купоны -> цены + доходность купонов
             sync:
-              enabled: false
+              enabled: true
               cron: "0 0 3 * * *"
               zone: Europe/Moscow
               steps:
-                bond: true
-                coupon: true
+                bond: false
+                coupon: false
                 price: true
             # частое обновление цен и доходности в торговые часы
             price:

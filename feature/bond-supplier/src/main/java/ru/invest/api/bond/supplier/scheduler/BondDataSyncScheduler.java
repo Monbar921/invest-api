@@ -5,6 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import ru.invest.api.common.mapper.AuditMapper;
@@ -38,6 +40,11 @@ public class BondDataSyncScheduler {
     private final boolean couponStepEnabled;
     @Value("${ru.invest.api.stock.supplier.scheduler.sync.steps.price:true}")
     private final boolean priceStepEnabled;
+
+    @EventListener(ApplicationReadyEvent.class)
+    public void onReady() {
+        sync();
+    }
 
     @Scheduled(cron = "${ru.invest.api.stock.supplier.scheduler.sync.cron}", zone = "${ru.invest.api.stock.supplier.scheduler.sync.zone:}")
     @SchedulerLock(name = BOND_DATA_SYNC_LOCK, lockAtLeastFor = "PT5M", lockAtMostFor = "PT2H")

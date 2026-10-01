@@ -11,5 +11,10 @@ public interface TinkoffBondUseCase {
 
     BondModel findByTicker(String ticker);
 
+    /**
+     * Облигация с ценой и купоном вместе с графиком выплат.
+     */
+    BondModel findDetailedByTicker(String ticker);
+
     void save(Map<String, BondModel> tinkoffBonds, AuditModel audit);
 }

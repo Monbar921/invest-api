@@ -45,6 +45,16 @@ public class TinkoffBondUseCaseImpl implements TinkoffBondUseCase {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public BondModel findDetailedByTicker(final String ticker) {
+        final Bond bond = bondRepository.findWithCouponDataByTicker(ticker)
+                .orElseThrow(() -> new GeneralNotFoundEntityException(
+                        ExceptionErrorCode.BOND_NOT_FOUND, BOND_NOT_FOUND_MESSAGE.formatted(ticker)));
+
+        return tinkoffBondEntityMapper.toDetailedModel(bond);
+    }
+
+    @Override
     @Transactional
     public void save(final Map<String, BondModel> tinkoffBonds, final AuditModel audit) {
         if (MapUtils.isEmpty(tinkoffBonds)) {
