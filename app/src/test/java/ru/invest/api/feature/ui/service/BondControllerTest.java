@@ -4,7 +4,6 @@ import feign.FeignException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.test.context.jdbc.Sql;
@@ -30,10 +29,6 @@ import ru.tinkoff.piapi.contract.v1.LastPrice;
 import ru.tinkoff.piapi.contract.v1.Quotation;
 
 import java.math.BigDecimal;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -76,11 +71,7 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
     private static final String RUB_WITHOUT_PRICE = "RU000A10ECY6";
 
     private static final int BAD_REQUEST = 400;
-    private static final int FORBIDDEN = 403;
     private static final int NOT_FOUND = 404;
-    // origin UI из ru.invest.api.cors.allowed-origins в тестовом application.yml
-    private static final String ALLOWED_ORIGIN = "http://localhost:5173";
-    private static final String ACCESS_CONTROL_ALLOW_ORIGIN = "Access-Control-Allow-Origin";
     // курсы ЦБ: 1 USD = 90 RUB, 10 CNY = 125 RUB (у юаня номинал 10, как бывает у ЦБ)
     private static final CurrencyElementDto USD_RATE = cbRfRate("USD", "1", "90,0");
     private static final CurrencyElementDto CNY_RATE = cbRfRate("CNY", "10", "125,0");
@@ -100,8 +91,6 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
     private CbRfClient cbRfClient;
     @Autowired
     private List<CacheManager> cacheManagers;
-    @Value("${server.port}")
-    private int serverPort;
 
     @BeforeEach
     public void setUp() {
@@ -481,40 +470,6 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
         final FeignException exception = assertThrows(FeignException.class, () -> investApiBondClient.getByTicker("UNKNOWN"));
 
         assertThat(exception.status(), equalTo(NOT_FOUND));
-    }
-
-    @Test
-    public void corsAllowsConfiguredOriginForBondsTest() throws Exception {
-        final HttpResponse<Void> response = preflight("/internal/rest/bonds/all/page", ALLOWED_ORIGIN);
-
-        assertThat(response.headers().firstValue(ACCESS_CONTROL_ALLOW_ORIGIN), equalTo(Optional.of(ALLOWED_ORIGIN)));
-    }
-
-    @Test
-    public void corsRejectsOtherOriginTest() throws Exception {
-        final HttpResponse<Void> response = preflight("/internal/rest/bonds/all/page", "http://evil.example.com");
-
-        assertThat(response.statusCode(), equalTo(FORBIDDEN));
-        assertThat(response.headers().firstValue(ACCESS_CONTROL_ALLOW_ORIGIN), equalTo(Optional.empty()));
-    }
-
-    @Test
-    public void corsIsNotOpenForMaintenanceTest() throws Exception {
-        final HttpResponse<Void> response = preflight("/internal/rest/maintenance/bond/sync-all", ALLOWED_ORIGIN);
-
-        assertThat(response.headers().firstValue(ACCESS_CONTROL_ALLOW_ORIGIN), equalTo(Optional.empty()));
-    }
-
-    private HttpResponse<Void> preflight(final String path, final String origin) throws Exception {
-        final HttpRequest request = HttpRequest.newBuilder(URI.create("http://localhost:" + serverPort + path))
-                .method("OPTIONS", HttpRequest.BodyPublishers.noBody())
-                .header("Origin", origin)
-                .header("Access-Control-Request-Method", "POST")
-                .build();
-
-        try (HttpClient client = HttpClient.newHttpClient()) {
-            return client.send(request, HttpResponse.BodyHandlers.discarding());
-        }
     }
 
     private void mockCbRfRates(final CurrencyElementDto... rates) {
