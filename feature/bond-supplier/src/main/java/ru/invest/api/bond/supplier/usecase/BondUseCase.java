@@ -5,27 +5,19 @@ import org.springframework.data.domain.Pageable;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.parameters.BondParametersModel;
 
-import java.util.List;
-
 public interface BondUseCase {
-    List<BondModel> getForeignCurrencyBonds(BondParametersModel bondParametersModel);
-
-    List<BondModel> getRubbleCurrencyBonds(BondParametersModel bondParametersModel);
-
-    List<BondModel> getAll(BondParametersModel bondParametersModel);
-
     /**
-     * Страница облигаций в иностранной валюте: фильтры и сортировка как в getForeignCurrencyBonds, batchLimit не учитывается.
+     * Страница облигаций в иностранной валюте: фильтры и сортировка применяются ко всей выборке, затем берётся страница.
      */
     Page<BondModel> getForeignCurrencyBondsPage(BondParametersModel bondParametersModel, Pageable pageable);
 
     /**
-     * Страница рублёвых облигаций: фильтры и сортировка как в getRubbleCurrencyBonds, batchLimit не учитывается.
+     * Страница рублёвых облигаций: фильтры и сортировка применяются ко всей выборке, затем берётся страница.
      */
     Page<BondModel> getRubbleCurrencyBondsPage(BondParametersModel bondParametersModel, Pageable pageable);
 
     /**
-     * Страница всех облигаций: фильтры и сортировка как в getAll, batchLimit не учитывается.
+     * Страница всех облигаций: фильтры и сортировка применяются ко всей выборке, затем берётся страница.
      */
     Page<BondModel> getAllPage(BondParametersModel bondParametersModel, Pageable pageable);
 

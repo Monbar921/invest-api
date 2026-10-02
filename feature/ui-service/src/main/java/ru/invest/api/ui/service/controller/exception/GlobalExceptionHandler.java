@@ -32,7 +32,7 @@ public class GlobalExceptionHandler {
         return problem;
     }
 
-    // нарушены ограничения на параметры запроса (например, @Positive на batchLimit)
+    // нарушены ограничения на параметры запроса (например, @Max на размер страницы)
     @ExceptionHandler(ConstraintViolationException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ProblemDetail handleConstraintViolation(final ConstraintViolationException ex) {

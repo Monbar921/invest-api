@@ -16,6 +16,12 @@ import java.util.Objects;
 
 @Service
 public class BondComparatorUseCaseImpl implements BondComparatorUseCase {
+    // последний ключ сортировки: без него облигации с равными значениями шли бы в порядке кэша,
+    // который меняется при его пересборке, и при листании страниц одни повторялись бы, а другие пропадали
+    private static final Comparator<BondModel> TIE_BREAKER = Comparator
+            .comparing(BondModel::getTicker, Comparator.nullsLast(Comparator.<String>naturalOrder()))
+            .thenComparing(BondModel::getUid, Comparator.nullsLast(Comparator.<String>naturalOrder()));
+
     @Override
     public Comparator<BondModel> createComparator(final List<BondSortModel> bondSorts) {
         final List<Comparator<BondModel>> comparators = new LinkedList<>();
@@ -32,7 +38,8 @@ public class BondComparatorUseCaseImpl implements BondComparatorUseCase {
 
         return comparators.stream()
                 .reduce(Comparator::thenComparing)
-                .orElse((o1, o2) -> 0);
+                .map(comparator -> comparator.thenComparing(TIE_BREAKER))
+                .orElse(TIE_BREAKER);
     }
 
     private <T extends Comparable<? super T>> Comparator<T> getOrder(final BondSortOrder bondSortOrder) {
@@ -43,7 +50,9 @@ public class BondComparatorUseCaseImpl implements BondComparatorUseCase {
 
     private Comparator<BondModel> buildComparator(final BondSortField sortField, final BondSortOrder bondSortOrder) {
         return switch (sortField) {
-            case RISK_LEVEL -> Comparator.comparingInt(this::riskPriority);
+            case RISK_LEVEL -> Comparator.comparing(
+                    this::riskPriority,
+                    Comparator.nullsLast(getOrder(bondSortOrder)));
             case COUPON_INTEREST -> Comparator.comparing(
                     bond -> bond.getCoupon() != null ? bond.getCoupon().getInterest() : null,
                     Comparator.<BigDecimal>nullsLast(getOrder(bondSortOrder)));
@@ -67,16 +76,16 @@ public class BondComparatorUseCaseImpl implements BondComparatorUseCase {
     }
 
     /**
-     * LOW/MODERATE → 0 (лучший риск), остальные → 1, null → 2.
-     * Используется при сортировке по RISK_LEVEL (ASC = сначала самые надёжные).
+     * Код риска из T-Invest API: LOW 1, MODERATE 2, HIGH 3 (ASC - сначала самые надёжные).
+     * Неизвестный риск - null: такие облигации идут в конце при любом направлении.
      */
-    private int riskPriority(final BondModel bond) {
+    private Integer riskPriority(final BondModel bond) {
         if (bond.getRiskLevel() == null) {
-            return 2;
+            return null;
         }
         return switch (bond.getRiskLevel()) {
-            case RISK_LEVEL_LOW, RISK_LEVEL_MODERATE -> 0;
-            default -> 1;
+            case RISK_LEVEL_LOW, RISK_LEVEL_MODERATE, RISK_LEVEL_HIGH -> bond.getRiskLevel().getValue();
+            case RISK_LEVEL_UNSPECIFIED, UNRECOGNIZED -> null;
         };
     }
 }

@@ -70,6 +70,7 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
     // rub, HIGH, текущей цены ещё нет
     private static final String RUB_WITHOUT_PRICE = "RU000A10ECY6";
 
+    private static final int MAX_PAGE_SIZE = 500;
     private static final int BAD_REQUEST = 400;
     private static final int NOT_FOUND = 404;
     // курсы ЦБ: 1 USD = 90 RUB, 10 CNY = 125 RUB (у юаня номинал 10, как бывает у ЦБ)
@@ -103,7 +104,7 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
 
     @Test
     public void getAllWithoutParametersSortsByCurrentPriceTest() {
-        final List<BondDto> bonds = investApiBondClient.getAll(null);
+        final List<BondDto> bonds = all();
 
         // по умолчанию - по текущей цене в рублях по возрастанию, облигации без цены в конце
         assertThat(tickers(bonds), contains(OFZ, RUB_MODERATE, RUB_HIGH, RUB_LOW, CNY_MODERATE, USD_LOW, RUB_WITHOUT_PRICE));
@@ -111,7 +112,7 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
 
     @Test
     public void getAllMapsBondFieldsTest() {
-        final BondDto bond = investApiBondClient.getAll(null)
+        final BondDto bond = all()
                 .stream()
                 .filter(dto -> RUB_LOW.equals(dto.getTicker()))
                 .findFirst()
@@ -142,7 +143,7 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
 
     @Test
     public void getAllWithoutCurrentPriceReturnsOnlyNominalTest() {
-        final BondDto bond = investApiBondClient.getAll(null)
+        final BondDto bond = all()
                 .stream()
                 .filter(dto -> RUB_WITHOUT_PRICE.equals(dto.getTicker()))
                 .findFirst()
@@ -159,7 +160,7 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
         final BondParametersRequest request = new BondParametersRequest();
         request.setPercentagePrice(valueRange("95", "100"));
 
-        final List<BondDto> bonds = investApiBondClient.getAll(null, request);
+        final List<BondDto> bonds = all(request);
 
         // проценты от номинала не зависят от валюты: RUB_MODERATE 98.9474%, RUB_HIGH 95.05%, USD_LOW 98%;
         // не проходят OFZ 61%, CNY_MODERATE 100.1%, RUB_LOW 100.5%; облигация без цены - в конце
@@ -168,7 +169,7 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
 
     @Test
     public void sortByPriceDescTest() {
-        final List<BondDto> bonds = investApiBondClient.getAll(null, sortedBy(sort(BondSortFieldRequest.PRICE, BondSortOrderRequest.DESC)));
+        final List<BondDto> bonds = all(sortedBy(sort(BondSortFieldRequest.PRICE, BondSortOrderRequest.DESC)));
 
         // по цене в рублях: 88 200, 12 512.50, 1005, 950.50, 940, 610; облигация без цены - в конце и при DESC
         assertThat(tickers(bonds), contains(USD_LOW, CNY_MODERATE, RUB_LOW, RUB_HIGH, RUB_MODERATE, OFZ, RUB_WITHOUT_PRICE));
@@ -176,30 +177,15 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
 
     @Test
     public void sortByPercentagePriceTest() {
-        final List<BondDto> bonds = investApiBondClient.getAll(null, sortedBy(sort(BondSortFieldRequest.PERCENTAGE_PRICE, BondSortOrderRequest.ASC)));
+        final List<BondDto> bonds = all(sortedBy(sort(BondSortFieldRequest.PERCENTAGE_PRICE, BondSortOrderRequest.ASC)));
 
         // 61%, 95.05%, 98%, 98.9474%, 100.1%, 100.5%; облигация без цены - в конце
         assertThat(tickers(bonds), contains(OFZ, RUB_HIGH, USD_LOW, RUB_MODERATE, CNY_MODERATE, RUB_LOW, RUB_WITHOUT_PRICE));
     }
 
     @Test
-    public void getAllBatchLimitTest() {
-        final List<BondDto> bonds = investApiBondClient.getAll(2);
-
-        assertThat(tickers(bonds), contains(OFZ, RUB_MODERATE));
-    }
-
-    @Test
-    public void getAllNotPositiveBatchLimitIsRejectedTest() {
-        final FeignException exception = assertThrows(FeignException.class, () -> investApiBondClient.getAll(0));
-
-        assertThat(exception.status(), equalTo(BAD_REQUEST));
-        assertThat(exception.contentUTF8(), containsString("batchLimit must be a positive number"));
-    }
-
-    @Test
     public void getForeignTest() {
-        final List<BondDto> bonds = investApiBondClient.getForeign(null);
+        final List<BondDto> bonds = foreign();
 
         // 12 512.50 RUB за CNY-облигацию меньше, чем 88 200 RUB за USD-облигацию
         assertThat(tickers(bonds), contains(CNY_MODERATE, USD_LOW));
@@ -210,7 +196,7 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
         // ЦБ не вернул курс юаня, запасной источник курсов (budget.org) тоже ничего не дал
         mockCbRfRates(USD_RATE);
 
-        final List<BondDto> bonds = investApiBondClient.getForeign(null);
+        final List<BondDto> bonds = foreign();
 
         assertThat(tickers(bonds), contains(USD_LOW, CNY_MODERATE));
         // в ответе цена остаётся в исходной валюте
@@ -221,7 +207,7 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
 
     @Test
     public void getLocalTest() {
-        final List<BondDto> bonds = investApiBondClient.getLocal(null);
+        final List<BondDto> bonds = local();
 
         assertThat(tickers(bonds), contains(OFZ, RUB_MODERATE, RUB_HIGH, RUB_LOW, RUB_WITHOUT_PRICE));
     }
@@ -231,7 +217,7 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
         final BondParametersRequest request = new BondParametersRequest();
         request.setCurrentPrice(valueRange("900", "1000"));
 
-        final List<BondDto> bonds = investApiBondClient.getAll(null, request);
+        final List<BondDto> bonds = all(request);
 
         // диапазон в рублях: USD-облигация (88 200 RUB) не проходит, хотя её цена в долларах 980;
         // облигацию без текущей цены фильтр по цене не отсекает - её цена ещё неизвестна
@@ -243,7 +229,7 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
         final BondParametersRequest request = new BondParametersRequest();
         request.setCurrentPrice(valueRange("10000", "20000"));
 
-        final List<BondDto> bonds = investApiBondClient.getAll(null, request);
+        final List<BondDto> bonds = all(request);
 
         assertThat(tickers(bonds), contains(CNY_MODERATE, RUB_WITHOUT_PRICE));
     }
@@ -253,25 +239,25 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
         final BondParametersRequest request = sortedBy(sort(BondSortFieldRequest.TICKER, BondSortOrderRequest.ASC));
         request.setCurrentPrice(valueRange("900", "1000"));
 
-        final List<BondDto> bonds = investApiBondClient.getAll(null, request);
+        final List<BondDto> bonds = all(request);
 
         // по тикеру облигация без цены (RU000A10ECY6) стояла бы второй, но при фильтре по цене она уходит в конец
         assertThat(tickers(bonds), contains(RUB_MODERATE, RUB_HIGH, RUB_WITHOUT_PRICE));
     }
 
     @Test
-    public void filterByCurrentPriceWithBatchLimitSkipsUnknownPriceTest() {
+    public void filterByCurrentPriceFirstPageSkipsUnknownPriceTest() {
         final BondParametersRequest request = sortedBy(sort(BondSortFieldRequest.TICKER, BondSortOrderRequest.ASC));
         request.setCurrentPrice(valueRange("900", "1000"));
 
-        final List<BondDto> bonds = investApiBondClient.getAll(2, request);
+        final List<BondDto> bonds = investApiBondClient.getAllPage(0, 2, request).getContent();
 
         assertThat(tickers(bonds), contains(RUB_MODERATE, RUB_HIGH));
     }
 
     @Test
     public void sortByCouponInterestDescTest() {
-        final List<BondDto> bonds = investApiBondClient.getAll(null, sortedBy(
+        final List<BondDto> bonds = all(sortedBy(
                 sort(BondSortFieldRequest.COUPON_INTEREST, BondSortOrderRequest.DESC),
                 sort(BondSortFieldRequest.TICKER, BondSortOrderRequest.ASC)));
 
@@ -282,7 +268,7 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
     @Test
     public void priceSyncIsVisibleWithoutWaitingForCacheTest() {
         // первый запрос кладёт облигации в кэш
-        final BondDto before = findByTicker(investApiBondClient.getAll(null), RUB_LOW);
+        final BondDto before = findByTicker(all(), RUB_LOW);
         assertThat(before.getPrice().getCurrent().getQuantity(), comparesEqualTo(new BigDecimal("1005.00")));
 
         when(marketDataGrpcWrapper.getLastPrices(any())).thenReturn(GetLastPricesResponse.newBuilder()
@@ -293,7 +279,7 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
         priceSyncUseCase.syncByTicker(RUB_LOW, auditMapper.toCurrentAuditModel(SCHEDULER_PROCESS));
 
         // синхронизация сбросила кэш - пользователь сразу видит новую цену: 99% от номинала 1000
-        final BondDto after = findByTicker(investApiBondClient.getAll(null), RUB_LOW);
+        final BondDto after = findByTicker(all(), RUB_LOW);
         assertThat(after.getPrice().getCurrent().getQuantity(), comparesEqualTo(new BigDecimal("990.00")));
     }
 
@@ -302,7 +288,7 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
         final BondParametersRequest request = new BondParametersRequest();
         request.setRiskLevels(List.of(RiskLevelDto.RISK_LEVEL_LOW));
 
-        final List<BondDto> bonds = investApiBondClient.getAll(null, request);
+        final List<BondDto> bonds = all(request);
 
         assertThat(tickers(bonds), contains(OFZ, RUB_LOW, USD_LOW));
     }
@@ -312,7 +298,7 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
         final BondParametersRequest request = new BondParametersRequest();
         request.setIsOfz(true);
 
-        final List<BondDto> bonds = investApiBondClient.getAll(null, request);
+        final List<BondDto> bonds = all(request);
 
         assertThat(tickers(bonds), contains(OFZ));
     }
@@ -322,33 +308,41 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
         final BondParametersRequest request = new BondParametersRequest();
         request.setIsOfz(false);
 
-        final List<BondDto> bonds = investApiBondClient.getAll(null, request);
+        final List<BondDto> bonds = all(request);
 
         assertThat(tickers(bonds), containsInAnyOrder(RUB_MODERATE, RUB_HIGH, RUB_LOW, USD_LOW, CNY_MODERATE, RUB_WITHOUT_PRICE));
     }
 
     @Test
     public void sortByTickerDescTest() {
-        final List<BondDto> bonds = investApiBondClient.getAll(null, sortedBy(sort(BondSortFieldRequest.TICKER, BondSortOrderRequest.DESC)));
+        final List<BondDto> bonds = all(sortedBy(sort(BondSortFieldRequest.TICKER, BondSortOrderRequest.DESC)));
 
         assertThat(tickers(bonds), contains(OFZ, RUB_LOW, RUB_HIGH, RUB_WITHOUT_PRICE, RUB_MODERATE, CNY_MODERATE, USD_LOW));
     }
 
     @Test
     public void sortByMaturityDateTest() {
-        final List<BondDto> bonds = investApiBondClient.getAll(null, sortedBy(sort(BondSortFieldRequest.MATURITY_DATE, BondSortOrderRequest.ASC)));
+        final List<BondDto> bonds = all(sortedBy(sort(BondSortFieldRequest.MATURITY_DATE, BondSortOrderRequest.ASC)));
 
         assertThat(tickers(bonds), contains(CNY_MODERATE, USD_LOW, RUB_MODERATE, RUB_LOW, RUB_WITHOUT_PRICE, RUB_HIGH, OFZ));
     }
 
     @Test
     public void sortByRiskLevelThenTickerTest() {
-        final List<BondDto> bonds = investApiBondClient.getAll(null, sortedBy(
+        final List<BondDto> bonds = all(sortedBy(
                 sort(BondSortFieldRequest.RISK_LEVEL, BondSortOrderRequest.ASC),
                 sort(BondSortFieldRequest.TICKER, BondSortOrderRequest.ASC)));
 
-        // сначала надёжные (LOW и MODERATE), потом HIGH; внутри группы - по тикеру
-        assertThat(tickers(bonds), contains(USD_LOW, CNY_MODERATE, RUB_MODERATE, RUB_LOW, OFZ, RUB_WITHOUT_PRICE, RUB_HIGH));
+        // LOW, MODERATE, HIGH; внутри уровня риска - по тикеру
+        assertThat(tickers(bonds), contains(USD_LOW, RUB_LOW, OFZ, CNY_MODERATE, RUB_MODERATE, RUB_WITHOUT_PRICE, RUB_HIGH));
+    }
+
+    @Test
+    public void sortByRiskLevelDescTest() {
+        final List<BondDto> bonds = all(sortedBy(sort(BondSortFieldRequest.RISK_LEVEL, BondSortOrderRequest.DESC)));
+
+        // сортировка только по риску: при равном риске порядок всё равно однозначный - по тикеру
+        assertThat(tickers(bonds), contains(RUB_WITHOUT_PRICE, RUB_HIGH, CNY_MODERATE, RUB_MODERATE, USD_LOW, RUB_LOW, OFZ));
     }
 
     @Test
@@ -356,7 +350,7 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
         final BondParametersRequest request = sortedBy(sort(BondSortFieldRequest.TICKER, BondSortOrderRequest.ASC));
         request.setRiskLevels(List.of(RiskLevelDto.RISK_LEVEL_LOW, RiskLevelDto.RISK_LEVEL_MODERATE));
 
-        final List<BondDto> bonds = investApiBondClient.getLocal(2, request);
+        final List<BondDto> bonds = investApiBondClient.getLocalPage(0, 2, request).getContent();
 
         assertThat(tickers(bonds), contains(RUB_MODERATE, RUB_LOW));
     }
@@ -367,7 +361,7 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
         final PageDto<BondDto> second = investApiBondClient.getAllPage(1, 3, new BondParametersRequest());
         final PageDto<BondDto> last = investApiBondClient.getAllPage(2, 3, new BondParametersRequest());
 
-        // тот же порядок, что у getAll без параметров, разрезанный по 3
+        // тот же порядок, что у всей выдачи без параметров, разрезанный по 3
         assertThat(tickers(first.getContent()), contains(OFZ, RUB_MODERATE, RUB_HIGH));
         assertThat(tickers(second.getContent()), contains(RUB_LOW, CNY_MODERATE, USD_LOW));
         assertThat(tickers(last.getContent()), contains(RUB_WITHOUT_PRICE));
@@ -409,12 +403,15 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
     }
 
     @Test
-    public void getAllPageIsNotLimitedByDefaultBatchLimitTest() {
-        // batchLimit по умолчанию (100) ограничивает только списочные эндпоинты: страница считает всю выдачу
-        final PageDto<BondDto> page = investApiBondClient.getAllPage(0, 1, sortedBy(sort(BondSortFieldRequest.TICKER, BondSortOrderRequest.DESC)));
+    @Sql(scripts = {"/sql/bonds-for-controller.sql", "/sql/many-bonds-for-controller.sql"})
+    public void getAllPageCountsWholeSelectionTest() {
+        // 7 облигаций основной фикстуры и 120 дополнительных: страницы считаются по всей выдаче, а не по первым 100
+        final PageDto<BondDto> page = investApiBondClient.getAllPage(2, 50, sortedBy(sort(BondSortFieldRequest.TICKER, BondSortOrderRequest.DESC)));
 
-        assertThat(tickers(page.getContent()), contains(OFZ));
-        assertThat(page.getTotalElements(), equalTo(7L));
+        assertThat(page.getTotalElements(), equalTo(127L));
+        assertThat(page.getTotalPages(), equalTo(3));
+        assertThat(page.getContent(), hasSize(27));
+        assertThat(tickers(page.getContent()).getLast(), equalTo(USD_LOW));
     }
 
     @Test
@@ -470,6 +467,23 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
         final FeignException exception = assertThrows(FeignException.class, () -> investApiBondClient.getByTicker("UNKNOWN"));
 
         assertThat(exception.status(), equalTo(NOT_FOUND));
+    }
+
+    private List<BondDto> all() {
+        return all(new BondParametersRequest());
+    }
+
+    // вся выдача одной страницей: в фикстуре облигаций меньше максимального размера страницы
+    private List<BondDto> all(final BondParametersRequest request) {
+        return investApiBondClient.getAllPage(0, MAX_PAGE_SIZE, request).getContent();
+    }
+
+    private List<BondDto> foreign() {
+        return investApiBondClient.getForeignPage(0, MAX_PAGE_SIZE, new BondParametersRequest()).getContent();
+    }
+
+    private List<BondDto> local() {
+        return investApiBondClient.getLocalPage(0, MAX_PAGE_SIZE, new BondParametersRequest()).getContent();
     }
 
     private void mockCbRfRates(final CurrencyElementDto... rates) {
