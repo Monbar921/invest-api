@@ -326,17 +326,4 @@
             </plugin>
         </plugins>
     </build>
-
-    <distributionManagement>
-        <repository>
-            <id>nexus</id>
-            <name>nexus-release</name>
-            <url>https://repository.s7corp.ru/repository/smi-release-group</url>
-        </repository>
-        <snapshotRepository>
-            <id>nexus-snapshots</id>
-            <name>nexus-snapshot</name>
-            <url>https://repository.s7corp.ru/repository/smi-snapshot-group</url>
-        </snapshotRepository>
-    </distributionManagement>
 </project>

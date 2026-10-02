@@ -1,7 +1,7 @@
 invest:
   enabled: true
   connector:
-    token: ${TOKEN}
+    token: $TOKEN
     # retry из SDK: повторяет только RESOURCE_EXHAUSTED, ждёт до сброса лимита (x-ratelimit-reset)
     connection:
       retry:
@@ -64,7 +64,7 @@ spring:
   datasource:
     hikari:
       connection-test-query: select 1
-      connection-init-sql: SET search_path TO invest_api_test
+      connection-init-sql: SET search_path TO $DB_SCHEMA
       connection-timeout: 30000
       driver-class-name: org.postgresql.Driver
       idle-timeout: 30000
@@ -72,26 +72,15 @@ spring:
       maximum-pool-size: 15
       minimum-idle: 15
       pool-name: postgres
-      password: postgres
-      jdbc-url: jdbc:postgresql://localhost:5432/postgres
-      username: postgres
-  liquibase:
-    change-log: classpath:liquibase/db.changelog-master.xml
-    parameters:
-      appUsername: ${spring.datasource.hikari.username}
-      schema: invest_api_test
-      sql_schema: invest_api_test
-    enabled: true
-    default-schema: invest_api_test
+      jdbc-url: jdbc:postgresql://$DB_HOST:DB_PORT/$DB_NAME
+      username: $DB_USERNAME
+      password: $DB_PASSWORD
 
 management:
   endpoints:
     web:
       exposure:
         include: health,info,metrics
-  endpoint:
-    health:
-      show-details: when-authorized
 
 springdoc:
   api-docs:
