@@ -34,7 +34,7 @@ ru:
             sync:
               enabled: true
               run-on-startup: true
-              cron: "0 0 3 * * * MON"
+              cron: "0 0 3 * * *"
               zone: Europe/Moscow
               steps:
                 bond: true
