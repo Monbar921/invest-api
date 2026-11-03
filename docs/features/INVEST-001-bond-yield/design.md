@@ -9,6 +9,7 @@
 | -------------- | --------------------------------------------------------------------------------- |
 | `bond`         | `offer_date timestamp`, `amortization_flag boolean not null default false`        |
 | `coupon`       | `yield_to_maturity numeric(19,2)`, `yield_to_offer numeric(19,2)`                 |
+| `coupon_data`  | `fix_date`, `price`, `currency` стали nullable: у далёких купонов дата фиксации реестра (у флоатеров и размер выплаты) ещё не назначены, а график теперь грузится до погашения |
 | `price`        | `aci_value numeric(19,2)`, `aci_currency varchar(3)`                              |
 | `amortization` | новая: `bond_id`, `uid`, `ticker`, `price`, `currency`, `payment_date` + аудит      |
 

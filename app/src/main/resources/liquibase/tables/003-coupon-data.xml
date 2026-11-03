@@ -56,4 +56,11 @@
             <column name="coupon_id"/>
         </createIndex>
     </changeSet>
+
+    <!-- у далёких купонов дата фиксации реестра (а у флоатеров и размер выплаты) ещё не назначены -->
+    <changeSet id="INVEST-001-coupon-data-optional-fix-date-and-price" author="d.v.kornilovich">
+        <dropNotNullConstraint tableName="coupon_data" columnName="fix_date" columnDataType="timestamp"/>
+        <dropNotNullConstraint tableName="coupon_data" columnName="price" columnDataType="numeric(19,2)"/>
+        <dropNotNullConstraint tableName="coupon_data" columnName="currency" columnDataType="varchar2(3)"/>
+    </changeSet>
 </databaseChangeLog>

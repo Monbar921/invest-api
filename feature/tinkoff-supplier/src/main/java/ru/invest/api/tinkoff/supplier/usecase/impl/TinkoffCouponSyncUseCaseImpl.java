@@ -3,6 +3,7 @@ package ru.invest.api.tinkoff.supplier.usecase.impl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -19,12 +20,11 @@ import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondCacheRepositoryUseCase;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondUseCase;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffCouponUseCase;
 
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 
@@ -77,42 +77,63 @@ public class TinkoffCouponSyncUseCaseImpl implements CouponSyncUseCase {
         final Map<String, String> uidTickerMap = validUidTickers.stream()
                 .collect(Collectors.toMap(ShortProductModel::getUid, ShortProductModel::getTicker));
 
-        final Iterator<ShortProductModel> uidTickerIterator = validUidTickers.iterator();
-        final Map<String, List<CouponDataModel>> couponBatch = new HashMap<>(BATCH_SIZE);
-
         log.info("Processing coupons, total size is {}", validUidTickers.size());
         try {
-            while (uidTickerIterator.hasNext()) {
-                final ShortProductModel uidTicker = uidTickerIterator.next();
-                couponBatch.put(uidTicker.getUid(), List.of());
-
-                if (couponBatch.size() == BATCH_SIZE || !uidTickerIterator.hasNext()) {
-                    fetchCouponsAsyncAndGet(couponBatch, uidTickerMap, audit);
-                    updateEntity(couponBatch);
-                    couponBatch.clear();
-                }
-            }
+            ListUtils.partition(validUidTickers, BATCH_SIZE)
+                    .forEach(batch -> updateEntity(fetchCouponsAsyncAndGet(batch, uidTickerMap, audit), uidTickerMap));
         } finally {
             tinkoffBondCacheRepositoryUseCase.evictAll();
         }
     }
 
-    private void fetchCouponsAsyncAndGet(final Map<String, List<CouponDataModel>> batchCouponData, final Map<String, String> uidTickerMap,
-                                         final AuditModel audit) {
-        final List<CompletableFuture<Void>> futures = batchCouponData.keySet().stream()
-                .map(uid -> CompletableFuture.runAsync(
-                        () -> batchCouponData.put(uid, tinkoffCouponProvider.getCouponData(uid, uidTickerMap.get(uid), audit)),
-                        couponExecutorService))
+    /**
+     * Графики купонов пачки; облигации, по которым API ответил ошибкой, в результат не попадают -
+     * их прежний график остаётся, а остальные облигации пачки загружаются.
+     */
+    @SuppressWarnings("checkstyle:IllegalCatch")
+    private Map<String, List<CouponDataModel>> fetchCouponsAsyncAndGet(final List<ShortProductModel> batch,
+                                                                       final Map<String, String> uidTickerMap,
+                                                                       final AuditModel audit) {
+        // результаты пишут потоки пула
+        final Map<String, List<CouponDataModel>> batchCouponData = new ConcurrentHashMap<>(batch.size());
+
+        final List<CompletableFuture<Void>> futures = batch.stream()
+                .map(ShortProductModel::getUid)
+                .map(uid -> CompletableFuture.runAsync(() -> {
+                    try {
+                        batchCouponData.put(uid, tinkoffCouponProvider.getCouponData(uid, uidTickerMap.get(uid), audit));
+                    } catch (final RuntimeException e) {
+                        log.warn("Failed to fetch coupons for bond {}", uidTickerMap.get(uid), e);
+                    }
+                }, couponExecutorService))
                 .toList();
 
         CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
+        return batchCouponData;
     }
 
-    private void updateEntity(final Map<String, List<CouponDataModel>> couponDataBatch) {
+    /**
+     * Пачка сохраняется одной транзакцией; если она упала, облигации сохраняются по одной, чтобы ошибка в данных
+     * одной облигации не оставила без графиков всю пачку.
+     */
+    @SuppressWarnings("checkstyle:IllegalCatch")
+    private void updateEntity(final Map<String, List<CouponDataModel>> couponDataBatch, final Map<String, String> uidTickerMap) {
         if (MapUtils.isEmpty(couponDataBatch)) {
             return;
         }
 
-        tinkoffCouponUseCase.saveCouponData(couponDataBatch);
+        try {
+            tinkoffCouponUseCase.saveCouponData(couponDataBatch);
+        } catch (final RuntimeException exception) {
+            log.warn("Failed to save coupons batch of {} bonds, saving one by one", couponDataBatch.size(), exception);
+
+            couponDataBatch.forEach((uid, couponData) -> {
+                try {
+                    tinkoffCouponUseCase.saveCouponData(Map.of(uid, couponData));
+                } catch (final RuntimeException e) {
+                    log.error("Failed to save coupons for bond {}", uidTickerMap.get(uid), e);
+                }
+            });
+        }
     }
 }

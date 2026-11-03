@@ -17,10 +17,12 @@ import ru.invest.api.common.repository.CouponRepository;
 import ru.invest.api.common.usecase.CouponSyncUseCase;
 import ru.invest.api.tinkoff.supplier.mapper.TinkoffCouponApiMapper;
 import ru.invest.api.tinkoff.supplier.wrapper.InstrumentsGrpcRateLimitedWrapper;
+import ru.tinkoff.piapi.contract.v1.GetBondCouponsRequest;
 import ru.tinkoff.piapi.contract.v1.GetBondCouponsResponse;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -120,6 +122,69 @@ public class CouponSyncTest extends AbstractInvestApplicationTest {
         verify(instrumentsGrpcWrapper).getBondCoupons(argThat(request -> request.hasFrom()
                 && request.hasTo()
                 && request.getTo().getSeconds() > inTenYears));
+    }
+
+    @Test
+    @Sql(scripts = "/sql/bonds-and-coupons.sql")
+    public void apiErrorForOneBondDoesNotStopSyncTest() {
+        final List<Bond> bonds = bondRepository.findAll();
+        final String failingUid = bonds.getFirst().getUid();
+        when(instrumentsGrpcWrapper.getBondCoupons(any())).thenAnswer(invocation -> {
+            if (failingUid.equals(invocation.<GetBondCouponsRequest>getArgument(0).getInstrumentId())) {
+                throw new IllegalStateException("tinkoff is unavailable");
+            }
+            return loadCouponFixture();
+        });
+
+        couponSyncUseCase.syncAll(auditMapper.toCurrentAuditModel(SCHEDULER_PROCESS));
+
+        assertCouponsLoadedExcept(bonds, failingUid);
+    }
+
+    @Test
+    @Sql(scripts = "/sql/bonds-and-coupons.sql")
+    public void saveErrorForOneBondDoesNotStopSyncTest() {
+        final List<Bond> bonds = bondRepository.findAll();
+        final String failingUid = bonds.getFirst().getUid();
+        // валюта длиннее varchar2(3) - БД не примет график только этой облигации
+        final GetBondCouponsResponse.Builder broken = loadCouponFixture().toBuilder();
+        broken.setEvents(0, broken.getEvents(0).toBuilder()
+                .setPayOneBond(broken.getEvents(0).getPayOneBond().toBuilder().setCurrency("rubles")));
+        when(instrumentsGrpcWrapper.getBondCoupons(any())).thenAnswer(invocation ->
+                failingUid.equals(invocation.<GetBondCouponsRequest>getArgument(0).getInstrumentId())
+                        ? broken.build()
+                        : loadCouponFixture());
+
+        couponSyncUseCase.syncAll(auditMapper.toCurrentAuditModel(SCHEDULER_PROCESS));
+
+        assertCouponsLoadedExcept(bonds, failingUid);
+    }
+
+    private void assertCouponsLoadedExcept(final List<Bond> bonds, final String failingUid) {
+        final int expectedSize = loadCouponFixture().getEventsCount();
+        for (final Bond bond : bonds) {
+            final Coupon coupon = couponRepository.findByUid(bond.getUid()).orElseThrow();
+            assertThat(bond.getTicker(), coupon.getCouponData(), hasSize(failingUid.equals(bond.getUid()) ? 0 : expectedSize));
+        }
+    }
+
+    @Test
+    @Sql(scripts = "/sql/bonds-and-coupons-RU000A10EQ34.sql")
+    public void savesCouponsWithoutFixDateAndPriceTest() {
+        // у далёких купонов дата фиксации реестра, а у флоатеров и размер выплаты ещё не назначены
+        final GetBondCouponsResponse.Builder fixture = loadCouponFixture().toBuilder();
+        fixture.setEvents(0, fixture.getEvents(0).toBuilder().clearFixDate().clearPayOneBond());
+        when(instrumentsGrpcWrapper.getBondCoupons(any())).thenReturn(fixture.build());
+
+        final Bond bond = bondRepository.findByTicker(TICKER).orElseThrow();
+        couponSyncUseCase.syncByTicker(TICKER, auditMapper.toCurrentAuditModel(SCHEDULER_PROCESS));
+
+        final Coupon actualCoupon = couponRepository.findByUid(bond.getUid()).orElseThrow();
+        assertThat(actualCoupon.getCouponData(), hasSize(fixture.getEventsCount()));
+        assertThat(actualCoupon.getCouponData()
+                .stream()
+                .filter(couponData -> couponData.getFixDate() == null && couponData.getPrice() == null)
+                .count(), equalTo(1L));
     }
 
     @Test
