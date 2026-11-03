@@ -17,6 +17,8 @@
 - Новые поля в API: `BondDto.offerDate`, `amortizationFlag`; `CouponDto.yieldToMaturity`, `yieldToOffer`;
   `PriceDto.aci`.
 - Сортировка по `YIELD_TO_MATURITY` и `YIELD_TO_OFFER`.
+- Флаг `sync.run-on-startup`: прогон цепочки в фоне сразу после старта, чтобы новые поля заполнились без ожидания
+  ночного запуска.
 
 Правила расчёта - в [business-rules.md](../../business-rules.md#доходность-к-погашению-и-к-оферте),
 как сделано - в [design.md](design.md).

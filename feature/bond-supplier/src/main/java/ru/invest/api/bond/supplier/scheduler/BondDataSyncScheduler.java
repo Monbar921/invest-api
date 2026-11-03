@@ -7,8 +7,6 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -39,8 +37,6 @@ public class BondDataSyncScheduler {
     private final List<PriceSyncUseCase> priceSyncUseCases;
     private final AuditMapper auditMapper;
 
-    @Value("${ru.invest.api.stock.supplier.scheduler.sync.run-on-startup:false}")
-    private final boolean runOnStartup;
     @Value("${ru.invest.api.stock.supplier.scheduler.sync.steps.bond:true}")
     private final boolean bondStepEnabled;
     @Value("${ru.invest.api.stock.supplier.scheduler.sync.steps.coupon:true}")
@@ -50,13 +46,9 @@ public class BondDataSyncScheduler {
     @Value("${ru.invest.api.stock.supplier.scheduler.sync.steps.price:true}")
     private final boolean priceStepEnabled;
 
-    @EventListener(ApplicationReadyEvent.class)
-    public void onReady() {
-        if (runOnStartup) {
-            sync();
-        }
-    }
-
+    /**
+     * Запускается по cron и при старте приложения из {@link BondDataSyncStartupRunner}.
+     */
     @Scheduled(cron = "${ru.invest.api.stock.supplier.scheduler.sync.cron}", zone = "${ru.invest.api.stock.supplier.scheduler.sync.zone:}")
     @SchedulerLock(name = BOND_DATA_SYNC_LOCK, lockAtLeastFor = "PT5M", lockAtMostFor = "PT2H")
     public void sync() {

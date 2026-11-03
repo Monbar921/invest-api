@@ -12,8 +12,7 @@ mvn test -pl app -am -Dtest=YieldToMaturityCalculationTest
 
 ## Устройство
 
-Все тесты - интеграционные, в модуле `app` (`app/src/test/java/ru/invest/api`), наследуются от
-`AbstractInvestApplicationTest`:
+Тесты лежат в модуле `app`. Тесты шедулеров - обычные unit-тесты на моках, остальные - интеграционные (`app/src/test/java/ru/invest/api`) и наследуются от `AbstractInvestApplicationTest`:
 
 - поднимается всё приложение (`@SpringBootTest`, порт 8099 из `app/src/test/resources/application.yml`);
 - PostgreSQL 17 в Testcontainers, контейнер переиспользуется между запусками (`withReuse(true)`), миграции Liquibase
@@ -32,6 +31,7 @@ mvn test -pl app -am -Dtest=YieldToMaturityCalculationTest
 | `common/PriceSyncTest`             | цены, НКД, пересчёт купонной доходности                               |
 | `common/YieldToMaturityCalculationTest` | расчёт доходности к погашению и к оферте, случаи `null`          |
 | `feature/bond/supplier/BondDataSyncSchedulerTest` | порядок шагов цепочки, флаги шагов, продолжение после ошибки |
+| `feature/bond/supplier/BondDataSyncStartupRunnerTest` | прогон при старте не блокирует поток старта |
 | `feature/ui/service/BondControllerTest` | страницы, фильтры, сортировки, пагинация, карточка облигации     |
 
 ## Тестовые данные

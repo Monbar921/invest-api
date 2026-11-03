@@ -17,9 +17,11 @@
 (change-log `classpath:liquibase/db.changelog-master.xml`, default-schema, параметры `appUsername`, `schema`, `sql_schema`).
 Локально приложение слушает `server.port: 8081`, invest-gateway ходит на `http://127.0.0.1:8081`.
 
-Шедулеры: `ru.invest.api.stock.supplier.scheduler.sync.enabled` (ночная цепочка, плюс прогон при старте),
+Шедулеры: `ru.invest.api.stock.supplier.scheduler.sync.enabled` (ночная цепочка по `sync.cron` - 6 полей Spring:
+`секунды минуты часы день месяц день_недели`), `...sync.run-on-startup` - прогнать цепочку в фоне сразу после старта,
 `...sync.steps.{bond,coupon,amortization,price}` - отдельные шаги, `...scheduler.price.enabled` - частое обновление цен.
-Для первого наполнения пустой БД должен быть включён шаг `bond`, иначе облигаций не будет.
+Для первого наполнения пустой БД должен быть включён шаг `bond`, иначе облигаций не будет. Полный прогон по пустой
+БД занимает минуты (купоны ~1600 облигаций идут с лимитом T-Invest API), приложение в это время уже отвечает.
 
 Swagger: http://localhost:8081/swagger-ui.html.
 
