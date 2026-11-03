@@ -56,6 +56,7 @@ public class BondSortUseCaseImpl implements BondSortUseCase {
                 .filter(bond -> filterByValueRange(bondParameters.getPercentagePrice(), getPercentagePrice(bond)))
                 .filter(bond -> filterByRiskLevel(bondParameters.getRiskLevels(), bond.getRiskLevel()))
                 .filter(bond -> filterByOfz(bondParameters.getIsOfz(), bond))
+                .filter(bond -> filterByFixedCoupon(bondParameters.getIsFixedCoupon(), bond))
                 .sorted(priceUnknownLast(bondParameters).thenComparing(bondParameters.getComparator()));
     }
 
@@ -84,6 +85,17 @@ public class BondSortUseCaseImpl implements BondSortUseCase {
 
         return BooleanUtils.isTrue(isOfz) && OFZ_PREDICATE.test(bond)
                 || !BooleanUtils.isTrue(isOfz) && !OFZ_PREDICATE.test(bond);
+    }
+
+    /**
+     * Облигация без данных о купоне не подходит ни под постоянный, ни под переменный купон.
+     */
+    private boolean filterByFixedCoupon(final Boolean isFixedCoupon, final BondModel bond) {
+        if (isFixedCoupon == null) {
+            return true;
+        }
+
+        return bond.getCoupon() != null && isFixedCoupon.equals(bond.getCoupon().getIsFixed());
     }
 
     private boolean filterByRiskLevel(final List<RiskLevel> riskLevels, final RiskLevel riskLevel) {

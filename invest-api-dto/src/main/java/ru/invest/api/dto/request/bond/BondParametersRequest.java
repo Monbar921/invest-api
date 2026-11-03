@@ -22,4 +22,8 @@ public class BondParametersRequest {
     private ValueRangeRequest percentagePrice;
     private List<RiskLevelDto> riskLevels;
     private Boolean isOfz;
+    /**
+     * Тип купона: true - только постоянный (фиксированный), false - только переменный (флоатеры), null - любой.
+     */
+    private Boolean isFixedCoupon;
 }

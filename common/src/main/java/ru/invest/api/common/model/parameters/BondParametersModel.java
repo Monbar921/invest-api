@@ -19,5 +19,7 @@ public class BondParametersModel {
     private ValueRangeModel percentagePrice;
     private List<RiskLevel> riskLevels;
     private Boolean isOfz;
+    /** true - только постоянный купон, false - только переменный, null - любой */
+    private Boolean isFixedCoupon;
     private Integer batchLimit;
 }

@@ -43,8 +43,10 @@ public abstract class BondParametersMapper {
     @Mapping(target = "percentagePrice", source = "percentagePrice")
     @Mapping(target = "riskLevels", source = "riskLevels")
     @Mapping(target = "isOfz", source = "isOfz")
+    @Mapping(target = "isFixedCoupon", source = "isFixedCoupon")
     public abstract BondParametersModel toModel(Integer batchLimit, List<BondSortModel> bondSorts
-            , ValueRangeModel currentPrice, ValueRangeModel percentagePrice, List<RiskLevel> riskLevels, Boolean isOfz);
+            , ValueRangeModel currentPrice, ValueRangeModel percentagePrice, List<RiskLevel> riskLevels, Boolean isOfz,
+            Boolean isFixedCoupon);
 
     @Mapping(target = "comparator", source = "bondSorts", qualifiedByName = "toComparator")
     @Mapping(target = "bondSorts", source = "bondSorts", qualifiedByName = "toBondSorts")
@@ -58,7 +60,8 @@ public abstract class BondParametersMapper {
                 getter(bondParametersModel, BondParametersModel::getCurrentPrice),
                 getter(bondParametersModel, BondParametersModel::getPercentagePrice),
                 getter(bondParametersModel, BondParametersModel::getRiskLevels),
-                getter(bondParametersModel, BondParametersModel::getIsOfz));
+                getter(bondParametersModel, BondParametersModel::getIsOfz),
+                getter(bondParametersModel, BondParametersModel::getIsFixedCoupon));
     }
 
     public BondParametersModel toModel(final BondParametersModel bondParametersModel) {

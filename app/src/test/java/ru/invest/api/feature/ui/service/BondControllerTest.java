@@ -327,6 +327,27 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
     }
 
     @Test
+    public void filterFixedCouponTest() {
+        final BondParametersRequest request = new BondParametersRequest();
+        request.setIsFixedCoupon(true);
+
+        final List<BondDto> bonds = all(request);
+
+        // облигации без данных о купоне не подходят ни под один тип купона
+        assertThat(tickers(bonds), containsInAnyOrder(OFZ, RUB_LOW, USD_LOW));
+    }
+
+    @Test
+    public void filterFloatingCouponTest() {
+        final BondParametersRequest request = new BondParametersRequest();
+        request.setIsFixedCoupon(false);
+
+        final List<BondDto> bonds = all(request);
+
+        assertThat(tickers(bonds), contains(RUB_HIGH));
+    }
+
+    @Test
     public void sortByTickerDescTest() {
         final List<BondDto> bonds = all(sortedBy(sort(BondSortFieldRequest.TICKER, BondSortOrderRequest.DESC)));
 

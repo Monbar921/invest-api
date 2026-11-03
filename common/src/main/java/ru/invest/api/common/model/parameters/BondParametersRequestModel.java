@@ -14,5 +14,6 @@ public class BondParametersRequestModel {
     private ValueRangeModel percentagePrice;
     private List<RiskLevel> riskLevels;
     private Boolean isOfz;
+    private Boolean isFixedCoupon;
     private Integer batchLimit;
 }
