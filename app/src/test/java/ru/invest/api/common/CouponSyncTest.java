@@ -9,6 +9,7 @@ import ru.invest.api.common.entity.Bond;
 import ru.invest.api.common.entity.Coupon;
 import ru.invest.api.common.entity.CouponData;
 import ru.invest.api.common.mapper.AuditMapper;
+import ru.invest.api.common.mapper.DateTimeMapper;
 import ru.invest.api.common.model.AuditModel;
 import ru.invest.api.common.model.CouponDataModel;
 import ru.invest.api.common.repository.BondRepository;
@@ -19,6 +20,7 @@ import ru.invest.api.tinkoff.supplier.wrapper.InstrumentsGrpcRateLimitedWrapper;
 import ru.tinkoff.piapi.contract.v1.GetBondCouponsResponse;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -29,6 +31,9 @@ import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static ru.invest.api.common.constants.SchedulerConstants.SCHEDULER_PROCESS;
 
@@ -47,6 +52,8 @@ public class CouponSyncTest extends AbstractInvestApplicationTest {
     private CouponRepository couponRepository;
     @Autowired
     private InstrumentsGrpcRateLimitedWrapper instrumentsGrpcWrapper;
+    @Autowired
+    private DateTimeMapper dateTimeMapper;
 
     @BeforeEach
     public void setUp(){
@@ -99,6 +106,47 @@ public class CouponSyncTest extends AbstractInvestApplicationTest {
         couponSyncUseCase.syncByTicker(TICKER, auditModel);
 
         assertCouponDataSynced(bond, expectedByPaymentDate);
+    }
+
+    @Test
+    @Sql(scripts = "/sql/bonds-and-coupons-RU000A10EQ34.sql")
+    public void requestsWholeScheduleTest() {
+        when(instrumentsGrpcWrapper.getBondCoupons(any())).thenReturn(loadCouponFixture());
+
+        couponSyncUseCase.syncByTicker(TICKER, auditMapper.toCurrentAuditModel(SCHEDULER_PROCESS));
+
+        // без явного периода API отдаёт будущие купоны только на год вперёд
+        final long inTenYears = dateTimeMapper.getNow().plusYears(10).toEpochSecond(ZoneOffset.UTC);
+        verify(instrumentsGrpcWrapper).getBondCoupons(argThat(request -> request.hasFrom()
+                && request.hasTo()
+                && request.getTo().getSeconds() > inTenYears));
+    }
+
+    @Test
+    @Sql(scripts = "/sql/bonds-and-coupons-RU000A10EQ34.sql")
+    public void reloadsScheduleEndingBeforeMaturityTest() {
+        when(instrumentsGrpcWrapper.getBondCoupons(any())).thenReturn(loadCouponFixture());
+        final AuditModel audit = auditMapper.toCurrentAuditModel(SCHEDULER_PROCESS);
+
+        // последний купон в фикстуре - 2027-09-21, погашение - 2029-03-14: график оборван, перезагружаем
+        couponSyncUseCase.syncAll(audit);
+        couponSyncUseCase.syncAll(audit);
+
+        verify(instrumentsGrpcWrapper, times(2)).getBondCoupons(any());
+    }
+
+    @Test
+    @Sql(scripts = "/sql/bonds-and-coupons-RU000A10EQ34.sql",
+            statements = "update bond set maturity_date = '2027-09-21 00:00:00' where ticker = 'RU000A10EQ34'")
+    public void keepsScheduleReachingMaturityTest() {
+        when(instrumentsGrpcWrapper.getBondCoupons(any())).thenReturn(loadCouponFixture());
+        final AuditModel audit = auditMapper.toCurrentAuditModel(SCHEDULER_PROCESS);
+
+        // фиксированный купон, график доходит до погашения - второй раз не запрашиваем
+        couponSyncUseCase.syncAll(audit);
+        couponSyncUseCase.syncAll(audit);
+
+        verify(instrumentsGrpcWrapper, times(1)).getBondCoupons(any());
     }
 
     private void assertCouponDataSynced(final Bond bond, final Map<LocalDateTime, CouponDataModel> expectedByPaymentDate) {

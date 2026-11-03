@@ -28,6 +28,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.Comparator;
+import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.comparesEqualTo;
@@ -122,19 +123,25 @@ public class PriceSyncTest extends AbstractInvestApplicationTest {
 
     /**
      * Годовая доходность: сумма ближайших quantityPerYear будущих выплат из фикстуры, делённая на текущую цену.
+     * Если до конца графика выплат осталось меньше, их сумма приводится к году.
      * Считается от текущей даты так же, как в сервисе, чтобы тест не устаревал вместе с фикстурой.
      */
     private BigDecimal expectedInterest(final Coupon coupon) {
         final GetBondCouponsResponse fixture = loadCouponFixture();
         final LocalDateTime now = dateTimeMapper.getNow();
 
-        final BigDecimal yearPayments = fixture.getEventsList()
+        final List<BigDecimal> payments = fixture.getEventsList()
                 .stream()
                 .filter(event -> dateTimeMapper.toLocalDateTime(event.getCouponDate()).isAfter(now))
                 .sorted(Comparator.comparing(event -> dateTimeMapper.toLocalDateTime(event.getCouponDate())))
                 .limit(coupon.getQuantityPerYear())
                 .map(event -> tinkoffMoneyApiMapper.toModel(event.getPayOneBond()).getQuantity())
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                .toList();
+        final BigDecimal sum = payments.stream().reduce(BigDecimal.ZERO, BigDecimal::add);
+        final BigDecimal yearPayments = payments.size() < coupon.getQuantityPerYear()
+                ? sum.multiply(BigDecimal.valueOf(coupon.getQuantityPerYear()))
+                        .divide(BigDecimal.valueOf(payments.size()), 10, RoundingMode.HALF_UP)
+                : sum;
 
         return yearPayments
                 .multiply(HUNDRED)

@@ -22,13 +22,11 @@ import java.util.Objects;
 
 import static ru.invest.api.common.exception.enums.ExceptionErrorCode.EMPTY_TICKER;
 import static ru.invest.api.common.exception.enums.ExceptionErrorCode.EMPTY_UID;
+import static ru.invest.api.tinkoff.supplier.constants.Constants.BOND_SCHEDULE_HORIZON_YEARS;
 
 @Service
 @RequiredArgsConstructor
 public class TinkoffAmortizationProviderImpl implements TinkoffAmortizationProvider {
-    // период по умолчанию в документации не описан - запрашиваем явно, с запасом на самые длинные выпуски
-    private static final int EVENTS_HORIZON_YEARS = 50;
-
     private final TinkoffAmortizationApiMapper tinkoffAmortizationApiMapper;
     private final InstrumentsGrpcRateLimitedWrapper instrumentsGrpcRateLimitedWrapper;
     private final DateTimeMapper dateTimeMapper;
@@ -47,7 +45,7 @@ public class TinkoffAmortizationProviderImpl implements TinkoffAmortizationProvi
                 .setInstrumentId(uid)
                 .setType(EventType.EVENT_TYPE_MTY)
                 .setFrom(toTimestamp(now))
-                .setTo(toTimestamp(now.plusYears(EVENTS_HORIZON_YEARS)))
+                .setTo(toTimestamp(now.plusYears(BOND_SCHEDULE_HORIZON_YEARS)))
                 .build();
 
         return instrumentsGrpcRateLimitedWrapper.getBondEvents(request)

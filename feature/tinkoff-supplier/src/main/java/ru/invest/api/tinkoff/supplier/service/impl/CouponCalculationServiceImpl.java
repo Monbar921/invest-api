@@ -80,7 +80,22 @@ public class CouponCalculationServiceImpl implements CouponCalculationService {
                 .map(MoneyModel::getQuantity)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        return calculateInterestPercentage(paymentSum, bondModel.getPrice());
+        return calculateInterestPercentage(toYearPaymentSum(paymentSum, payments.size(), couponModel.getQuantityPerYear()),
+                bondModel.getPrice());
+    }
+
+    /**
+     * До погашения осталось меньше купонов, чем выплат в год - приводим их сумму к году,
+     * иначе облигация за пару месяцев до погашения показывала бы долю годового купона.
+     */
+    private BigDecimal toYearPaymentSum(final BigDecimal paymentSum, final int paymentCount, final int paymentsPerYear) {
+        if (paymentsPerYear <= 0 || paymentCount == 0 || paymentCount >= paymentsPerYear) {
+            return paymentSum;
+        }
+
+        return paymentSum
+                .multiply(BigDecimal.valueOf(paymentsPerYear))
+                .divide(BigDecimal.valueOf(paymentCount), SCALE, RoundingMode.HALF_UP);
     }
 
     @Override

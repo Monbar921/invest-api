@@ -1,0 +1,35 @@
+[[data-source]]
+id = "149e4e88-10cd-45ad-b298-5fa843332c55"
+name = "invest@localhost"
+driver = "postgres"
+host = "localhost"
+port = 15432
+database = "invest"
+user = "invest_api_app"
+ssl = "prefer"
+savePassword = true
+readOnly = false
+vendor = ""
+comment = ""
+urlOnly = false
+url = ""
+sslCaFile = ""
+sslCertFile = ""
+sslKeyFile = ""
+properties = []
+
+[data-source.options]
+transaction = "auto"
+defaultSchema = ""
+timeZone = ""
+startupScript = ""
+singleDatabase = false
+
+[data-source.introspection]
+allDatabases = true
+databases = []
+allSchemas = true
+schemas = []
+showSystem = false
+showTemplates = false
+objectFilter = ""

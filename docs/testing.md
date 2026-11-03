@@ -26,9 +26,10 @@ mvn test -pl app -am -Dtest=YieldToMaturityCalculationTest
 | Тест                               | Что проверяет                                                         |
 | ---------------------------------- | --------------------------------------------------------------------- |
 | `common/BondSyncTest`              | загрузка облигаций, дата оферты, НКД, флаг амортизации                |
-| `common/CouponSyncTest`            | загрузка графика купонов                                              |
+| `common/CouponSyncTest`            | загрузка графика купонов, явный период запроса, перезагрузка графика, оборванного раньше погашения |
 | `common/AmortizationSyncTest`      | загрузка графика амортизации, замена графика при повторной синхронизации, пропуск облигаций без амортизации |
 | `common/PriceSyncTest`             | цены, НКД, пересчёт купонной доходности                               |
+| `common/CouponInterestCalculationTest` | купонная доходность, приведение к году, когда до погашения осталось меньше купонов, чем выплат в год |
 | `common/YieldToMaturityCalculationTest` | расчёт доходности к погашению и к оферте, случаи `null`          |
 | `feature/bond/supplier/BondDataSyncSchedulerTest` | порядок шагов цепочки, флаги шагов, продолжение после ошибки |
 | `feature/bond/supplier/BondDataSyncStartupRunnerTest` | прогон при старте не блокирует поток старта |

@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import ru.invest.api.common.entity.Bond;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -19,6 +20,21 @@ public interface BondRepository extends JpaRepository<Bond, Long> {
               or c.couponData is empty
             """)
     Slice<Bond> findByNotFixedCouponAndEmptyCoupons(Pageable pageable);
+
+    /**
+     * Дата последнего загруженного купона облигаций с фиксированным купоном - чтобы перезагрузить график,
+     * который обрывается раньше погашения.
+     */
+    @Query("""
+            select b.uid as uid, b.ticker as ticker, b.maturityDate as maturityDate, max(cd.paymentDate) as lastPaymentDate
+            from Bond b
+            join b.coupon c
+            join c.couponData cd
+            where c.isFixed = true
+              and b.maturityDate > :now
+            group by b.uid, b.ticker, b.maturityDate
+            """)
+    List<CouponScheduleEnd> findFixedCouponScheduleEnds(LocalDateTime now);
 
     /**
      * Все облигации сразу с ценой и купоном: обратные OneToOne-связи Hibernate иначе грузит

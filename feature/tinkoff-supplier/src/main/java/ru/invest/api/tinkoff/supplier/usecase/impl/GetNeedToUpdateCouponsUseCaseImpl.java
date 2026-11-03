@@ -9,10 +9,12 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.invest.api.common.entity.Bond;
+import ru.invest.api.common.mapper.DateTimeMapper;
 import ru.invest.api.common.model.ShortProductModel;
 import ru.invest.api.common.repository.BondRepository;
 import ru.invest.api.tinkoff.supplier.usecase.GetNeedToUpdateCouponsUseCase;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,8 +23,11 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class GetNeedToUpdateCouponsUseCaseImpl implements GetNeedToUpdateCouponsUseCase {
     private final static Pageable ONE_THOUSAND_PAGEABLE = PageRequest.of(0, 1000, Sort.by("id"));
+    // последний купон обычно совпадает с датой погашения; месяц запаса - на перенос выплаты с выходных
+    private static final int SCHEDULE_END_TOLERANCE_DAYS = 31;
 
     private final BondRepository bondRepository;
+    private final DateTimeMapper dateTimeMapper;
 
     @Override
     @Transactional
@@ -52,6 +57,18 @@ public class GetNeedToUpdateCouponsUseCaseImpl implements GetNeedToUpdateCoupons
 
             pageable = bondSlice.nextPageable();
         } while (bondSlice.hasNext());
+
+        // график фиксированного купона, оборванный раньше погашения, - без купонов в конце доходность к погашению занижена
+        final LocalDateTime now = dateTimeMapper.getNow();
+        bondRepository.findFixedCouponScheduleEnds(now)
+                .stream()
+                .filter(end -> StringUtils.isNotBlank(end.getUid()))
+                .filter(end -> StringUtils.isNotBlank(end.getTicker()))
+                .filter(end -> end.getLastPaymentDate().isBefore(end.getMaturityDate().minusDays(SCHEDULE_END_TOLERANCE_DAYS)))
+                .forEach(end -> uidTickers.putIfAbsent(end.getUid(),
+                        new ShortProductModel()
+                                .setTicker(end.getTicker())
+                                .setUid(end.getUid())));
 
         return uidTickers
                 .values()
