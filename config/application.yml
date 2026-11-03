@@ -34,11 +34,11 @@ ru:
             sync:
               enabled: true
               run-on-startup: true
-              cron: "0 0 3 * * *"
+              cron: "0 0 3 * * * MON"
               zone: Europe/Moscow
               steps:
-                bond: false
-                coupon: false
+                bond: true
+                coupon: true
                 price: true
             # частое обновление цен и доходности в торговые часы
             price:

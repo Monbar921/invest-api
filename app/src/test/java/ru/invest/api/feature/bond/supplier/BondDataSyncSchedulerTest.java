@@ -69,6 +69,6 @@ public class BondDataSyncSchedulerTest {
 
     private BondDataSyncScheduler scheduler(final boolean bond, final boolean coupon, final boolean price) {
         return new BondDataSyncScheduler(List.of(bondSyncUseCase), List.of(couponSyncUseCase), List.of(amortizationSyncUseCase),
-                List.of(priceSyncUseCase), auditMapper, bond, coupon, true, price);
+                List.of(priceSyncUseCase), auditMapper, true, bond, coupon, true, price);
     }
 }
