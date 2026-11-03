@@ -139,6 +139,18 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
 
         // 1005.00 от номинала 1000.00
         assertThat(bond.getPrice().getPercentagePrice(), comparesEqualTo(new BigDecimal("100.5")));
+        assertThat(bond.getPrice().getCurrentInRub(), equalTo(new BigDecimal("1005.00")));
+    }
+
+    @Test
+    public void foreignBondsHaveRubPriceTest() {
+        final List<BondDto> bonds = foreign();
+
+        // 980 USD * 90 и 1001 CNY * 12.5 - по курсу ЦБ, до копеек
+        assertThat(findByTicker(bonds, USD_LOW).getPrice().getCurrentInRub(), equalTo(new BigDecimal("88200.00")));
+        assertThat(findByTicker(bonds, CNY_MODERATE).getPrice().getCurrentInRub(), equalTo(new BigDecimal("12512.50")));
+        // цена в валюте облигации отдаётся как есть
+        assertThat(findByTicker(bonds, USD_LOW).getPrice().getCurrent().getCurrency(), equalTo("usd"));
     }
 
     @Test
@@ -203,6 +215,7 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
         final BondDto cnyBond = findByTicker(bonds, CNY_MODERATE);
         assertThat(cnyBond.getPrice().getCurrent().getQuantity(), comparesEqualTo(new BigDecimal("1001.00")));
         assertThat(cnyBond.getPrice().getCurrent().getCurrency(), equalTo("cny"));
+        assertThat(cnyBond.getPrice().getCurrentInRub(), nullValue());
     }
 
     @Test
@@ -445,6 +458,7 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
         assertThat(bond.getName(), equalTo("Авто Финанс Банк БО-001Р-18"));
         assertThat(bond.getPrice().getCurrent().getQuantity(), comparesEqualTo(new BigDecimal("1005.00")));
         assertThat(bond.getPrice().getPercentagePrice(), comparesEqualTo(new BigDecimal("100.5")));
+        assertThat(bond.getPrice().getCurrentInRub(), equalTo(new BigDecimal("1005.00")));
         assertThat(bond.getCoupon().getInterest(), comparesEqualTo(new BigDecimal("18.50")));
 
         // в фикстуре выплаты вставлены не по порядку - карточка отдаёт их по дате выплаты
@@ -452,6 +466,13 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
         assertThat(couponData.stream().map(data -> data.getPaymentDate().getMonthValue()).toList(), contains(10, 11, 12));
         assertThat(couponData.getLast().getPrice().getQuantity(), comparesEqualTo(new BigDecimal("15.71")));
         assertThat(couponData.getLast().getPrice().getCurrency(), equalTo("rub"));
+    }
+
+    @Test
+    public void getByTickerForeignBondHasRubPriceTest() {
+        final BondDto bond = investApiBondClient.getByTicker(USD_LOW);
+
+        assertThat(bond.getPrice().getCurrentInRub(), equalTo(new BigDecimal("88200.00")));
     }
 
     @Test

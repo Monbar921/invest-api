@@ -53,6 +53,12 @@ public class Coupon {
     @Column(name = "interest")
     private BigDecimal interest;
 
+    @Column(name = "yield_to_maturity")
+    private BigDecimal yieldToMaturity;
+
+    @Column(name = "yield_to_offer")
+    private BigDecimal yieldToOffer;
+
     @OneToMany(mappedBy = "coupon", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("paymentDate asc")
     private List<CouponData> couponData;

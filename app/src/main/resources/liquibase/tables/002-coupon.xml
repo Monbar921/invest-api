@@ -51,4 +51,28 @@
             <column name="bond_id"/>
         </createIndex>
     </changeSet>
+
+    <changeSet id="INVEST-001-add-coupon-yield-to-maturity" author="d.v.kornilovich">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="coupon" columnName="yield_to_maturity"/>
+            </not>
+        </preConditions>
+
+        <addColumn tableName="coupon">
+            <column name="yield_to_maturity" type="numeric(19,2)"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="INVEST-001-add-coupon-yield-to-offer" author="d.v.kornilovich">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="coupon" columnName="yield_to_offer"/>
+            </not>
+        </preConditions>
+
+        <addColumn tableName="coupon">
+            <column name="yield_to_offer" type="numeric(19,2)"/>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>

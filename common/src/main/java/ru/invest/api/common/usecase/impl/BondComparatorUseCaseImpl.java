@@ -72,6 +72,12 @@ public class BondComparatorUseCaseImpl implements BondComparatorUseCase {
             case PERCENTAGE_PRICE -> Comparator.comparing(
                     bond -> bond.getPrice() != null ? bond.getPrice().getPercentagePrice() : null,
                     Comparator.nullsLast(getOrder(bondSortOrder)));
+            case YIELD_TO_MATURITY -> Comparator.comparing(
+                    bond -> bond.getCoupon() != null ? bond.getCoupon().getYieldToMaturity() : null,
+                    Comparator.<BigDecimal>nullsLast(getOrder(bondSortOrder)));
+            case YIELD_TO_OFFER -> Comparator.comparing(
+                    bond -> bond.getCoupon() != null ? bond.getCoupon().getYieldToOffer() : null,
+                    Comparator.<BigDecimal>nullsLast(getOrder(bondSortOrder)));
         };
     }
 

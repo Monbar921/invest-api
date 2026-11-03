@@ -55,6 +55,8 @@ public abstract class TinkoffCouponMapper {
     @Mapping(target = "created", ignore = true)
     @Mapping(target = "updated", ignore = true)
     @Mapping(target = "interest", ignore = true)
+    @Mapping(target = "yieldToMaturity", ignore = true)
+    @Mapping(target = "yieldToOffer", ignore = true)
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "couponData", ignore = true)
     @Mapping(target = "isFixed", source = "bondModel.coupon.isFixed")

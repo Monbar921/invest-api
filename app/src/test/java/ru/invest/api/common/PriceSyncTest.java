@@ -114,6 +114,8 @@ public class PriceSyncTest extends AbstractInvestApplicationTest {
 
         // numeric(19,2) в БД округляет значение половиной вверх
         assertThat(actualCoupon.getInterest(), comparesEqualTo(expectedInterest(actualCoupon).setScale(2, RoundingMode.HALF_UP)));
+        // точное значение проверяет YieldToMaturityCalculationTest, здесь - что расчёт встроен в синхронизацию цен
+        assertThat(actualCoupon.getYieldToMaturity(), notNullValue());
         assertThat(actualCoupon.getUpdated(), notNullValue());
         assertThat(actualCoupon.getUpdated().getCommittedBy(), equalTo(SCHEDULER_PROCESS));
     }

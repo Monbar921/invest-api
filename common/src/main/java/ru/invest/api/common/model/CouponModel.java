@@ -13,6 +13,10 @@ import java.util.List;
 public class CouponModel {
     private String uid;
     private BigDecimal interest;
+    /** Эффективная доходность к погашению в % годовых, с учётом НКД и амортизации; null - посчитать нельзя */
+    private BigDecimal yieldToMaturity;
+    /** Эффективная доходность к оферте в % годовых, с учётом НКД; null - оферты нет или посчитать нельзя */
+    private BigDecimal yieldToOffer;
     private Boolean isFixed;
     private int quantityPerYear;
     private List<CouponDataModel> couponData;

@@ -15,6 +15,9 @@ import ru.invest.api.tinkoff.supplier.mapper.TinkoffBondApiMapper;
 import ru.invest.api.tinkoff.supplier.wrapper.InstrumentsGrpcRateLimitedWrapper;
 import ru.tinkoff.piapi.contract.v1.BondsResponse;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -82,6 +85,8 @@ public class BondSyncTest extends AbstractInvestApplicationTest {
             assertThat(actual.getCurrency(), equalTo(expected.getCurrency()));
             assertThat(actual.getRiskLevel(), equalTo(expected.getRiskLevel()));
             assertThat(actual.getMaturityDate(), equalTo(expected.getMaturityDate()));
+            assertThat(actual.getOfferDate(), equalTo(expected.getOfferDate()));
+            assertThat(actual.isAmortizationFlag(), equalTo(expected.isAmortizationFlag()));
 
             assertThat(actual.getCreated(), notNullValue());
             assertThat(actual.getCreated().getCommittedBy(), equalTo(SCHEDULER_PROCESS));
@@ -96,6 +101,10 @@ public class BondSyncTest extends AbstractInvestApplicationTest {
             // BigDecimal.equals() чувствителен к scale (2 в БД против nano-точности в модели),
             // поэтому сравниваем значение, а не представление
             assertThat(actualPrice.getNominalPrice(), comparesEqualTo(expected.getPrice().getNominal().getQuantity()));
+            assertThat(actualPrice.getAciCurrency(), equalTo(expected.getPrice().getAci().getCurrency()));
+            // numeric(19,2) в БД округляет значение половиной вверх
+            assertThat(actualPrice.getAciValue(),
+                    comparesEqualTo(expected.getPrice().getAci().getQuantity().setScale(2, RoundingMode.HALF_UP)));
             // текущая цена при сохранении облигации не заполняется - её пишет синхронизация цен
             assertThat(actualPrice.getPrice(), nullValue());
             assertThat(actualPrice.getCurrency(), nullValue());
@@ -104,5 +113,26 @@ public class BondSyncTest extends AbstractInvestApplicationTest {
             assertThat(actualPrice.getCreated().getCommittedBy(), equalTo(SCHEDULER_PROCESS));
             assertThat(actualPrice.getCreated().getCommittedAt(), notNullValue());
         }
+    }
+
+    @Test
+    public void syncOfferAciAndAmortizationTest() {
+        when(instrumentsGrpcWrapper.bonds(any()))
+                .thenReturn(loadFixture());
+
+        bondSyncUseCase.syncAll(auditMapper.toCurrentAuditModel(SCHEDULER_PROCESS));
+
+        // call_date в фикстуре - 1799798400
+        final Bond withOffer = bondRepository.findByTicker("RU000A10C5B8").orElseThrow();
+        assertThat(withOffer.getOfferDate(), equalTo(LocalDateTime.of(2027, 1, 13, 0, 0)));
+        assertThat(withOffer.isAmortizationFlag(), equalTo(false));
+
+        final Bond withAmortization = bondRepository.findByTicker("RU000A10DZH4").orElseThrow();
+        assertThat(withAmortization.getOfferDate(), nullValue());
+        assertThat(withAmortization.isAmortizationFlag(), equalTo(true));
+
+        final Price price = bondRepository.findByTicker("RU000A10EQ34").orElseThrow().getPrice();
+        assertThat(price.getAciValue(), comparesEqualTo(new BigDecimal("11.72")));
+        assertThat(price.getAciCurrency(), equalTo("rub"));
     }
 }

@@ -45,6 +45,10 @@ public abstract class TinkoffBondEntityMapper {
     @Mapping(target = "sector", source = "bondModel.sector")
     @Mapping(target = "riskLevel", source = "bondModel.riskLevel")
     @Mapping(target = "maturityDate", source = "bondModel.maturityDate")
+    @Mapping(target = "offerDate", source = "bondModel.offerDate")
+    @Mapping(target = "amortizationFlag", source = "bondModel.amortizationFlag")
+    // график амортизации ведёт своя синхронизация
+    @Mapping(target = "amortizations", ignore = true)
     @Mapping(target = "currency", source = "bondModel.currency")
     public abstract Bond toEntity(BondModel bondModel, Bond existing);
 
@@ -59,6 +63,8 @@ public abstract class TinkoffBondEntityMapper {
     // в списках облигаций отдаём только доходность купона, без графика выплат
     @Mapping(target = "coupon", source = "bond.coupon", qualifiedByName = "toShortModel")
     @Mapping(target = "maturityDate", source = "bond.maturityDate")
+    // график амортизации нужен только расчёту доходности, он грузит его сам
+    @Mapping(target = "amortizations", ignore = true)
     public abstract BondModel toModel(Bond bond);
 
     public abstract List<BondModel> toModel(List<Bond> bonds);

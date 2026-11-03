@@ -52,6 +52,12 @@ public class Price {
     @Column(name = "currency")
     private String currency;
 
+    @Column(name = "aci_value")
+    private BigDecimal aciValue;
+
+    @Column(name = "aci_currency")
+    private String aciCurrency;
+
     @Embedded
     @AttributeOverride(name = "committedBy", column = @Column(name = "created_by"))
     @AttributeOverride(name = "committedAt", column = @Column(name = "created_at"))

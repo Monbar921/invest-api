@@ -6,6 +6,7 @@ import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import ru.invest.api.common.mapper.DateTimeMapper;
+import ru.invest.api.common.model.AmortizationModel;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.CouponDataModel;
 import ru.invest.api.common.model.CouponModel;
@@ -18,16 +19,27 @@ import ru.invest.api.tinkoff.supplier.service.CouponCalculationService;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Function;
 
 @Service
 @RequiredArgsConstructor
 public class CouponCalculationServiceImpl implements CouponCalculationService {
     private static final int SCALE = 10;
     private static final BigDecimal PERCENT = BigDecimal.valueOf(100.0);
+    private static final int YIELD_SCALE = 4;
+    private static final double DAYS_IN_YEAR = 365.0;
+    // границы поиска ставки доходности: от -99% до 1000% годовых
+    private static final double MIN_RATE = -0.99;
+    private static final double MAX_RATE = 10.0;
+    private static final double RATE_PRECISION = 1e-10;
+    // расхождение суммы погашений с номиналом в пределах копейки - округление, а не ошибка данных
+    private static final BigDecimal NOMINAL_TOLERANCE = new BigDecimal("0.01");
 
     private final CurrencyPriceUseCase currencyPriceUseCase;
     private final DateTimeMapper dateTimeMapper;
@@ -71,6 +83,132 @@ public class CouponCalculationServiceImpl implements CouponCalculationService {
         return calculateInterestPercentage(paymentSum, bondModel.getPrice());
     }
 
+    @Override
+    public BigDecimal calculateYieldToMaturity(final CouponModel couponModel, final BondModel bondModel) {
+        return calculateYield(couponModel, bondModel, bondModel.getMaturityDate());
+    }
+
+    @Override
+    public BigDecimal calculateYieldToOffer(final CouponModel couponModel, final BondModel bondModel) {
+        final LocalDateTime offerDate = bondModel.getOfferDate();
+        // оферта в дату погашения или позже ничем не отличается от погашения
+        if (offerDate == null || bondModel.getMaturityDate() != null && !offerDate.isBefore(bondModel.getMaturityDate())) {
+            return null;
+        }
+
+        return calculateYield(couponModel, bondModel, offerDate);
+    }
+
+    /**
+     * Доходность, если держать облигацию до даты horizon и получить в эту дату остаток номинала.
+     * Цена покупки - текущая цена плюс НКД; выплаты - купоны и частичные погашения номинала до horizon включительно.
+     */
+    private BigDecimal calculateYield(final CouponModel couponModel, final BondModel bondModel, final LocalDateTime horizon) {
+        final PriceModel price = bondModel.getPrice();
+        // НКД null - облигации ещё не синхронизированы, без него доходность была бы завышена
+        if (ObjectUtils.anyNull(couponModel, price, horizon)
+                || ObjectUtils.anyNull(price.getAci(), price.getNominal())
+                || !isPositive(price.getCurrent())
+                || !isPositive(price.getNominal())) {
+            return null;
+        }
+
+        final LocalDateTime now = dateTimeMapper.getNow();
+        if (!horizon.isAfter(now)) {
+            return null;
+        }
+
+        final List<AmortizationModel> futureAmortizations = getFuturePayments(bondModel.getAmortizations(),
+                AmortizationModel::getPaymentDate, now);
+        // график амортизации ещё не загружен - весь номинал ушёл бы на дату погашения и исказил доходность
+        if (bondModel.isAmortizationFlag() && futureAmortizations.isEmpty()) {
+            return null;
+        }
+
+        final String bondPriceCurrency = price.getCurrent().getCurrency();
+        final BigDecimal dirtyPrice = getDirtyPrice(price, bondPriceCurrency);
+        final MoneyModel nominal = convertToBondCurrency(price.getNominal(), bondPriceCurrency);
+        if (ObjectUtils.anyNull(dirtyPrice, nominal)) {
+            return null;
+        }
+
+        final List<CashFlow> cashFlows = new ArrayList<>();
+
+        final List<CouponDataModel> coupons = getFuturePayments(couponModel.getCouponData(), CouponDataModel::getPaymentDate, now);
+        for (final CouponDataModel coupon : coupons) {
+            if (isAfter(coupon.getPaymentDate(), horizon)) {
+                continue;
+            }
+            // размер купона ещё не объявлен (флоатер) - без него доходность была бы занижена
+            final MoneyModel payment = isPositive(coupon.getPrice())
+                    ? convertToBondCurrency(coupon.getPrice(), bondPriceCurrency)
+                    : null;
+            if (payment == null) {
+                return null;
+            }
+            cashFlows.add(toCashFlow(now, coupon.getPaymentDate(), payment.getQuantity()));
+        }
+
+        BigDecimal repaid = BigDecimal.ZERO;
+        for (final AmortizationModel amortization : futureAmortizations) {
+            if (isAfter(amortization.getPaymentDate(), horizon)) {
+                continue;
+            }
+            final MoneyModel payment = isPositive(amortization.getPrice())
+                    ? convertToBondCurrency(amortization.getPrice(), bondPriceCurrency)
+                    : null;
+            if (payment == null) {
+                return null;
+            }
+            cashFlows.add(toCashFlow(now, amortization.getPaymentDate(), payment.getQuantity()));
+            repaid = repaid.add(payment.getQuantity());
+        }
+
+        // остаток номинала гасится в дату horizon: при погашении - всё, что не покрыл график, при оферте - выкуп по номиналу
+        final BigDecimal remainder = nominal.getQuantity().subtract(repaid);
+        if (remainder.compareTo(NOMINAL_TOLERANCE.negate()) < 0) {
+            // погашений по графику больше текущего номинала - данные противоречивы
+            return null;
+        }
+        if (remainder.signum() > 0) {
+            cashFlows.add(toCashFlow(now, horizon, remainder));
+        }
+
+        return solveYield(cashFlows, dirtyPrice.doubleValue());
+    }
+
+    private <T> List<T> getFuturePayments(final List<T> payments, final Function<T, LocalDateTime> paymentDate,
+                                          final LocalDateTime now) {
+        return Optional.ofNullable(payments)
+                .orElseGet(List::of)
+                .stream()
+                .filter(Objects::nonNull)
+                .filter(payment -> paymentDate.apply(payment) != null)
+                .filter(payment -> paymentDate.apply(payment).isAfter(now))
+                .toList();
+    }
+
+    /**
+     * Цена покупки с НКД в валюте цены облигации; null - НКД не перевести в валюту цены.
+     */
+    private BigDecimal getDirtyPrice(final PriceModel price, final String bondPriceCurrency) {
+        final MoneyModel aci = price.getAci();
+        if (aci.getQuantity() == null || aci.getQuantity().signum() == 0) {
+            return price.getCurrent().getQuantity();
+        }
+        if (StringUtils.isBlank(aci.getCurrency())) {
+            return null;
+        }
+
+        final MoneyModel convertedAci = convertToBondCurrency(aci, bondPriceCurrency);
+        return convertedAci == null ? null : price.getCurrent().getQuantity().add(convertedAci.getQuantity());
+    }
+
+    // выплаты сравниваются по дням: купон в день погашения или оферты ещё входит в расчёт
+    private boolean isAfter(final LocalDateTime paymentDate, final LocalDateTime horizon) {
+        return paymentDate.toLocalDate().isAfter(horizon.toLocalDate());
+    }
+
     private List<CouponDataModel> getOneYearCoupons(final List<CouponDataModel> couponData, final int paymentsPerYear) {
         if (CollectionUtils.isEmpty(couponData) || paymentsPerYear == 0) {
             return couponData;
@@ -103,6 +241,50 @@ public class CouponCalculationServiceImpl implements CouponCalculationService {
                 .setCurrency(converted.getTarget());
     }
 
+    private boolean isPositive(final MoneyModel money) {
+        return money != null
+                && StringUtils.isNotBlank(money.getCurrency())
+                && money.getQuantity() != null
+                && money.getQuantity().signum() > 0;
+    }
+
+    private CashFlow toCashFlow(final LocalDateTime now, final LocalDateTime paymentDate, final BigDecimal amount) {
+        final long days = ChronoUnit.DAYS.between(now.toLocalDate(), paymentDate.toLocalDate());
+        return new CashFlow(days / DAYS_IN_YEAR, amount.doubleValue());
+    }
+
+    /**
+     * Ставка ищется делением отрезка пополам: приведённая стоимость выплат монотонно убывает с ростом ставки.
+     */
+    private BigDecimal solveYield(final List<CashFlow> cashFlows, final double price) {
+        // доходность вне границ поиска - такую облигацию честно оценить нельзя
+        if (presentValue(cashFlows, MAX_RATE) > price || presentValue(cashFlows, MIN_RATE) < price) {
+            return null;
+        }
+
+        double low = MIN_RATE;
+        double high = MAX_RATE;
+        while (high - low > RATE_PRECISION) {
+            final double middle = (low + high) / 2;
+            if (presentValue(cashFlows, middle) > price) {
+                low = middle;
+            } else {
+                high = middle;
+            }
+        }
+
+        return BigDecimal.valueOf((low + high) / 2)
+                .multiply(PERCENT)
+                .setScale(YIELD_SCALE, RoundingMode.HALF_UP);
+    }
+
+    private double presentValue(final List<CashFlow> cashFlows, final double rate) {
+        return cashFlows
+                .stream()
+                .mapToDouble(cashFlow -> cashFlow.amount() / Math.pow(1 + rate, cashFlow.years()))
+                .sum();
+    }
+
     private BigDecimal calculateInterestPercentage(final BigDecimal paymentSum, final PriceModel currentPrice) {
         if (ObjectUtils.anyNull(paymentSum, currentPrice)
                 || currentPrice.getCurrent() == null
@@ -114,5 +296,8 @@ public class CouponCalculationServiceImpl implements CouponCalculationService {
         return paymentSum
                 .multiply(PERCENT)
                 .divide(currentPrice.getCurrent().getQuantity(), SCALE, RoundingMode.FLOOR);
+    }
+
+    private record CashFlow(double years, double amount) {
     }
 }

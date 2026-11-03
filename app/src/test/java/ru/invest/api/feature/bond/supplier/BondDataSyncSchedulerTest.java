@@ -6,6 +6,7 @@ import org.mockito.InOrder;
 import ru.invest.api.bond.supplier.scheduler.BondDataSyncScheduler;
 import ru.invest.api.common.mapper.AuditMapper;
 import ru.invest.api.common.model.AuditModel;
+import ru.invest.api.common.usecase.AmortizationSyncUseCase;
 import ru.invest.api.common.usecase.BondSyncUseCase;
 import ru.invest.api.common.usecase.CouponSyncUseCase;
 import ru.invest.api.common.usecase.PriceSyncUseCase;
@@ -24,6 +25,7 @@ import static ru.invest.api.common.constants.SchedulerConstants.SCHEDULER_PROCES
 public class BondDataSyncSchedulerTest {
     private final BondSyncUseCase bondSyncUseCase = mock(BondSyncUseCase.class);
     private final CouponSyncUseCase couponSyncUseCase = mock(CouponSyncUseCase.class);
+    private final AmortizationSyncUseCase amortizationSyncUseCase = mock(AmortizationSyncUseCase.class);
     private final PriceSyncUseCase priceSyncUseCase = mock(PriceSyncUseCase.class);
     private final AuditMapper auditMapper = mock(AuditMapper.class);
     private final AuditModel audit = new AuditModel().setCommittedBy(SCHEDULER_PROCESS);
@@ -37,9 +39,10 @@ public class BondDataSyncSchedulerTest {
     public void runsStepsInOrderTest() {
         scheduler(true, true, true).sync();
 
-        final InOrder inOrder = inOrder(bondSyncUseCase, couponSyncUseCase, priceSyncUseCase);
+        final InOrder inOrder = inOrder(bondSyncUseCase, couponSyncUseCase, amortizationSyncUseCase, priceSyncUseCase);
         inOrder.verify(bondSyncUseCase).syncAll(audit);
         inOrder.verify(couponSyncUseCase).syncAll(audit);
+        inOrder.verify(amortizationSyncUseCase).syncAll(audit);
         inOrder.verify(priceSyncUseCase).syncAll(audit);
     }
 
@@ -51,6 +54,7 @@ public class BondDataSyncSchedulerTest {
         scheduler(true, true, true).sync();
 
         verify(couponSyncUseCase).syncAll(audit);
+        verify(amortizationSyncUseCase).syncAll(audit);
         verify(priceSyncUseCase).syncAll(audit);
     }
 
@@ -64,7 +68,7 @@ public class BondDataSyncSchedulerTest {
     }
 
     private BondDataSyncScheduler scheduler(final boolean bond, final boolean coupon, final boolean price) {
-        return new BondDataSyncScheduler(List.of(bondSyncUseCase), List.of(couponSyncUseCase), List.of(priceSyncUseCase), auditMapper,
-                bond, coupon, price);
+        return new BondDataSyncScheduler(List.of(bondSyncUseCase), List.of(couponSyncUseCase), List.of(amortizationSyncUseCase),
+                List.of(priceSyncUseCase), auditMapper, bond, coupon, true, price);
     }
 }

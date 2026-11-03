@@ -12,8 +12,8 @@ import ru.invest.api.common.mapper.BigDecimalMapper;
 import ru.invest.api.common.model.AuditModel;
 import ru.invest.api.common.model.MoneyModel;
 import ru.invest.api.common.model.PriceModel;
+import ru.tinkoff.piapi.contract.v1.Bond;
 import ru.tinkoff.piapi.contract.v1.LastPrice;
-import ru.tinkoff.piapi.contract.v1.MoneyValue;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -32,14 +32,17 @@ public abstract class TinkoffPriceApiMapper {
     @Mapping(target = "nominal", source = "nominal")
     @Mapping(target = "current", ignore = true)
     @Mapping(target = "percentagePrice", ignore = true)
+    @Mapping(target = "aci", ignore = true)
     @Mapping(target = "logged", source = "audit")
     public abstract PriceModel toBondPriceModel(LastPrice lastPrice, MoneyModel nominal, AuditModel audit);
 
+    // цену облигации в списке Bonds не отдают: из него берём только номинал и НКД, текущую цену заполняет синхронизация цен
     @Mapping(target = "nominal", source = "nominal")
+    @Mapping(target = "aci", source = "aciValue")
     @Mapping(target = "uid", ignore = true)
     @Mapping(target = "current", ignore = true)
     @Mapping(target = "percentagePrice", ignore = true)
-    public abstract PriceModel toNominalModel(MoneyValue nominal);
+    public abstract PriceModel toStaticPriceModel(Bond bond);
 
     @AfterMapping
     protected void afterMapping(@MappingTarget final PriceModel priceModel, final LastPrice lastPrice) {

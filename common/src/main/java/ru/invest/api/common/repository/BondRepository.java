@@ -33,6 +33,26 @@ public interface BondRepository extends JpaRepository<Bond, Long> {
 
     List<Bond> findByUidIn(Set<String> tickers);
 
+    /**
+     * Облигации с амортизацией - для синхронизации графика частичных погашений.
+     */
+    @Query("""
+            select b from Bond b
+            left join fetch b.price
+            left join fetch b.coupon
+            where b.amortizationFlag = true
+            """)
+    List<Bond> findAmortizing();
+
+    @Query("""
+            select distinct b from Bond b
+            left join fetch b.price
+            left join fetch b.coupon
+            left join fetch b.amortizations
+            where b.uid in :uids
+            """)
+    List<Bond> findWithAmortizationsByUidIn(Set<String> uids);
+
     Optional<Bond> findByUid(String uid);
 
     Optional<Bond> findByTicker(String ticker);

@@ -43,4 +43,19 @@
             <column name="updated_by" type="varchar(200)"/>
         </createTable>
     </changeSet>
+
+    <changeSet id="INVEST-001-add-bond-offer-and-amortization" author="d.v.kornilovich">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="bond" columnName="offer_date"/>
+            </not>
+        </preConditions>
+
+        <addColumn tableName="bond">
+            <column name="offer_date" type="timestamp"/>
+            <column name="amortization_flag" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>

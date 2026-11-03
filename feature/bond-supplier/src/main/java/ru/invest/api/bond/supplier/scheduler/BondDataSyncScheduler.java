@@ -11,6 +11,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import ru.invest.api.common.mapper.AuditMapper;
 import ru.invest.api.common.model.AuditModel;
+import ru.invest.api.common.usecase.AmortizationSyncUseCase;
 import ru.invest.api.common.usecase.BondSyncUseCase;
 import ru.invest.api.common.usecase.CouponSyncUseCase;
 import ru.invest.api.common.usecase.PriceSyncUseCase;
@@ -21,7 +22,7 @@ import static ru.invest.api.common.constants.SchedulerConstants.BOND_DATA_SYNC_L
 import static ru.invest.api.common.constants.SchedulerConstants.SCHEDULER_PROCESS;
 
 /**
- * Ночная цепочка синхронизации: облигации -> купоны -> цены (вместе с пересчётом доходности купонов).
+ * Ночная цепочка синхронизации: облигации -> купоны -> амортизация -> цены (вместе с пересчётом доходностей).
  * Шаги идут строго по очереди; упавший шаг логируется, цепочка продолжается на уже имеющихся данных.
  */
 @Slf4j
@@ -31,6 +32,7 @@ import static ru.invest.api.common.constants.SchedulerConstants.SCHEDULER_PROCES
 public class BondDataSyncScheduler {
     private final List<BondSyncUseCase> bondSyncUseCases;
     private final List<CouponSyncUseCase> couponSyncUseCases;
+    private final List<AmortizationSyncUseCase> amortizationSyncUseCases;
     private final List<PriceSyncUseCase> priceSyncUseCases;
     private final AuditMapper auditMapper;
 
@@ -38,6 +40,8 @@ public class BondDataSyncScheduler {
     private final boolean bondStepEnabled;
     @Value("${ru.invest.api.stock.supplier.scheduler.sync.steps.coupon:true}")
     private final boolean couponStepEnabled;
+    @Value("${ru.invest.api.stock.supplier.scheduler.sync.steps.amortization:true}")
+    private final boolean amortizationStepEnabled;
     @Value("${ru.invest.api.stock.supplier.scheduler.sync.steps.price:true}")
     private final boolean priceStepEnabled;
 
@@ -60,6 +64,10 @@ public class BondDataSyncScheduler {
                 .stream()
                 .findAny()
                 .ifPresent(couponSyncUseCase -> couponSyncUseCase.syncAll(audit)));
+        runStep("amortization", amortizationStepEnabled, () -> amortizationSyncUseCases
+                .stream()
+                .findAny()
+                .ifPresent(amortizationSyncUseCase -> amortizationSyncUseCase.syncAll(audit)));
         runStep("price", priceStepEnabled, () -> priceSyncUseCases
                 .stream()
                 .findAny()

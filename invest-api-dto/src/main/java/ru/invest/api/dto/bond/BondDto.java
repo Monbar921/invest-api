@@ -21,4 +21,9 @@ public class BondDto {
     private RiskLevelDto riskLevel;
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
     private ZonedDateTime maturityDate;
+    /** Дата ближайшей оферты; null - оферты нет */
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+    private ZonedDateTime offerDate;
+    /** Облигация с амортизацией: номинал гасится частями */
+    private boolean amortizationFlag;
 }

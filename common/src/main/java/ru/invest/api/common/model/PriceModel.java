@@ -16,10 +16,12 @@ public class PriceModel {
     private MoneyModel current;
     /**
      * Текущая цена в рублях по курсу ЦБ - для фильтрации и сортировки облигаций в разных валютах.
-     * Заполняется при загрузке облигаций в кэш, наружу не отдаётся; null - цены нет или нет курса.
+     * Не хранится в БД: считается при загрузке облигаций в кэш и при чтении карточки; null - цены нет или нет курса.
      */
     private BigDecimal currentInRub;
     private BigDecimal percentagePrice;
+    /** НКД на одну облигацию - на дату последней синхронизации облигаций */
+    private MoneyModel aci;
     private AuditModel created;
     private AuditModel updated;
     private AuditModel logged;

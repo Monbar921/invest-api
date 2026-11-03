@@ -45,6 +45,8 @@ public abstract class TinkoffPriceEntityMapper {
     @Mapping(target = "uid", source = "bond.uid")
     @Mapping(target = "nominalPrice", source = "bondModel.price.nominal.quantity")
     @Mapping(target = "nominalCurrency", source = "bondModel.price.nominal.currency")
+    @Mapping(target = "aciValue", source = "bondModel.price.aci.quantity")
+    @Mapping(target = "aciCurrency", source = "bondModel.price.aci.currency")
     public abstract Price toEntity(Bond bond, BondModel bondModel);
 
     // синхронизация цен меняет только текущую цену, номинал и привязка к облигации остаются как есть
@@ -59,7 +61,17 @@ public abstract class TinkoffPriceEntityMapper {
     @Mapping(target = "currentInRub", ignore = true)
     @Mapping(target = "nominal", source = "entity", qualifiedByName = "toNominal")
     @Mapping(target = "current", source = "entity", qualifiedByName = "toCurrent")
+    @Mapping(target = "aci", source = "entity", qualifiedByName = "toAci")
     public abstract PriceModel toModel(Price entity);
+
+    @Named("toAci")
+    protected MoneyModel toAci(final Price entity) {
+        if (entity == null || ObjectUtils.allNull(entity.getAciValue(), entity.getAciCurrency())) {
+            return null;
+        }
+
+        return tinkoffMoneyApiMapper.toModel(entity.getAciCurrency(), entity.getAciValue());
+    }
 
     @Named("toNominal")
     protected MoneyModel toNominal(final Price entity) {

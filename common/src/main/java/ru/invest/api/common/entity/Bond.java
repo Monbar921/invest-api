@@ -10,7 +10,9 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -20,6 +22,7 @@ import lombok.experimental.Accessors;
 import ru.invest.api.common.model.enums.RiskLevel;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -38,6 +41,11 @@ public class Bond {
 
     @OneToOne(mappedBy = "bond", cascade = CascadeType.ALL, orphanRemoval = true)
     private Price price;
+
+    /** График частичных погашений номинала - заполняется только для облигаций с амортизацией */
+    @OneToMany(mappedBy = "bond", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("paymentDate asc")
+    private List<Amortization> amortizations;
 
     @Column(name = "ticker")
     private String ticker;
@@ -59,6 +67,12 @@ public class Bond {
 
     @Column(name = "maturity_date")
     private LocalDateTime maturityDate;
+
+    @Column(name = "offer_date")
+    private LocalDateTime offerDate;
+
+    @Column(name = "amortization_flag")
+    private boolean amortizationFlag;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "risk_level")

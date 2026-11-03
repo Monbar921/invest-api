@@ -13,5 +13,9 @@ public class PriceDto {
     private String uid;
     private MoneyDto nominal;
     private MoneyDto current;
+    /** Текущая цена в рублях по курсу ЦБ, до копеек; null - цены или курса нет. По ней идёт сортировка PRICE */
+    private BigDecimal currentInRub;
     private BigDecimal percentagePrice;
+    /** НКД на одну облигацию */
+    private MoneyDto aci;
 }

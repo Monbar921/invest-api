@@ -8,6 +8,9 @@ import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.CouponModel;
 import ru.tinkoff.piapi.contract.v1.Bond;
 
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+
 @Mapper(uses = {TinkoffPriceApiMapper.class, DateTimeMapper.class})
 public interface TinkoffBondApiMapper {
 
@@ -22,8 +25,23 @@ public interface TinkoffBondApiMapper {
     @Mapping(target = "riskLevel", source = "riskLevel")
     @Mapping(target = "coupon", source = "bond", qualifiedByName = "toInitialCoupon")
     @Mapping(target = "maturityDate", source = "maturityDate")
-    @Mapping(target = "price", source = "nominal")
+    @Mapping(target = "offerDate", source = "bond", qualifiedByName = "toOfferDate")
+    @Mapping(target = "amortizationFlag", source = "amortizationFlag")
+    @Mapping(target = "amortizations", ignore = true)
+    @Mapping(target = "price", source = "bond")
     BondModel toModel(Bond bond);
+
+    /**
+     * Дата оферты; у облигаций без оферты call_date не заполнен.
+     */
+    @Named("toOfferDate")
+    default LocalDateTime toOfferDate(final Bond bond) {
+        if (bond == null || !bond.hasCallDate() || bond.getCallDate().getSeconds() <= 0) {
+            return null;
+        }
+
+        return LocalDateTime.ofEpochSecond(bond.getCallDate().getSeconds(), bond.getCallDate().getNanos(), ZoneOffset.UTC);
+    }
 
     @Named("toInitialCoupon")
     default CouponModel toInitialCoupon(final Bond bond) {

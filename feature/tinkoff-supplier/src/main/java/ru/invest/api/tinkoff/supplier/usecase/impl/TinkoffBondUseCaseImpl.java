@@ -12,6 +12,7 @@ import ru.invest.api.common.model.AuditModel;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.repository.BondRepository;
 import ru.invest.api.tinkoff.supplier.mapper.TinkoffBondEntityMapper;
+import ru.invest.api.tinkoff.supplier.service.PriceConversionService;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondUseCase;
 
 import java.util.List;
@@ -27,6 +28,7 @@ public class TinkoffBondUseCaseImpl implements TinkoffBondUseCase {
 
     private final TinkoffBondEntityMapper tinkoffBondEntityMapper;
     private final BondRepository bondRepository;
+    private final PriceConversionService priceConversionService;
 
     @Override
     @Transactional(readOnly = true)
@@ -51,7 +53,10 @@ public class TinkoffBondUseCaseImpl implements TinkoffBondUseCase {
                 .orElseThrow(() -> new GeneralNotFoundEntityException(
                         ExceptionErrorCode.BOND_NOT_FOUND, BOND_NOT_FOUND_MESSAGE.formatted(ticker)));
 
-        return tinkoffBondEntityMapper.toDetailedModel(bond);
+        final BondModel bondModel = tinkoffBondEntityMapper.toDetailedModel(bond);
+        // карточка читается мимо кэша облигаций - рублёвую цену считаем так же, как при загрузке кэша
+        priceConversionService.fillCurrentInRub(List.of(bondModel));
+        return bondModel;
     }
 
     @Override
@@ -67,18 +72,7 @@ public class TinkoffBondUseCaseImpl implements TinkoffBondUseCase {
 
         final Map<String, Bond> existingBondsMap = existingBonds
                 .stream()
-                .collect(Collectors.toMap(Bond::getUid, Function.identity()));
-
-        final List<Bond> toSave = tinkoffBonds.values()
-                .stream()
-                .filter(bondModel -> existingBondsMap.get(bondModel.getUid()) == null)
-                .map(bondModel -> tinkoffBondEntityMapper.toEntity(bondModel, existingBondsMap.get(bondModel.getUid())))
-                .toList();
-
-        tinkoffBonds.values()
-                .stream()
-                .filter(bondModel -> existingBondsMap.get(bondModel.getUid()) != null)
-                .forEach(bondModel -> tinkoffBondEntityMapper.toEntity(bondModel, existingBondsMap.get(bondModel.getUid())));
+                .collect(Collectors.toMap(Bond::getTicker, Function.identity()));
 
         final List<Bond> toDelete = existingBonds
                 .stream()
@@ -89,6 +83,18 @@ public class TinkoffBondUseCaseImpl implements TinkoffBondUseCase {
         if (CollectionUtils.isNotEmpty(existingBonds) && CollectionUtils.isNotEmpty(toDelete)) {
             existingBonds.removeAll(toDelete);
         }
+
+        tinkoffBonds.values()
+                .stream()
+                .filter(bondModel -> existingBondsMap.get(bondModel.getTicker()) != null)
+                .forEach(bondModel -> tinkoffBondEntityMapper.toEntity(bondModel, existingBondsMap.get(bondModel.getTicker())));
+
+        final List<Bond> toSave = tinkoffBonds.values()
+                .stream()
+                .filter(bondModel -> existingBondsMap.get(bondModel.getTicker()) == null)
+                .map(bondModel -> tinkoffBondEntityMapper.toEntity(bondModel, existingBondsMap.get(bondModel.getTicker())))
+                .toList();
+
         if (CollectionUtils.isNotEmpty(toSave)) {
             existingBonds.addAll(toSave);
         }

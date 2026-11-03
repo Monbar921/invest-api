@@ -7,6 +7,8 @@ import ru.invest.api.tinkoff.supplier.wrapper.InstrumentsGrpcRateLimitedWrapper;
 import ru.tinkoff.piapi.contract.v1.BondsResponse;
 import ru.tinkoff.piapi.contract.v1.GetBondCouponsRequest;
 import ru.tinkoff.piapi.contract.v1.GetBondCouponsResponse;
+import ru.tinkoff.piapi.contract.v1.GetBondEventsRequest;
+import ru.tinkoff.piapi.contract.v1.GetBondEventsResponse;
 import ru.tinkoff.piapi.contract.v1.InstrumentsRequest;
 import ru.tinkoff.piapi.contract.v1.InstrumentsServiceGrpc;
 import ru.ttech.piapi.core.connector.resilience.ResilienceSyncStubWrapper;
@@ -26,5 +28,10 @@ public class InstrumentsGrpcRateLimitedWrapperImpl implements InstrumentsGrpcRat
     @Override
     public GetBondCouponsResponse getBondCoupons(final GetBondCouponsRequest request) {
         return instrumentsService.callSyncMethod(InstrumentsServiceGrpc.getGetBondCouponsMethod(), stub -> stub.getBondCoupons(request));
+    }
+
+    @Override
+    public GetBondEventsResponse getBondEvents(final GetBondEventsRequest request) {
+        return instrumentsService.callSyncMethod(InstrumentsServiceGrpc.getGetBondEventsMethod(), stub -> stub.getBondEvents(request));
     }
 }

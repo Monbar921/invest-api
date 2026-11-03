@@ -6,7 +6,8 @@ import java.util.Set;
 
 public interface CouponInterestUseCase {
     /**
-     * Пересчитывает годовую доходность купона (coupon.interest) относительно текущей цены облигации.
+     * Пересчитывает годовую доходность купона (coupon.interest), доходности к погашению (coupon.yieldToMaturity)
+     * и к оферте (coupon.yieldToOffer) относительно текущей цены облигации.
      *
      * @param uids uid облигаций, у которых обновилась цена
      */
