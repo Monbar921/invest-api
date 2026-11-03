@@ -1,0 +1,120 @@
+# Запуск и деплой invest-api
+
+## Локальный запуск из IDE
+
+Нужны JDK 25, Maven, PostgreSQL со схемой для приложения (Liquibase создаёт таблицы, но не схему).
+
+Конфигурация:
+
+| Файл                               | Что                                                                                 |
+| ---------------------------------- | ----------------------------------------------------------------------------------- |
+| `config/application.yml`           | шаблон конфигурации в git, Spring читает его из `./config` рабочей директории. Значения вида `$TOKEN`, `$DB_HOST` - заглушки, их нужно переопределить |
+| `local_config/application-test.yml`| локальные настройки с токеном и БД, в git не попадает. Подключается в run configuration, например `--spring.config.additional-location=file:./local_config/ --spring.profiles.active=test` |
+| `.env`                             | переменные для локального Postgres в docker (шаблон - `.env.example`), в git не попадает |
+
+Что обязательно задать: `invest.connector.token` (токен T-Invest API), `spring.datasource.hikari.*`
+(jdbc-url, username, password, `connection-init-sql: SET search_path TO <схема>`), `spring.liquibase.*`
+(change-log `classpath:liquibase/db.changelog-master.xml`, default-schema, параметры `appUsername`, `schema`, `sql_schema`).
+Локально приложение слушает `server.port: 8081`, invest-gateway ходит на `http://127.0.0.1:8081`.
+
+Шедулеры: `ru.invest.api.stock.supplier.scheduler.sync.enabled` (ночная цепочка, плюс прогон при старте),
+`...sync.steps.{bond,coupon,amortization,price}` - отдельные шаги, `...scheduler.price.enabled` - частое обновление цен.
+Для первого наполнения пустой БД должен быть включён шаг `bond`, иначе облигаций не будет.
+
+Swagger: http://localhost:8081/swagger-ui.html.
+
+## Локальный стенд в k3d
+
+Все сервисы (invest-api, gateway, UI, Keycloak, Postgres) в кластере k3d в WSL поднимает
+[invest-deploy](../../invest-deploy/docs/deployment.md): `.\deploy.ps1 api` в каталоге invest-deploy собирает
+invest-api и выкатывает его. Профиль `k8s` для стенда лежит в invest-deploy, базовый `config/application.yml` берётся
+из этого репозитория.
+
+## Образ
+
+Сборка раскладывает приложение для Docker в `app/target/dockerbuild` (`mvn package`, плагины `maven-dependency-plugin`
+и `maven-antrun-plugin` в корневом pom):
+
+- `ext/` - сторонние библиотеки: меняются редко, идут отдельным слоем;
+- `lib/` - модули проекта и сам `app`.
+
+Запуск: `java -cp '/app/lib/*:/app/ext/*' ru.invest.api.InvestApplication`. В truststore JVM нужен корневой
+сертификат Минцифры (им подписан сертификат invest-public-api.tinkoff.ru).
+
+## CI
+
+`.github/workflows/ci-cd.yml`:
+
+| Событие                        | Что                                                         |
+| ------------------------------ | ----------------------------------------------------------- |
+| pull request в master/develop/uat | сборка, checkstyle, тесты                                |
+| push в develop/uat             | + образ `ghcr.io/monbar921/invest-api`, теги `<short sha>`, `<ветка>` |
+| push в master                  | + тег `latest`                                              |
+
+Деплой из CI не делается.
+
+> Сейчас job образа сломан: `Dockerfile` в корне репозитория удалён в коммите `856eb1d`, а `docker/build-push-action`
+> собирает с `context: .`. Рабочий Dockerfile для стенда - `invest-deploy/docker/java.Dockerfile`.
+
+## Kubernetes (удалённый кластер)
+
+Манифесты на Kustomize в `k8s/`, образ из ghcr.io:
+
+```
+k8s/
+  base/                 Deployment, Service, Ingress (nginx), ConfigMap из config.env
+  overlays/
+    develop/            namespace invest-api-develop
+    uat/                namespace invest-api-uat
+    prod/               namespace invest-api-prod
+  secret.example.yaml   шаблон секрета
+```
+
+Overlay задаёт namespace, тег образа (`images.newTag`), хост ingress и отличия конфига.
+
+### Первый деплой окружения
+
+На примере `develop`:
+
+1. Ресурсы (под не поднимется, пока нет секретов - это нормально):
+   ```bash
+   kubectl apply -k k8s/overlays/develop
+   ```
+2. Секрет приложения (см. `k8s/secret.example.yaml`):
+   ```bash
+   kubectl create secret generic invest-api-secret -n invest-api-develop \
+     --from-literal=TOKEN=<tinkoff-token> \
+     --from-literal=DB_URL=jdbc:postgresql://<host>:5432/<db> \
+     --from-literal=DB_USERNAME=<user> \
+     --from-literal=DB_PASSWORD=<password>
+   ```
+3. Доступ к приватному ghcr.io (PAT с правом `read:packages`):
+   ```bash
+   kubectl create secret docker-registry ghcr-secret -n invest-api-develop \
+     --docker-server=ghcr.io --docker-username=Monbar921 --docker-password=<PAT>
+   ```
+4. Перезапуск:
+   ```bash
+   kubectl rollout restart deployment/invest-api -n invest-api-develop
+   kubectl rollout status deployment/invest-api -n invest-api-develop
+   ```
+
+### Обновление версии
+
+Тег в `k8s/overlays/<окружение>/kustomization.yaml` (лучше short sha - деплой воспроизводим, откат - смена тега),
+затем `kubectl apply -k k8s/overlays/<окружение>`. С тегом ветки (`develop`, `latest`) apply изменений не увидит,
+нужен `kubectl rollout restart`. Изменения `config.env` перезапускают поды сами: к имени ConfigMap добавляется хэш.
+
+### Проверка
+
+```bash
+kubectl kustomize k8s/overlays/develop          # что будет применено
+kubectl logs -l app=invest-api -n invest-api-develop --tail=100
+kubectl port-forward svc/invest-api 8080:80 -n invest-api-develop
+```
+
+`ImagePullBackOff` - проблема с `ghcr-secret`, `CrashLoopBackOff` - логи (обычно БД или токен).
+
+> Манифесты k8s/ отстают от кода: env `TOKEN` и `DB_*` из секрета не совпадают с ключами конфига
+> (`invest.connector.token`, `spring.datasource.hikari.*`), а схема и Liquibase не настроены. Перед использованием
+> их нужно сверить с профилем `k8s` в invest-deploy.

@@ -1,0 +1,66 @@
+# INVEST-001: как сделано
+
+## Данные
+
+Миграции в `app/src/main/resources/liquibase/tables/` (changeSet'ы `INVEST-001-*`, с preConditions - повторный
+запуск на БД, где колонки уже есть, их пропускает):
+
+| Таблица        | Изменение                                                                         |
+| -------------- | --------------------------------------------------------------------------------- |
+| `bond`         | `offer_date timestamp`, `amortization_flag boolean not null default false`        |
+| `coupon`       | `yield_to_maturity numeric(19,2)`, `yield_to_offer numeric(19,2)`                 |
+| `price`        | `aci_value numeric(19,2)`, `aci_currency varchar(3)`                              |
+| `amortization` | новая: `bond_id`, `uid`, `ticker`, `price`, `currency`, `payment_date` + аудит      |
+
+Откуда берутся:
+
+- **НКД** - `aciValue` из ответа `Bonds` (`TinkoffPriceApiMapper.toStaticPriceModel`), сохраняется вместе с номиналом
+  при синхронизации облигаций. Цена в `Bonds` не приходит, текущую цену по-прежнему пишет синхронизация цен.
+- **Дата оферты** - `callDate` облигации; 0 или отсутствие - оферты нет (`TinkoffBondApiMapper.toOfferDate`).
+- **Амортизация** - `InstrumentsService.GetBondEvents` с типом `EVENT_TYPE_MTY`, от текущей даты
+  (`TinkoffAmortizationProviderImpl`), только для облигаций с `amortizationFlag`.
+
+## Синхронизация
+
+`BondDataSyncScheduler`: bond → coupon → **amortization** → price. Шаг включается флагом
+`ru.invest.api.stock.supplier.scheduler.sync.steps.amortization` (по умолчанию `true`).
+`TinkoffAmortizationSyncUseCaseImpl` идёт пачками по 100; если график облигации получить не удалось, старый не
+затирается пустым.
+
+Доходности пересчитывает `CouponInterestUseCaseImpl` после сохранения цен: пачки по 500 uid, каждая в своей транзакции.
+Для расчёта собирается `BondModel` только с нужным: цена, даты погашения и оферты, флаг и график амортизации.
+
+## Расчёт
+
+`CouponCalculationServiceImpl.calculateYieldToMaturity / calculateYieldToOffer` → общий `calculateYield(horizon)`:
+
+1. Проверки входа (цена, номинал, НКД, горизонт в будущем, загружен ли график амортизации).
+2. Цена покупки = текущая цена + НКД, в валюте цены.
+3. Денежные потоки: купоны и погашения до горизонта включительно (по дням), остаток номинала - в дату горизонта.
+4. `solveYield`: бисекция по ставке на [−0.99, 10], т.к. приведённая стоимость монотонно убывает с ростом ставки.
+   Если цена вне [PV(10), PV(−0.99)] - `null`.
+
+### Решения
+
+- **Бисекция, а не Ньютон**: функция монотонна, бисекция всегда сходится и не требует производной; 
+  ~35 итераций до точности 1e-10 - дёшево даже для тысяч облигаций.
+- **`null` вместо приближения**: флоатер без объявленных купонов или облигация без загруженной амортизации
+  дали бы правдоподобное, но неверное число - в сортировке оно хуже, чем отсутствие значения.
+- **Оферта = выкуп по номиналу** в дату `callDate`. Цена выкупа по оферте в API не приходит.
+- **365 дней в году**, без учёта конвенции дней конкретного выпуска - для сравнения облигаций между собой достаточно.
+
+## API
+
+- DTO: `BondDto.offerDate`, `amortizationFlag`; `CouponDto.yieldToMaturity`, `yieldToOffer`; `PriceDto.aci`.
+- `BondSortFieldRequest`: `YIELD_TO_MATURITY`, `YIELD_TO_OFFER` (`null` - в конце, см. `BondComparatorUseCaseImpl`).
+- Стартер `InvestApiBondClient` не менялся: новые поля приходят в тех же DTO.
+
+## Тесты
+
+- `YieldToMaturityCalculationTest` - доходность к погашению (выше и ниже номинала, с НКД и без), амортизация
+  (с графиком, без графика, погашений больше номинала), доходность к оферте (с амортизацией, без оферты, оферта после
+  погашения, флоатер), уже выплаченные и необъявленные купоны, погашенная облигация, нет цены.
+- `AmortizationSyncTest` - загрузка графика, замена при повторной синхронизации, пропуск облигаций без амортизации.
+  Сохранение старого графика при ошибке API тестом не покрыто.
+- `BondSyncTest`, `PriceSyncTest`, `BondDataSyncSchedulerTest`, `BondControllerTest` - новые поля, шаг цепочки,
+  сортировка по доходностям.

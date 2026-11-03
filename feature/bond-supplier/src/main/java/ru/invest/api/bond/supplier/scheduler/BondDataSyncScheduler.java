@@ -1,14 +1,20 @@
 package ru.invest.api.bond.supplier.scheduler;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
+import static ru.invest.api.common.constants.SchedulerConstants.BOND_DATA_SYNC_LOCK;
+import static ru.invest.api.common.constants.SchedulerConstants.SCHEDULER_PROCESS;
+
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import ru.invest.api.common.mapper.AuditMapper;
 import ru.invest.api.common.model.AuditModel;
 import ru.invest.api.common.usecase.AmortizationSyncUseCase;
@@ -16,14 +22,11 @@ import ru.invest.api.common.usecase.BondSyncUseCase;
 import ru.invest.api.common.usecase.CouponSyncUseCase;
 import ru.invest.api.common.usecase.PriceSyncUseCase;
 
-import java.util.List;
-
-import static ru.invest.api.common.constants.SchedulerConstants.BOND_DATA_SYNC_LOCK;
-import static ru.invest.api.common.constants.SchedulerConstants.SCHEDULER_PROCESS;
-
 /**
- * Ночная цепочка синхронизации: облигации -> купоны -> амортизация -> цены (вместе с пересчётом доходностей).
- * Шаги идут строго по очереди; упавший шаг логируется, цепочка продолжается на уже имеющихся данных.
+ * Ночная цепочка синхронизации: облигации -> купоны -> амортизация -> цены
+ * (вместе с пересчётом доходностей).
+ * Шаги идут строго по очереди; упавший шаг логируется, цепочка продолжается на
+ * уже имеющихся данных.
  */
 @Slf4j
 @Component
@@ -36,6 +39,8 @@ public class BondDataSyncScheduler {
     private final List<PriceSyncUseCase> priceSyncUseCases;
     private final AuditMapper auditMapper;
 
+    @Value("${ru.invest.api.stock.supplier.scheduler.sync.run-on-startup:false}")
+    private final boolean runOnStartup;
     @Value("${ru.invest.api.stock.supplier.scheduler.sync.steps.bond:true}")
     private final boolean bondStepEnabled;
     @Value("${ru.invest.api.stock.supplier.scheduler.sync.steps.coupon:true}")
@@ -47,7 +52,9 @@ public class BondDataSyncScheduler {
 
     @EventListener(ApplicationReadyEvent.class)
     public void onReady() {
-        sync();
+        if (runOnStartup) {
+            sync();
+        }
     }
 
     @Scheduled(cron = "${ru.invest.api.stock.supplier.scheduler.sync.cron}", zone = "${ru.invest.api.stock.supplier.scheduler.sync.zone:}")
