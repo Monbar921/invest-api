@@ -135,6 +135,7 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
         assertThat(bond.getCoupon().getUid(), equalTo("1c0a2f3e-0004-4000-8000-000000000004"));
         assertThat(bond.getCoupon().getInterest(), comparesEqualTo(new BigDecimal("18.50")));
         assertThat(bond.getCoupon().getQuantityPerYear(), equalTo(12));
+        assertThat(bond.getCoupon().getIsFixed(), equalTo(true));
         assertThat(bond.getCoupon().getCouponData(), nullValue());
 
         // 1005.00 от номинала 1000.00

@@ -71,7 +71,8 @@
 
 ## API
 
-- DTO: `BondDto.offerDate`, `amortizationFlag`; `CouponDto.yieldToMaturity`, `yieldToOffer`; `PriceDto.aci`.
+- DTO: `BondDto.offerDate`, `amortizationFlag`; `CouponDto.yieldToMaturity`, `yieldToOffer`, `isFixed` (тип купона); `PriceDto.aci`.
+- Фильтр `BondParametersRequest.isFixedCoupon`: постоянный / переменный купон.
 - `BondSortFieldRequest`: `YIELD_TO_MATURITY`, `YIELD_TO_OFFER` (`null` - в конце, см. `BondComparatorUseCaseImpl`).
 - Стартер `InvestApiBondClient` не менялся: новые поля приходят в тех же DTO.
 
