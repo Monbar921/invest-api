@@ -109,6 +109,8 @@ maintenance-эндпоинты - значение заголовка `From`).
 | ------------------------------------------------------------- | --------------------------------------------------------- |
 | `POST /internal/rest/bonds/{all\|local\|foreign}/page?page=&size=` | страница облигаций; в теле `BondParametersRequest`: сортировки, фильтры по цене, риску, ОФЗ. `size` 1..500, по умолчанию 50 |
 | `GET /internal/rest/bonds/{ticker}`                           | облигация с ценой, купоном и графиком выплат              |
+| `GET /internal/rest/bonds/search?query=&limit=`               | нестрогий поиск по тикеру, ISIN и названию среди облигаций в кэше; `limit` 1..50, по умолчанию 20 |
+| `POST /internal/rest/bonds/{ticker}/calculation`              | доход за период владения; в теле `ProfitCalculationRequest` (даты, количество, цены покупки и продажи) |
 | `POST /internal/rest/maintenance/bond/sync-all`               | синхронизация облигаций                                   |
 | `POST /internal/rest/maintenance/bond/{coupon\|amortization\|price}/sync-all` | синхронизация купонов / амортизации / цен |
 | `POST /internal/rest/maintenance/bond/{coupon\|amortization\|price}/sync-by-ticker/{ticker}` | то же для одной облигации |

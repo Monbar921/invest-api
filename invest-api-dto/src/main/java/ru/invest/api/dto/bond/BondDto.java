@@ -16,6 +16,7 @@ public class BondDto {
     private String uid;
     private String isin;
     private String name;
+    private String sector;
     private PriceDto price;
     private CouponDto coupon;
     private RiskLevelDto riskLevel;

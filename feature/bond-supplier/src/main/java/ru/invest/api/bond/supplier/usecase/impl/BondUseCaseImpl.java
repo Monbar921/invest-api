@@ -8,13 +8,20 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import ru.invest.api.bond.supplier.usecase.BondUseCase;
 import ru.invest.api.common.model.BondModel;
+import ru.invest.api.common.model.calculation.ProfitCalculationModel;
+import ru.invest.api.common.model.calculation.ProfitCalculationRequestModel;
 import ru.invest.api.common.model.parameters.BondParametersModel;
+import ru.invest.api.common.usecase.BondSearchUseCase;
 import ru.invest.api.common.usecase.BondSortUseCase;
+import ru.invest.api.tinkoff.supplier.service.ProfitCalculationService;
+import ru.invest.api.tinkoff.supplier.usecase.TinkoffAmortizationUseCase;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondCacheRepositoryUseCase;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondUseCase;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +29,9 @@ public class BondUseCaseImpl implements BondUseCase {
     private final TinkoffBondCacheRepositoryUseCase tinkoffBondCacheRepositoryUseCase;
     private final TinkoffBondUseCase tinkoffBondUseCase;
     private final BondSortUseCase bondSortUseCase;
+    private final BondSearchUseCase bondSearchUseCase;
+    private final TinkoffAmortizationUseCase tinkoffAmortizationUseCase;
+    private final ProfitCalculationService profitCalculationService;
 
     @Override
     public Page<BondModel> getForeignCurrencyBondsPage(final BondParametersModel bondParametersModel, final Pageable pageable) {
@@ -41,6 +51,22 @@ public class BondUseCaseImpl implements BondUseCase {
     @Override
     public BondModel getByTicker(final String ticker) {
         return tinkoffBondUseCase.findDetailedByTicker(ticker);
+    }
+
+    @Override
+    public List<BondModel> search(final String query, final int limit) {
+        final Map<String, BondModel> cachedBonds = tinkoffBondCacheRepositoryUseCase.getBonds();
+        return MapUtils.isEmpty(cachedBonds) ? List.of() : bondSearchUseCase.search(cachedBonds.values(), query, limit);
+    }
+
+    @Override
+    public ProfitCalculationModel calculateProfit(final String ticker, final ProfitCalculationRequestModel request) {
+        // карточка с графиком купонов; будущие погашения номинала карточка не грузит - добираем отдельно
+        final BondModel bond = tinkoffBondUseCase.findDetailedByTicker(ticker);
+        bond.setAmortizations(tinkoffAmortizationUseCase.findByUids(Set.of(bond.getUid()))
+                .getOrDefault(bond.getUid(), List.of()));
+
+        return profitCalculationService.calculate(bond, Optional.ofNullable(request).orElseGet(ProfitCalculationRequestModel::new));
     }
 
     // все облигации лежат в кэше: фильтруем и сортируем всю выборку в памяти, страница - срез списка

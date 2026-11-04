@@ -14,7 +14,11 @@ import ru.invest.api.cb.rf.supplier.model.CurrencyElementDto;
 import ru.invest.api.common.mapper.AuditMapper;
 import ru.invest.api.common.usecase.PriceSyncUseCase;
 import ru.invest.api.dto.bond.BondDto;
+import ru.invest.api.dto.bond.BondSearchItemDto;
 import ru.invest.api.dto.bond.CouponDataDto;
+import ru.invest.api.dto.bond.calculation.ExitTypeDto;
+import ru.invest.api.dto.bond.calculation.ProfitCalculationDto;
+import ru.invest.api.dto.bond.calculation.ProfitCalculationRequest;
 import ru.invest.api.dto.bond.enums.RiskLevelDto;
 import ru.invest.api.dto.page.PageDto;
 import ru.invest.api.dto.request.bond.BondParametersRequest;
@@ -35,6 +39,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.closeTo;
 import static org.hamcrest.Matchers.comparesEqualTo;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -73,6 +78,7 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
     private static final int MAX_PAGE_SIZE = 500;
     private static final int BAD_REQUEST = 400;
     private static final int NOT_FOUND = 404;
+    private static final int UNPROCESSABLE_CONTENT = 422;
     // курсы ЦБ: 1 USD = 90 RUB, 10 CNY = 125 RUB (у юаня номинал 10, как бывает у ЦБ)
     private static final CurrencyElementDto USD_RATE = cbRfRate("USD", "1", "90,0");
     private static final CurrencyElementDto CNY_RATE = cbRfRate("CNY", "10", "125,0");
@@ -508,6 +514,91 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
     @Test
     public void getByUnknownTickerIsNotFoundTest() {
         final FeignException exception = assertThrows(FeignException.class, () -> investApiBondClient.getByTicker("UNKNOWN"));
+
+        assertThat(exception.status(), equalTo(NOT_FOUND));
+    }
+
+    @Test
+    public void searchByTickerPrefixTest() {
+        final List<BondSearchItemDto> found = investApiBondClient.search("ru000a10e", null);
+
+        // совпадение с начала тикера, внутри ранга - по названию
+        assertThat(found.stream().map(BondSearchItemDto::getTicker).toList(), contains(RUB_LOW, RUB_HIGH, RUB_WITHOUT_PRICE));
+        assertThat(found.getFirst().getName(), equalTo("Авто Финанс Банк БО-001Р-18"));
+        assertThat(found.getFirst().getSector(), equalTo("financial"));
+    }
+
+    @Test
+    public void searchExactTickerFirstTest() {
+        final List<BondSearchItemDto> found = investApiBondClient.search(RUB_HIGH, null);
+
+        assertThat(found.getFirst().getTicker(), equalTo(RUB_HIGH));
+    }
+
+    @Test
+    public void searchByNameWordsTest() {
+        // слова названия в любом порядке и регистре
+        assertThat(investApiBondClient.search("капитал газпром", null).stream().map(BondSearchItemDto::getTicker).toList(),
+                contains(USD_LOW));
+        // ISIN ОФЗ не совпадает с тикером
+        assertThat(investApiBondClient.search("RU000A1038V6", null).getFirst().getTicker(), equalTo(OFZ));
+    }
+
+    @Test
+    public void searchShortQueryAndLimitTest() {
+        assertThat(investApiBondClient.search("р", null), empty());
+        assertThat(investApiBondClient.search("ru000", 2), hasSize(2));
+    }
+
+    @Test
+    public void calculateProfitSaleTest() {
+        final LocalDate sellDate = LocalDate.now(ZoneOffset.UTC).plusDays(30);
+
+        final ProfitCalculationDto calculation = investApiBondClient.calculateProfit(RUB_LOW, new ProfitCalculationRequest()
+                .setSellDate(sellDate)
+                .setQuantity(2)
+                .setSellPricePercent(new BigDecimal("101")));
+
+        assertThat(calculation.getExitType(), equalTo(ExitTypeDto.SALE));
+        assertThat(calculation.getSellDate(), equalTo(sellDate));
+        assertThat(calculation.getQuantity(), equalTo(2));
+        assertThat(calculation.getCurrency(), equalTo("rub"));
+        // покупка по текущей цене 100,5% от номинала 1000, продажа по 101%, на 2 облигации
+        assertThat(calculation.getPurchaseAmount(), comparesEqualTo(new BigDecimal("2010.00")));
+        assertThat(calculation.getExitAmount(), comparesEqualTo(new BigDecimal("2020.00")));
+        // доход - всё полученное минус всё заплаченное, с точностью до округления каждой суммы
+        final BigDecimal expectedProfit = calculation.getCouponIncome()
+                .add(calculation.getAmortizationIncome())
+                .add(calculation.getExitAmount())
+                .add(calculation.getExitAci())
+                .subtract(calculation.getPurchaseAmount())
+                .subtract(calculation.getPurchaseAci());
+        assertThat(calculation.getProfit(), closeTo(expectedProfit, new BigDecimal("0.03")));
+    }
+
+    @Test
+    public void calculateProfitAfterMaturityHoldsToMaturityTest() {
+        final ProfitCalculationDto calculation = investApiBondClient.calculateProfit(RUB_LOW, new ProfitCalculationRequest()
+                .setSellDate(LocalDate.of(2035, 1, 1)));
+
+        assertThat(calculation.getExitType(), equalTo(ExitTypeDto.MATURITY));
+        assertThat(calculation.getSellDate(), equalTo(LocalDate.of(2029, 3, 14)));
+        assertThat(calculation.getExitAmount(), comparesEqualTo(new BigDecimal("1000.00")));
+    }
+
+    @Test
+    public void calculateProfitInvalidPeriodTest() {
+        final FeignException exception = assertThrows(FeignException.class, () -> investApiBondClient.calculateProfit(RUB_LOW,
+                new ProfitCalculationRequest().setBuyDate(LocalDate.now(ZoneOffset.UTC).minusDays(1))));
+
+        assertThat(exception.status(), equalTo(UNPROCESSABLE_CONTENT));
+        assertThat(exception.contentUTF8(), containsString("buyDate must not be in the past"));
+    }
+
+    @Test
+    public void calculateProfitUnknownTickerTest() {
+        final FeignException exception = assertThrows(FeignException.class,
+                () -> investApiBondClient.calculateProfit("UNKNOWN", new ProfitCalculationRequest()));
 
         assertThat(exception.status(), equalTo(NOT_FOUND));
     }

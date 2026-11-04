@@ -9,5 +9,6 @@ public enum ExceptionErrorCode {
     EMPTY_UID,
     EMPTY_TICKER,
     EMPTY_CURRENCY,
-    EMPTY_DATE
+    EMPTY_DATE,
+    INVALID_CALCULATION_PARAMETERS
 }

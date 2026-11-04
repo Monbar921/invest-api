@@ -3,7 +3,11 @@ package ru.invest.api.bond.supplier.usecase;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import ru.invest.api.common.model.BondModel;
+import ru.invest.api.common.model.calculation.ProfitCalculationModel;
+import ru.invest.api.common.model.calculation.ProfitCalculationRequestModel;
 import ru.invest.api.common.model.parameters.BondParametersModel;
+
+import java.util.List;
 
 public interface BondUseCase {
     /**
@@ -25,4 +29,14 @@ public interface BondUseCase {
      * Облигация с ценой и купоном вместе с графиком выплат.
      */
     BondModel getByTicker(String ticker);
+
+    /**
+     * Нестрогий поиск облигаций по тикеру, ISIN и названию - см. {@link ru.invest.api.common.usecase.BondSearchUseCase}.
+     */
+    List<BondModel> search(String query, int limit);
+
+    /**
+     * Доход по облигации за период владения.
+     */
+    ProfitCalculationModel calculateProfit(String ticker, ProfitCalculationRequestModel request);
 }

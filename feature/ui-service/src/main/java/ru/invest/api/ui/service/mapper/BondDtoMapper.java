@@ -7,8 +7,13 @@ import org.springframework.data.domain.Page;
 import ru.invest.api.common.mapper.DateTimeMapper;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.PriceModel;
+import ru.invest.api.common.model.calculation.ProfitCalculationModel;
+import ru.invest.api.common.model.calculation.ProfitCalculationRequestModel;
 import ru.invest.api.dto.bond.BondDto;
+import ru.invest.api.dto.bond.BondSearchItemDto;
 import ru.invest.api.dto.bond.PriceDto;
+import ru.invest.api.dto.bond.calculation.ProfitCalculationDto;
+import ru.invest.api.dto.bond.calculation.ProfitCalculationRequest;
 import ru.invest.api.dto.page.PageDto;
 
 import java.math.BigDecimal;
@@ -32,6 +37,14 @@ public interface BondDtoMapper {
                 .setTotalElements(page.getTotalElements())
                 .setTotalPages(page.getTotalPages());
     }
+
+    BondSearchItemDto toSearchItem(BondModel bond);
+
+    List<BondSearchItemDto> toSearchItems(List<BondModel> bonds);
+
+    ProfitCalculationRequestModel toCalculationModel(ProfitCalculationRequest request);
+
+    ProfitCalculationDto toCalculationDto(ProfitCalculationModel calculation);
 
     // сортировка идёт по точному значению, наружу - до копеек
     @Named("toKopecks")

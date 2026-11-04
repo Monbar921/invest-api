@@ -15,10 +15,15 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import ru.invest.api.bond.supplier.usecase.BondUseCase;
 import ru.invest.api.dto.bond.BondDto;
+import ru.invest.api.dto.bond.BondSearchItemDto;
+import ru.invest.api.dto.bond.calculation.ProfitCalculationDto;
+import ru.invest.api.dto.bond.calculation.ProfitCalculationRequest;
 import ru.invest.api.dto.page.PageDto;
 import ru.invest.api.dto.request.bond.BondParametersRequest;
 import ru.invest.api.ui.service.mapper.BondDtoMapper;
 import ru.invest.api.ui.service.mapper.BondParametersRequestMapper;
+
+import java.util.List;
 
 @Validated
 @RestController
@@ -27,6 +32,8 @@ import ru.invest.api.ui.service.mapper.BondParametersRequestMapper;
 public class BondController {
     private static final String DEFAULT_PAGE_SIZE = "50";
     private static final long MAX_PAGE_SIZE = 500;
+    private static final String DEFAULT_SEARCH_LIMIT = "20";
+    private static final long MAX_SEARCH_LIMIT = 50;
 
     private final BondUseCase bondUseCase;
     private final BondParametersRequestMapper bondParametersRequestMapper;
@@ -84,5 +91,28 @@ public class BondController {
     @GetMapping("/{ticker}")
     public BondDto getByTicker(@PathVariable final String ticker) {
         return bondDtoMapper.toDto(bondUseCase.getByTicker(ticker));
+    }
+
+    /**
+     * Нестрогий поиск облигаций по тикеру, ISIN или названию - для подсказок при вводе.
+     *
+     * @param query строка поиска; короче двух символов - пустой список
+     * @param limit сколько облигаций вернуть (1..50)
+     */
+    @GetMapping("/search")
+    public List<BondSearchItemDto> search(
+            @RequestParam final String query,
+            @RequestParam(defaultValue = DEFAULT_SEARCH_LIMIT) @Positive(message = "limit must be a positive number")
+            @Max(value = MAX_SEARCH_LIMIT, message = "limit must not exceed 50") final int limit) {
+        return bondDtoMapper.toSearchItems(bondUseCase.search(query, limit));
+    }
+
+    /**
+     * Доход по облигации за период владения: покупка, купоны, погашения номинала, продажа, НДФЛ.
+     */
+    @PostMapping("/{ticker}/calculation")
+    public ProfitCalculationDto calculateProfit(@PathVariable final String ticker,
+                                                @RequestBody(required = false) final ProfitCalculationRequest request) {
+        return bondDtoMapper.toCalculationDto(bondUseCase.calculateProfit(ticker, bondDtoMapper.toCalculationModel(request)));
     }
 }

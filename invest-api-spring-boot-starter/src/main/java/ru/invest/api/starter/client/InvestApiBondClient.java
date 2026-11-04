@@ -6,8 +6,13 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import ru.invest.api.dto.bond.BondDto;
+import ru.invest.api.dto.bond.BondSearchItemDto;
+import ru.invest.api.dto.bond.calculation.ProfitCalculationDto;
+import ru.invest.api.dto.bond.calculation.ProfitCalculationRequest;
 import ru.invest.api.dto.page.PageDto;
 import ru.invest.api.dto.request.bond.BondParametersRequest;
+
+import java.util.List;
 
 /**
  * Клиент к BondController. Базовый путь /internal/rest задаётся в InvestApiBondClientAutoConfiguration.
@@ -49,4 +54,19 @@ public interface InvestApiBondClient {
      */
     @GetMapping("/bonds/{ticker}")
     BondDto getByTicker(@PathVariable("ticker") String ticker);
+
+    /**
+     * Нестрогий поиск облигаций по тикеру, ISIN или названию.
+     *
+     * @param limit сколько облигаций вернуть (1..50), null - 20
+     */
+    @GetMapping("/bonds/search")
+    List<BondSearchItemDto> search(@RequestParam("query") String query,
+                                   @RequestParam(value = "limit", required = false) Integer limit);
+
+    /**
+     * Доход по облигации за период владения.
+     */
+    @PostMapping("/bonds/{ticker}/calculation")
+    ProfitCalculationDto calculateProfit(@PathVariable("ticker") String ticker, @RequestBody ProfitCalculationRequest request);
 }
