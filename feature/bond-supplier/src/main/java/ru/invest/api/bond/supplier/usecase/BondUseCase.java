@@ -4,9 +4,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.calculation.ProfitCalculationModel;
+import ru.invest.api.common.model.candle.CandleInterval;
+import ru.invest.api.common.model.candle.CandleModel;
 import ru.invest.api.common.model.calculation.ProfitCalculationRequestModel;
 import ru.invest.api.common.model.parameters.BondParametersModel;
 
+import java.time.LocalDate;
 import java.util.List;
 
 public interface BondUseCase {
@@ -39,4 +42,12 @@ public interface BondUseCase {
      * Доход по облигации за период владения.
      */
     ProfitCalculationModel calculateProfit(String ticker, ProfitCalculationRequestModel request);
+
+    /**
+     * Свечи цены облигации в % от номинала за период; неделя и месяц собираются из дневных.
+     *
+     * @param from первый день, null - вся история
+     * @param to   последний день, null - сегодня
+     */
+    List<CandleModel> getCandles(String ticker, CandleInterval interval, LocalDate from, LocalDate to);
 }

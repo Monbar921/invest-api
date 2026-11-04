@@ -17,12 +17,13 @@ import ru.invest.api.common.mapper.AuditMapper;
 import ru.invest.api.common.model.AuditModel;
 import ru.invest.api.common.usecase.AmortizationSyncUseCase;
 import ru.invest.api.common.usecase.BondSyncUseCase;
+import ru.invest.api.common.usecase.CandleSyncUseCase;
 import ru.invest.api.common.usecase.CouponSyncUseCase;
 import ru.invest.api.common.usecase.PriceSyncUseCase;
 
 /**
  * Ночная цепочка синхронизации: облигации -> купоны -> амортизация -> цены
- * (вместе с пересчётом доходностей).
+ * (вместе с пересчётом доходностей) -> свечи.
  * Шаги идут строго по очереди; упавший шаг логируется, цепочка продолжается на
  * уже имеющихся данных.
  */
@@ -35,6 +36,7 @@ public class BondDataSyncScheduler {
     private final List<CouponSyncUseCase> couponSyncUseCases;
     private final List<AmortizationSyncUseCase> amortizationSyncUseCases;
     private final List<PriceSyncUseCase> priceSyncUseCases;
+    private final List<CandleSyncUseCase> candleSyncUseCases;
     private final AuditMapper auditMapper;
 
     @Value("${ru.invest.api.stock.supplier.scheduler.sync.steps.bond:true}")
@@ -45,6 +47,8 @@ public class BondDataSyncScheduler {
     private final boolean amortizationStepEnabled;
     @Value("${ru.invest.api.stock.supplier.scheduler.sync.steps.price:true}")
     private final boolean priceStepEnabled;
+    @Value("${ru.invest.api.stock.supplier.scheduler.sync.steps.candle:true}")
+    private final boolean candleStepEnabled;
 
     /**
      * Запускается по cron и при старте приложения из {@link BondDataSyncStartupRunner}.
@@ -71,6 +75,10 @@ public class BondDataSyncScheduler {
                 .stream()
                 .findAny()
                 .ifPresent(priceSyncUseCase -> priceSyncUseCase.syncAll(audit)));
+        runStep("candle", candleStepEnabled, () -> candleSyncUseCases
+                .stream()
+                .findAny()
+                .ifPresent(candleSyncUseCase -> candleSyncUseCase.syncAll(audit)));
 
         log.info("Bond data sync scheduler finished");
     }

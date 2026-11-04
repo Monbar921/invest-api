@@ -1,3 +1,4 @@
+truncate table price_candle restart identity cascade;
 truncate table amortization restart identity cascade;
 truncate table coupon_data restart identity cascade;
 truncate table coupon restart identity cascade;

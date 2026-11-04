@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -18,11 +19,14 @@ import ru.invest.api.dto.bond.BondDto;
 import ru.invest.api.dto.bond.BondSearchItemDto;
 import ru.invest.api.dto.bond.calculation.ProfitCalculationDto;
 import ru.invest.api.dto.bond.calculation.ProfitCalculationRequest;
+import ru.invest.api.dto.bond.candle.CandleDto;
+import ru.invest.api.dto.bond.candle.CandleIntervalDto;
 import ru.invest.api.dto.page.PageDto;
 import ru.invest.api.dto.request.bond.BondParametersRequest;
 import ru.invest.api.ui.service.mapper.BondDtoMapper;
 import ru.invest.api.ui.service.mapper.BondParametersRequestMapper;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Validated
@@ -114,5 +118,20 @@ public class BondController {
     public ProfitCalculationDto calculateProfit(@PathVariable final String ticker,
                                                 @RequestBody(required = false) final ProfitCalculationRequest request) {
         return bondDtoMapper.toCalculationDto(bondUseCase.calculateProfit(ticker, bondDtoMapper.toCalculationModel(request)));
+    }
+
+    /**
+     * Свечи цены облигации в % от номинала для графика.
+     *
+     * @param interval DAY, WEEK или MONTH; по умолчанию DAY
+     * @param from     первый день (YYYY-MM-DD), по умолчанию - вся история
+     * @param to       последний день, по умолчанию - сегодня
+     */
+    @GetMapping("/{ticker}/candles")
+    public List<CandleDto> getCandles(@PathVariable final String ticker,
+                                      @RequestParam(defaultValue = "DAY") final CandleIntervalDto interval,
+                                      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) final LocalDate from,
+                                      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) final LocalDate to) {
+        return bondDtoMapper.toCandleDto(bondUseCase.getCandles(ticker, bondDtoMapper.toCandleInterval(interval), from, to));
     }
 }

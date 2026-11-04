@@ -9,4 +9,5 @@
     <include file="tables/003-coupon-data.xml" relativeToChangelogFile="true"/>
     <include file="tables/004-price.xml" relativeToChangelogFile="true"/>
     <include file="tables/005-amortization.xml" relativeToChangelogFile="true"/>
+    <include file="tables/006-price-candle.xml" relativeToChangelogFile="true"/>
 </databaseChangeLog>

@@ -56,6 +56,10 @@ invest-gateway ──────▶│ ui-service: /internal/rest/bonds/**, /in
    при ошибке по облигации остаётся старый график.
 4. **price** - последние цены (`MarketDataService.GetLastPrices`), затем пересчёт купонной доходности,
    доходности к погашению и к оферте пачками по 500, каждая пачка в своей транзакции.
+5. **candle** - дневные свечи цены (`MarketDataService.GetCandles`, только биржевые) для графика. У облигации без
+   свечей - вся история окнами по 5 лет назад, пока окно не окажется пустым; иначе - с последней сохранённой свечи
+   включительно (она могла быть незавершённой). Облигации по одной, каждая в своей транзакции; ошибка по облигации
+   пишется в лог и не останавливает остальные.
 
 `PriceSyncScheduler` - частое обновление цен в торговые часы (`scheduler.price`, по умолчанию выключен).
 Оба шедулера делят ShedLock-блокировку `BOND_DATA_SYNC_LOCK` (таблица `shedlock`, `JdbcTemplateLockProvider`
@@ -67,6 +71,8 @@ invest-gateway ──────▶│ ui-service: /internal/rest/bonds/**, /in
 
 Запросы к T-Invest API идут через `*GrpcRateLimitedWrapper` с лимитами по методам из `invest.rate-limiter`
 (серверные лимиты: developer.tbank.ru/invest/intro/intro/limits). Retry SDK повторяет только `RESOURCE_EXHAUSTED`.
+`GetCandles` - 5 запросов в секунду (`invest.rate-limiter.candles`): лимит сервиса MarketData 600 в минуту общий с
+`GetLastPrices`, но шаги цен и свечей идут по очереди.
 
 ## Кэш
 
@@ -96,6 +102,7 @@ PostgreSQL, схема задаётся в конфиге (`spring.liquibase.def
 | `coupon_data`  | график купонных выплат: дата, размер, валюта                                          |
 | `price`        | цена (1:1): номинал, текущая цена, % от номинала, НКД                                 |
 | `amortization` | график частичных погашений номинала                                                   |
+| `price_candle` | дневные свечи цены в % от номинала, уникальны по `(uid, candle_date)`; удаляются вместе с облигацией (`on delete cascade`) |
 | `shedlock`     | блокировки шедулеров                                                                  |
 
 У всех таблиц аудит: `created_at/by`, `updated_at/by` (шедулер пишет процесс `SCHEDULER_PROCESS`,
@@ -110,10 +117,11 @@ maintenance-эндпоинты - значение заголовка `From`).
 | `POST /internal/rest/bonds/{all\|local\|foreign}/page?page=&size=` | страница облигаций; в теле `BondParametersRequest`: сортировки, фильтры по цене, риску, ОФЗ. `size` 1..500, по умолчанию 50 |
 | `GET /internal/rest/bonds/{ticker}`                           | облигация с ценой, купоном и графиком выплат              |
 | `GET /internal/rest/bonds/search?query=&limit=`               | нестрогий поиск по тикеру, ISIN и названию среди облигаций в кэше; `limit` 1..50, по умолчанию 20 |
+| `GET /internal/rest/bonds/{ticker}/candles?interval=&from=&to=` | свечи цены в % от номинала; `interval` DAY / WEEK / MONTH (по умолчанию DAY), даты YYYY-MM-DD, по умолчанию - вся история по сегодня |
 | `POST /internal/rest/bonds/{ticker}/calculation`              | доход за период владения; в теле `ProfitCalculationRequest` (даты, количество, цены покупки и продажи) |
 | `POST /internal/rest/maintenance/bond/sync-all`               | синхронизация облигаций                                   |
-| `POST /internal/rest/maintenance/bond/{coupon\|amortization\|price}/sync-all` | синхронизация купонов / амортизации / цен |
-| `POST /internal/rest/maintenance/bond/{coupon\|amortization\|price}/sync-by-ticker/{ticker}` | то же для одной облигации |
+| `POST /internal/rest/maintenance/bond/{coupon\|amortization\|price\|candle}/sync-all` | синхронизация купонов / амортизации / цен / свечей |
+| `POST /internal/rest/maintenance/bond/{coupon\|amortization\|price\|candle}/sync-by-ticker/{ticker}` | то же для одной облигации |
 
 Maintenance-эндпоинты требуют заголовок `From` (кто запустил, пишется в аудит) и через gateway не доступны.
 `local` - облигации в рублях, `foreign` - в иностранной валюте (правило - в [business-rules.md](business-rules.md)).
@@ -126,7 +134,7 @@ Maintenance-эндпоинты требуют заголовок `From` (кто 
 
 | Система             | Зачем                                   | Настройка                                           |
 | ------------------- | --------------------------------------- | --------------------------------------------------- |
-| T-Invest API (gRPC) | облигации, купоны, события, цены        | `invest.connector.token`, `invest.rate-limiter.*`   |
+| T-Invest API (gRPC) | облигации, купоны, события, цены, свечи | `invest.connector.token`, `invest.rate-limiter.*`   |
 | ЦБ РФ               | курсы к рублю                           | `spring.cloud.openfeign.client.config.cb-rf-client.url` |
 | api.budjet.org      | курсы пар без рубля и запасной источник | `...budget-org-client.url`                          |
 

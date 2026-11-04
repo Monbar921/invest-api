@@ -39,6 +39,12 @@ public class RateLimiterProperties {
     private Limit lastPrices = new Limit(9, Duration.ofSeconds(1));
 
     /**
+     * MarketDataService/GetCandles: 5 в секунду = 300 в минуту (лимит сервиса - 600, общий с GetLastPrices,
+     * но шаги синхронизации свечей и цен идут по очереди)
+     */
+    private Limit candles = new Limit(5, Duration.ofSeconds(1));
+
+    /**
      * Лимит для остальных методов, для которых нет отдельной настройки
      */
     private Limit defaultLimit = new Limit(1, Duration.ofSeconds(1));

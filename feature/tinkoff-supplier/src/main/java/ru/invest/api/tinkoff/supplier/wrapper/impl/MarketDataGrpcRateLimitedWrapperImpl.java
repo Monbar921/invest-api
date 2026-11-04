@@ -4,6 +4,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import ru.invest.api.tinkoff.supplier.wrapper.MarketDataGrpcRateLimitedWrapper;
+import ru.tinkoff.piapi.contract.v1.GetCandlesRequest;
+import ru.tinkoff.piapi.contract.v1.GetCandlesResponse;
 import ru.tinkoff.piapi.contract.v1.GetLastPricesRequest;
 import ru.tinkoff.piapi.contract.v1.GetLastPricesResponse;
 import ru.tinkoff.piapi.contract.v1.MarketDataServiceGrpc;
@@ -19,5 +21,10 @@ public class MarketDataGrpcRateLimitedWrapperImpl implements MarketDataGrpcRateL
     @Override
     public GetLastPricesResponse getLastPrices(final GetLastPricesRequest request) {
         return marketDataService.callSyncMethod(MarketDataServiceGrpc.getGetLastPricesMethod(), stub -> stub.getLastPrices(request));
+    }
+
+    @Override
+    public GetCandlesResponse getCandles(final GetCandlesRequest request) {
+        return marketDataService.callSyncMethod(MarketDataServiceGrpc.getGetCandlesMethod(), stub -> stub.getCandles(request));
     }
 }

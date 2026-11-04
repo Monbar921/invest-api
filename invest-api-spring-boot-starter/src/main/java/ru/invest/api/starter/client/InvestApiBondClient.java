@@ -1,5 +1,6 @@
 package ru.invest.api.starter.client;
 
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -9,9 +10,12 @@ import ru.invest.api.dto.bond.BondDto;
 import ru.invest.api.dto.bond.BondSearchItemDto;
 import ru.invest.api.dto.bond.calculation.ProfitCalculationDto;
 import ru.invest.api.dto.bond.calculation.ProfitCalculationRequest;
+import ru.invest.api.dto.bond.candle.CandleDto;
+import ru.invest.api.dto.bond.candle.CandleIntervalDto;
 import ru.invest.api.dto.page.PageDto;
 import ru.invest.api.dto.request.bond.BondParametersRequest;
 
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -69,4 +73,15 @@ public interface InvestApiBondClient {
      */
     @PostMapping("/bonds/{ticker}/calculation")
     ProfitCalculationDto calculateProfit(@PathVariable("ticker") String ticker, @RequestBody ProfitCalculationRequest request);
+
+    /**
+     * Свечи цены облигации в % от номинала.
+     *
+     * @param interval null - DAY; from, to - YYYY-MM-DD, null - вся история и сегодня
+     */
+    @GetMapping("/bonds/{ticker}/candles")
+    List<CandleDto> getCandles(@PathVariable("ticker") String ticker,
+                               @RequestParam(value = "interval", required = false) CandleIntervalDto interval,
+                               @RequestParam(value = "from", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+                               @RequestParam(value = "to", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to);
 }

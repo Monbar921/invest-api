@@ -9,11 +9,15 @@ import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.PriceModel;
 import ru.invest.api.common.model.calculation.ProfitCalculationModel;
 import ru.invest.api.common.model.calculation.ProfitCalculationRequestModel;
+import ru.invest.api.common.model.candle.CandleInterval;
+import ru.invest.api.common.model.candle.CandleModel;
 import ru.invest.api.dto.bond.BondDto;
 import ru.invest.api.dto.bond.BondSearchItemDto;
 import ru.invest.api.dto.bond.PriceDto;
 import ru.invest.api.dto.bond.calculation.ProfitCalculationDto;
 import ru.invest.api.dto.bond.calculation.ProfitCalculationRequest;
+import ru.invest.api.dto.bond.candle.CandleDto;
+import ru.invest.api.dto.bond.candle.CandleIntervalDto;
 import ru.invest.api.dto.page.PageDto;
 
 import java.math.BigDecimal;
@@ -45,6 +49,10 @@ public interface BondDtoMapper {
     ProfitCalculationRequestModel toCalculationModel(ProfitCalculationRequest request);
 
     ProfitCalculationDto toCalculationDto(ProfitCalculationModel calculation);
+
+    List<CandleDto> toCandleDto(List<CandleModel> candles);
+
+    CandleInterval toCandleInterval(CandleIntervalDto interval);
 
     // сортировка идёт по точному значению, наружу - до копеек
     @Named("toKopecks")

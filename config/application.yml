@@ -18,6 +18,9 @@ invest:
     last-prices:
       requests: 9
       period: 1s
+    candles:
+      requests: 5
+      period: 1s
     default-limit:
       requests: 1
       period: 1s

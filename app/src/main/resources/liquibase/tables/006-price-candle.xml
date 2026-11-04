@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.4.xsd">
+
+    <!-- дневные свечи цены облигации в % от номинала; неделя и месяц собираются из них при чтении -->
+    <changeSet id="INVEST-002-create-price-candle-table" author="d.v.kornilovich">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="price_candle"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="price_candle">
+            <column autoIncrement="true" name="id" type="bigserial">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="bond_id" type="bigint">
+                <!-- свечи удаляются вместе с облигацией: связь в сущности Bond не заводим, чтобы не грузить их -->
+                <constraints nullable="false" foreignKeyName="fk_price_candle_bond_id" references="bond(id)" deleteCascade="true"/>
+            </column>
+            <column name="uid" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="candle_date" type="date">
+                <constraints nullable="false"/>
+            </column>
+            <column name="open" type="numeric(19,4)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="high" type="numeric(19,4)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="low" type="numeric(19,4)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="close" type="numeric(19,4)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="volume" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamp"/>
+            <column name="created_by" type="varchar(200)"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="INVEST-002-create-price-candle-indexes" author="d.v.kornilovich">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <indexExists tableName="price_candle" indexName="price_candle_uid_date_uq_idx"/>
+            </not>
+        </preConditions>
+
+        <createIndex tableName="price_candle" indexName="price_candle_uid_date_uq_idx" unique="true">
+            <column name="uid"/>
+            <column name="candle_date"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

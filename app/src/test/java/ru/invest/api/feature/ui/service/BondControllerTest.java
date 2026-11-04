@@ -19,6 +19,8 @@ import ru.invest.api.dto.bond.CouponDataDto;
 import ru.invest.api.dto.bond.calculation.ExitTypeDto;
 import ru.invest.api.dto.bond.calculation.ProfitCalculationDto;
 import ru.invest.api.dto.bond.calculation.ProfitCalculationRequest;
+import ru.invest.api.dto.bond.candle.CandleDto;
+import ru.invest.api.dto.bond.candle.CandleIntervalDto;
 import ru.invest.api.dto.bond.enums.RiskLevelDto;
 import ru.invest.api.dto.page.PageDto;
 import ru.invest.api.dto.request.bond.BondParametersRequest;
@@ -517,6 +519,39 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
     }
 
     @Test
+    @Sql(scripts = "/sql/bonds-for-controller.sql", statements = {
+            // понедельник 28.09, среда 30.09 и понедельник 05.10.2026 для RU000A10EQ34 (bond_id 4)
+            "insert into price_candle (bond_id, uid, candle_date, open, high, low, close, volume) values "
+                    + "(4, '1c0a2f3e-0004-4000-8000-000000000004', '2026-09-28', 100, 101, 99, 100.5, 10), "
+                    + "(4, '1c0a2f3e-0004-4000-8000-000000000004', '2026-09-30', 100.5, 102, 100, 101, 20), "
+                    + "(4, '1c0a2f3e-0004-4000-8000-000000000004', '2026-10-05', 101, 101.5, 100.8, 101.2, 5)"})
+    public void getCandlesTest() {
+        final List<CandleDto> days = investApiBondClient.getCandles(RUB_LOW, null, null, null);
+        final List<CandleDto> weeks = investApiBondClient.getCandles(RUB_LOW, CandleIntervalDto.WEEK, null, null);
+        final List<CandleDto> months = investApiBondClient.getCandles(RUB_LOW, CandleIntervalDto.MONTH, null, null);
+        final List<CandleDto> fromSeptember29 = investApiBondClient.getCandles(RUB_LOW, null, LocalDate.of(2026, 9, 29), null);
+
+        assertThat(days.stream().map(CandleDto::getDate).toList(),
+                contains(LocalDate.of(2026, 9, 28), LocalDate.of(2026, 9, 30), LocalDate.of(2026, 10, 5)));
+        assertThat(weeks, hasSize(2));
+        assertThat(weeks.getFirst().getClose(), comparesEqualTo(new BigDecimal("101")));
+        assertThat(weeks.getFirst().getVolume(), equalTo(30L));
+        assertThat(months.stream().map(CandleDto::getDate).toList(),
+                contains(LocalDate.of(2026, 9, 1), LocalDate.of(2026, 10, 1)));
+        assertThat(fromSeptember29, hasSize(2));
+        // свечей у облигации нет - пустой список, не ошибка
+        assertThat(investApiBondClient.getCandles(OFZ, null, null, null), empty());
+    }
+
+    @Test
+    public void getCandlesUnknownTickerTest() {
+        final FeignException exception = assertThrows(FeignException.class,
+                () -> investApiBondClient.getCandles("UNKNOWN", null, null, null));
+
+        assertThat(exception.status(), equalTo(NOT_FOUND));
+    }
+
+    @Test
     public void unknownPathIsNotFoundTest() throws Exception {
         // без своего обработчика неизвестный путь уходил в общий handleGeneral и отвечал 500
         final HttpClient client = HttpClient.newHttpClient();
@@ -529,6 +564,13 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
 
         assertThat(unknownPath.statusCode(), equalTo(NOT_FOUND));
         assertThat(wrongMethod.statusCode(), equalTo(METHOD_NOT_ALLOWED));
+
+        // неверный формат даты - ошибка клиента, а не сервера
+        final HttpResponse<String> wrongDate = client.send(
+                HttpRequest.newBuilder(URI.create("http://localhost:8099/internal/rest/bonds/RU000A10EQ34/candles?from=29.09.2026"))
+                        .GET().build(),
+                HttpResponse.BodyHandlers.ofString());
+        assertThat(wrongDate.statusCode(), equalTo(BAD_REQUEST));
     }
 
     @Test

@@ -51,6 +51,8 @@ public class TinkoffApiConfig {
                         toRateLimiterConfig(properties.getBonds(), properties))
                 .withRateLimiterForMethod(MarketDataServiceGrpc.getGetLastPricesMethod(),
                         toRateLimiterConfig(properties.getLastPrices(), properties))
+                .withRateLimiterForMethod(MarketDataServiceGrpc.getGetCandlesMethod(),
+                        toRateLimiterConfig(properties.getCandles(), properties))
                 .withDefaultBulkHead(BulkheadConfig.custom()
                         .maxConcurrentCalls(properties.getMaxConcurrentCalls())
                         .maxWaitDuration(properties.getTimeout())

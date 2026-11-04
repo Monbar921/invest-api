@@ -13,6 +13,7 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import ru.invest.api.common.exception.GeneralNotFoundEntityException;
 import ru.invest.api.common.exception.GeneralUnprocessableEntityException;
@@ -50,6 +51,16 @@ public class GlobalExceptionHandler {
         final ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.METHOD_NOT_ALLOWED);
         problem.setTitle("Method Not Allowed");
         problem.setDetail(ex.getMessage());
+        return problem;
+    }
+
+    // параметр не того типа: дата не в формате YYYY-MM-DD, неизвестный интервал
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ProblemDetail handleTypeMismatch(final MethodArgumentTypeMismatchException ex) {
+        final ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
+        problem.setTitle("Bad Request");
+        problem.setDetail("Invalid value '%s' of parameter %s".formatted(ex.getValue(), ex.getName()));
         return problem;
     }
 

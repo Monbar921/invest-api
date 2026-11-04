@@ -8,6 +8,7 @@ import ru.invest.api.common.mapper.AuditMapper;
 import ru.invest.api.common.model.AuditModel;
 import ru.invest.api.common.usecase.AmortizationSyncUseCase;
 import ru.invest.api.common.usecase.BondSyncUseCase;
+import ru.invest.api.common.usecase.CandleSyncUseCase;
 import ru.invest.api.common.usecase.CouponSyncUseCase;
 import ru.invest.api.common.usecase.PriceSyncUseCase;
 
@@ -27,6 +28,7 @@ public class BondDataSyncSchedulerTest {
     private final CouponSyncUseCase couponSyncUseCase = mock(CouponSyncUseCase.class);
     private final AmortizationSyncUseCase amortizationSyncUseCase = mock(AmortizationSyncUseCase.class);
     private final PriceSyncUseCase priceSyncUseCase = mock(PriceSyncUseCase.class);
+    private final CandleSyncUseCase candleSyncUseCase = mock(CandleSyncUseCase.class);
     private final AuditMapper auditMapper = mock(AuditMapper.class);
     private final AuditModel audit = new AuditModel().setCommittedBy(SCHEDULER_PROCESS);
 
@@ -39,11 +41,13 @@ public class BondDataSyncSchedulerTest {
     public void runsStepsInOrderTest() {
         scheduler(true, true, true).sync();
 
-        final InOrder inOrder = inOrder(bondSyncUseCase, couponSyncUseCase, amortizationSyncUseCase, priceSyncUseCase);
+        final InOrder inOrder = inOrder(bondSyncUseCase, couponSyncUseCase, amortizationSyncUseCase, priceSyncUseCase,
+                candleSyncUseCase);
         inOrder.verify(bondSyncUseCase).syncAll(audit);
         inOrder.verify(couponSyncUseCase).syncAll(audit);
         inOrder.verify(amortizationSyncUseCase).syncAll(audit);
         inOrder.verify(priceSyncUseCase).syncAll(audit);
+        inOrder.verify(candleSyncUseCase).syncAll(audit);
     }
 
     @Test
@@ -69,6 +73,6 @@ public class BondDataSyncSchedulerTest {
 
     private BondDataSyncScheduler scheduler(final boolean bond, final boolean coupon, final boolean price) {
         return new BondDataSyncScheduler(List.of(bondSyncUseCase), List.of(couponSyncUseCase), List.of(amortizationSyncUseCase),
-                List.of(priceSyncUseCase), auditMapper, bond, coupon, true, price);
+                List.of(priceSyncUseCase), List.of(candleSyncUseCase), auditMapper, bond, coupon, true, price, true);
     }
 }
