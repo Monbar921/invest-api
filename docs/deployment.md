@@ -122,3 +122,7 @@ kubectl port-forward svc/invest-api 8080:80 -n invest-api-develop
 > Манифесты k8s/ отстают от кода: env `TOKEN` и `DB_*` из секрета не совпадают с ключами конфига
 > (`invest.connector.token`, `spring.datasource.hikari.*`), а схема и Liquibase не настроены. Перед использованием
 > их нужно сверить с профилем `k8s` в invest-deploy.
+
+`spring.jpa.open-in-view: false` (в `config/application.yml`): с ним по умолчанию `true` EntityManager жил весь
+HTTP-запрос, и ручная синхронизация свечей копила в нём все сохранённые сущности - под падал по памяти
+(`OOMKilled` на лимите 1 ГБ).

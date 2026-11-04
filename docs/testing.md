@@ -35,6 +35,7 @@ mvn test -pl app -am -Dtest=YieldToMaturityCalculationTest
 | `common/YieldToMaturityCalculationTest` | расчёт доходности к погашению и к оферте, случаи `null`          |
 | `feature/bond/supplier/BondDataSyncSchedulerTest` | порядок шагов цепочки, флаги шагов, продолжение после ошибки |
 | `feature/bond/supplier/BondDataSyncStartupRunnerTest` | прогон при старте не блокирует поток старта |
+| `feature/ui/service/MaintenanceControllerTest` | `sync-all` в фоне: сразу 202, повторный запуск во время работы - 409, после - снова 202 |
 | `feature/ui/service/BondControllerTest` | страницы, фильтры, сортировки, пагинация, карточка облигации, поиск, калькулятор, свечи, 404 и 405 на неизвестный путь и метод, 400 на неверную дату |
 
 ## Тестовые данные

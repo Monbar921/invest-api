@@ -50,6 +50,10 @@ ru:
               zone: Europe/Moscow
 
 spring:
+  jpa:
+    # без этого EntityManager живёт весь HTTP-запрос: ручная синхронизация свечей копила в нём сотни тысяч
+    # сохранённых сущностей и падала по памяти (OOMKilled на лимите 1 ГБ). Данные грузятся в @Transactional
+    open-in-view: false
   cache:
     type: caffeine
   cloud:

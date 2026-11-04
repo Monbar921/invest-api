@@ -123,7 +123,11 @@ maintenance-эндпоинты - значение заголовка `From`).
 | `POST /internal/rest/maintenance/bond/{coupon\|amortization\|price\|candle}/sync-all` | синхронизация купонов / амортизации / цен / свечей |
 | `POST /internal/rest/maintenance/bond/{coupon\|amortization\|price\|candle}/sync-by-ticker/{ticker}` | то же для одной облигации |
 
-Maintenance-эндпоинты требуют заголовок `From` (кто запустил, пишется в аудит) и через gateway не доступны.
+Maintenance-эндпоинты требуют заголовок `From` (кто запустил, пишется в аудит; без него - `400`) и через gateway не
+доступны. `sync-all` идёт в фоне (`MaintenanceTaskRunner`): ответ сразу `202 Accepted`, ход и итог - в логе; пока
+та же задача не закончилась, повторный запуск получает `409 Conflict`. Полная синхронизация свечей - десятки минут,
+держать на ней HTTP-запрос нельзя. С ночной цепочкой ручной запуск не согласован (ShedLock его не видит) - не
+запускайте вручную шаг, который сейчас идёт по расписанию или при старте. `sync-by-ticker` - синхронно.
 `local` - облигации в рублях, `foreign` - в иностранной валюте (правило - в [business-rules.md](business-rules.md)).
 
 Для других Java-сервисов есть стартер: `@EnableInvestApiBondClient` подключает Feign-клиент `InvestApiBondClient`
