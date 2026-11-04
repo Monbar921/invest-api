@@ -1,6 +1,6 @@
-# INVEST-002: график цены облигации
+# INVEST-001: график цены облигации
 
-**Статус:** в работе. Ветки `feature/INVEST-002` (invest-api) и `feature/INV-002` (invest-api-ui), от INVEST-001.
+**Статус:** в работе. Ветки `feature/INVEST-001` (invest-api) и `feature/INV-001` (invest-api-ui).
 
 ## Цель
 
@@ -24,4 +24,4 @@
 ## Что осталось
 
 - Первая загрузка свечей на стенде и проверка, насколько глубоко T-Invest хранит историю старых выпусков.
-- PR в master (после INVEST-001).
+- PR в master вместе с INVEST-001.
