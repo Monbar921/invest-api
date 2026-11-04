@@ -47,8 +47,11 @@ public abstract class TinkoffPriceApiMapper {
     @AfterMapping
     protected void afterMapping(@MappingTarget final PriceModel priceModel, final LastPrice lastPrice) {
 
-        final BigDecimal currentPercentage = bigDecimalMapper.fromBaseAndNanoFloatParts(lastPrice.getPrice().getUnits(),
+        final BigDecimal lastPercentage = bigDecimalMapper.fromBaseAndNanoFloatParts(lastPrice.getPrice().getUnits(),
                 lastPrice.getPrice().getNano());
+        // 0 приходит у бумаг без сделок (на размещении) - это не цена, а её отсутствие:
+        // иначе такие бумаги стояли бы первыми при сортировке по цене и ломали расчёты от цены
+        final BigDecimal currentPercentage = lastPercentage != null && lastPercentage.signum() > 0 ? lastPercentage : null;
         priceModel.setPercentagePrice(currentPercentage);
         priceModel.setCurrent(
                 getCurrent(priceModel.getNominal(), currentPercentage)

@@ -9,9 +9,11 @@ import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 import ru.invest.api.common.exception.GeneralNotFoundEntityException;
 import ru.invest.api.common.exception.GeneralUnprocessableEntityException;
 import ru.ttech.piapi.core.connector.exception.ServiceRuntimeException;
@@ -28,6 +30,25 @@ public class GlobalExceptionHandler {
         log.warn("Entity not found: {}", ex.getMessage());
         final ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
         problem.setTitle("Not Found");
+        problem.setDetail(ex.getMessage());
+        return problem;
+    }
+
+    // неизвестный путь: без этого обработчика его ловит общий handleGeneral и отвечает 500
+    @ExceptionHandler(NoResourceFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ProblemDetail handleNoResource(final NoResourceFoundException ex) {
+        final ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
+        problem.setTitle("Not Found");
+        problem.setDetail("No endpoint %s %s".formatted(ex.getHttpMethod(), ex.getResourcePath()));
+        return problem;
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    @ResponseStatus(HttpStatus.METHOD_NOT_ALLOWED)
+    public ProblemDetail handleMethodNotSupported(final HttpRequestMethodNotSupportedException ex) {
+        final ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.METHOD_NOT_ALLOWED);
+        problem.setTitle("Method Not Allowed");
         problem.setDetail(ex.getMessage());
         return problem;
     }

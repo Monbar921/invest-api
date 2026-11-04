@@ -33,6 +33,10 @@ import ru.tinkoff.piapi.contract.v1.LastPrice;
 import ru.tinkoff.piapi.contract.v1.Quotation;
 
 import java.math.BigDecimal;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -79,6 +83,7 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
     private static final int BAD_REQUEST = 400;
     private static final int NOT_FOUND = 404;
     private static final int UNPROCESSABLE_CONTENT = 422;
+    private static final int METHOD_NOT_ALLOWED = 405;
     // курсы ЦБ: 1 USD = 90 RUB, 10 CNY = 125 RUB (у юаня номинал 10, как бывает у ЦБ)
     private static final CurrencyElementDto USD_RATE = cbRfRate("USD", "1", "90,0");
     private static final CurrencyElementDto CNY_RATE = cbRfRate("CNY", "10", "125,0");
@@ -509,6 +514,21 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
 
         assertThat(bond.getCoupon(), nullValue());
         assertThat(bond.getPrice().getCurrent(), nullValue());
+    }
+
+    @Test
+    public void unknownPathIsNotFoundTest() throws Exception {
+        // без своего обработчика неизвестный путь уходил в общий handleGeneral и отвечал 500
+        final HttpClient client = HttpClient.newHttpClient();
+        final HttpResponse<String> unknownPath = client.send(
+                HttpRequest.newBuilder(URI.create("http://localhost:8099/internal/rest/bonds?page=0")).GET().build(),
+                HttpResponse.BodyHandlers.ofString());
+        final HttpResponse<String> wrongMethod = client.send(
+                HttpRequest.newBuilder(URI.create("http://localhost:8099/internal/rest/bonds/search?query=ru")).DELETE().build(),
+                HttpResponse.BodyHandlers.ofString());
+
+        assertThat(unknownPath.statusCode(), equalTo(NOT_FOUND));
+        assertThat(wrongMethod.statusCode(), equalTo(METHOD_NOT_ALLOWED));
     }
 
     @Test

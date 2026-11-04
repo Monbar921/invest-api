@@ -28,12 +28,12 @@ mvn test -pl app -am -Dtest=YieldToMaturityCalculationTest
 | `common/BondSyncTest`              | загрузка облигаций, дата оферты, НКД, флаг амортизации                |
 | `common/CouponSyncTest`            | загрузка графика купонов, явный период запроса, перезагрузка графика, оборванного раньше погашения, купоны без даты фиксации, изоляция ошибок API и БД по облигации |
 | `common/AmortizationSyncTest`      | загрузка графика амортизации, замена графика при повторной синхронизации, пропуск облигаций без амортизации |
-| `common/PriceSyncTest`             | цены, НКД, пересчёт купонной доходности                               |
+| `common/PriceSyncTest`             | цены, НКД, пересчёт купонной доходности, нулевая цена сохраняется как отсутствие цены |
 | `common/CouponInterestCalculationTest` | купонная доходность, приведение к году, когда до погашения осталось меньше купонов, чем выплат в год |
 | `common/YieldToMaturityCalculationTest` | расчёт доходности к погашению и к оферте, случаи `null`          |
 | `feature/bond/supplier/BondDataSyncSchedulerTest` | порядок шагов цепочки, флаги шагов, продолжение после ошибки |
 | `feature/bond/supplier/BondDataSyncStartupRunnerTest` | прогон при старте не блокирует поток старта |
-| `feature/ui/service/BondControllerTest` | страницы, фильтры, сортировки, пагинация, карточка облигации     |
+| `feature/ui/service/BondControllerTest` | страницы, фильтры, сортировки, пагинация, карточка облигации, поиск, калькулятор, 404 и 405 на неизвестный путь и метод |
 
 ## Тестовые данные
 

@@ -34,6 +34,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.comparesEqualTo;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static ru.invest.api.common.constants.SchedulerConstants.SCHEDULER_PROCESS;
@@ -101,6 +102,24 @@ public class PriceSyncTest extends AbstractInvestApplicationTest {
         priceSyncUseCase.syncByTicker(TICKER, audit);
 
         assertPriceAndInterestSynced();
+    }
+
+    @Test
+    @Sql(scripts = "/sql/bonds-and-coupons-RU000A10EQ34.sql")
+    public void zeroPriceIsNoPriceTest() {
+        // сначала обычная цена, потом 0 - у бумаги без сделок: прежняя цена стирается, а не превращается в 0
+        priceSyncUseCase.syncByTicker(TICKER, audit);
+        when(marketDataGrpcWrapper.getLastPrices(any())).thenReturn(GetLastPricesResponse.newBuilder()
+                .addLastPrices(LastPrice.newBuilder()
+                        .setInstrumentUid(bond.getUid())
+                        .setPrice(Quotation.newBuilder().setUnits(0).setNano(0)))
+                .build());
+
+        priceSyncUseCase.syncByTicker(TICKER, audit);
+
+        final Price actualPrice = priceRepository.findByUid(bond.getUid()).orElseThrow();
+        assertThat(actualPrice.getPrice(), nullValue());
+        assertThat(actualPrice.getCurrency(), nullValue());
     }
 
     private void assertPriceAndInterestSynced() {
