@@ -1,6 +1,8 @@
 package ru.invest.api.common;
 
 import com.google.protobuf.Timestamp;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.jdbc.Sql;
@@ -74,9 +76,11 @@ public class CandleSyncTest extends AbstractInvestApplicationTest {
         assertThat(saved.getLast().getDate(), equalTo(today));
         assertThat(saved.getLast().getClose(), comparesEqualTo(new BigDecimal("100.4")));
         // только дневные биржевые свечи; окно с данными и пустое окно перед ним
+        // limit вместе с источником свечей API не принимает: INVALID_ARGUMENT 30220
         verify(marketDataGrpcWrapper, times(2)).getCandles(argThat(request ->
                 request.getInterval() == CandleInterval.CANDLE_INTERVAL_DAY
-                        && request.getCandleSourceType() == GetCandlesRequest.CandleSource.CANDLE_SOURCE_EXCHANGE));
+                        && request.getCandleSourceType() == GetCandlesRequest.CandleSource.CANDLE_SOURCE_EXCHANGE
+                        && !request.hasLimit()));
     }
 
     @Test
@@ -121,6 +125,18 @@ public class CandleSyncTest extends AbstractInvestApplicationTest {
                 assertThat(bond.getTicker(), saved, not(empty()));
             }
         }
+    }
+
+    @Test
+    @Sql(scripts = "/sql/bonds-and-coupons.sql")
+    public void openCircuitBreakerStopsSyncTest() {
+        // предохранитель открыт - остальные облигации упадут так же, запросы дальше не идут
+        when(marketDataGrpcWrapper.getCandles(any())).thenThrow(CallNotPermittedException.createCallNotPermittedException(
+                CircuitBreaker.ofDefaults("tinkoff.public.invest.api.contract.v1.MarketDataService/GetCandles")));
+
+        candleSyncUseCase.syncAll(audit());
+
+        verify(marketDataGrpcWrapper, times(1)).getCandles(any());
     }
 
     private List<CandleModel> candles() {

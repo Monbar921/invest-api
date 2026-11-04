@@ -14,7 +14,7 @@
 | ------------------------------------------------------------- | -------- | ---------------------------------------------------------------- |
 | [INVEST-001-bond-yield](features/INVEST-001-bond-yield/)      | в работе | доходность к погашению и к оферте с учётом НКД и амортизации     |
 | [INVEST-001-revenue-calculator](features/INVEST-001-revenue-calculator/) | в работе | калькулятор дохода за период: поиск облигации, даты и цены покупки и продажи, НДФЛ |
-| [INVEST-002-price-chart](features/INVEST-002-price-chart/) | в работе | график цены по дневным свечам: интервалы день / неделя / месяц, периоды |
+| [INVEST-001-price-chart](features/INVEST-001-price-chart/) | в работе | график цены по дневным свечам: интервалы день / неделя / месяц, периоды |
 
 Связанные проекты: [invest-gateway](../../invest-gateway/docs/), [invest-api-ui](../../invest-api-ui/docs/),
 [invest-deploy](../../invest-deploy/docs/) (локальный стенд в k3d).

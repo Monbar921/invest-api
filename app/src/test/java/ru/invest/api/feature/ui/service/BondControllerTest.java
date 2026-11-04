@@ -571,6 +571,21 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
                         .GET().build(),
                 HttpResponse.BodyHandlers.ofString());
         assertThat(wrongDate.statusCode(), equalTo(BAD_REQUEST));
+
+        // maintenance без заголовка From (кто запустил, пишется в аудит) - ошибка клиента с причиной, а не 500;
+        // синхронизация при этом не запускается
+        final HttpResponse<String> withoutFrom = client.send(
+                HttpRequest.newBuilder(URI.create("http://localhost:8099/internal/rest/maintenance/bond/candle/sync-all"))
+                        .POST(HttpRequest.BodyPublishers.noBody()).build(),
+                HttpResponse.BodyHandlers.ofString());
+        assertThat(withoutFrom.statusCode(), equalTo(BAD_REQUEST));
+        assertThat(withoutFrom.body(), containsString("From"));
+
+        // у поиска нет обязательного query
+        final HttpResponse<String> searchWithoutQuery = client.send(
+                HttpRequest.newBuilder(URI.create("http://localhost:8099/internal/rest/bonds/search")).GET().build(),
+                HttpResponse.BodyHandlers.ofString());
+        assertThat(searchWithoutQuery.statusCode(), equalTo(BAD_REQUEST));
     }
 
     @Test

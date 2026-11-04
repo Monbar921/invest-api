@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.bind.ServletRequestBindingException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -50,6 +51,16 @@ public class GlobalExceptionHandler {
     public ProblemDetail handleMethodNotSupported(final HttpRequestMethodNotSupportedException ex) {
         final ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.METHOD_NOT_ALLOWED);
         problem.setTitle("Method Not Allowed");
+        problem.setDetail(ex.getMessage());
+        return problem;
+    }
+
+    // нет обязательного заголовка или параметра: например, From у maintenance-эндпоинтов, query у поиска
+    @ExceptionHandler(ServletRequestBindingException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ProblemDetail handleMissingRequestValue(final ServletRequestBindingException ex) {
+        final ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
+        problem.setTitle("Bad Request");
         problem.setDetail(ex.getMessage());
         return problem;
     }

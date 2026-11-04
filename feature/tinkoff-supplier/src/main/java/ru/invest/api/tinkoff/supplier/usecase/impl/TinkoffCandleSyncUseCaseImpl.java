@@ -1,5 +1,6 @@
 package ru.invest.api.tinkoff.supplier.usecase.impl;
 
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -13,6 +14,7 @@ import ru.invest.api.common.usecase.CandleSyncUseCase;
 import ru.invest.api.tinkoff.supplier.provider.TinkoffCandleProvider;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondUseCase;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffCandleUseCase;
+import ru.ttech.piapi.core.connector.exception.ServiceRuntimeException;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -38,19 +40,35 @@ public class TinkoffCandleSyncUseCaseImpl implements CandleSyncUseCase {
                 .toList();
 
         log.info("Processing candles, total size is {}", bonds.size());
-        final long failed = bonds.stream().filter(bond -> !sync(bond, audit)).count();
+        int failed = 0;
+        for (final BondModel bond : bonds) {
+            try {
+                if (!sync(bond, audit)) {
+                    failed++;
+                }
+            } catch (final CallNotPermittedException e) {
+                // предохранитель SDK открылся после серии ошибок API: остальные облигации упадут так же -
+                // останавливаем шаг, их свечи доберёт следующий запуск
+                log.error("Candles sync stopped: T-Invest API circuit breaker is open, {} bonds not processed",
+                        bonds.size() - bonds.indexOf(bond));
+                return;
+            }
+        }
         log.info("Candles processed, failed for {} bonds", failed);
     }
 
     @Override
     public void syncByTicker(final String ticker, final AuditModel audit) {
-        sync(tinkoffBondUseCase.findByTicker(ticker), audit);
+        if (!sync(tinkoffBondUseCase.findByTicker(ticker), audit)) {
+            throw new IllegalStateException("Failed to sync candles for bond %s, see log".formatted(ticker));
+        }
     }
 
     /**
      * Первый раз - вся история, дальше - с последней сохранённой свечи включительно: она могла быть незавершённой.
      *
      * @return false - свечи облигации получить или сохранить не удалось; ошибка не останавливает остальные облигации
+     * @throws CallNotPermittedException предохранитель SDK открыт - продолжать бессмысленно
      */
     @SuppressWarnings("checkstyle:IllegalCatch")
     private boolean sync(final BondModel bond, final AuditModel audit) {
@@ -63,6 +81,13 @@ public class TinkoffCandleSyncUseCaseImpl implements CandleSyncUseCase {
 
             tinkoffCandleUseCase.replaceFrom(bond.getUid(), candles, audit);
             return true;
+        } catch (final CallNotPermittedException e) {
+            throw e;
+        } catch (final ServiceRuntimeException e) {
+            // ошибка API по облигации - одной строкой: стектрейс на каждую из 1600 облигаций забивает лог за минуты
+            log.warn("Failed to sync candles for bond {}: {} {} {}, trackingId={}", bond.getTicker(), e.getErrorType(),
+                    e.getErrorCode(), e.getDescription(), e.getTrackingId());
+            return false;
         } catch (final RuntimeException e) {
             log.warn("Failed to sync candles for bond {}", bond.getTicker(), e);
             return false;

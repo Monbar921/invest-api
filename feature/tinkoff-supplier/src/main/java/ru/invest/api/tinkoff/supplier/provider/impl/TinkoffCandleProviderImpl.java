@@ -34,7 +34,6 @@ public class TinkoffCandleProviderImpl implements TinkoffCandleProvider {
      * Дневные свечи API отдаёт окнами до 6 лет и не больше 2400 за запрос; 5 лет - с запасом по обоим ограничениям.
      */
     private static final int WINDOW_YEARS = 5;
-    private static final int MAX_CANDLES = 2400;
     /** Сколько окон назад искать историю - 30 лет, дольше облигации не торгуются */
     private static final int MAX_HISTORY_WINDOWS = 6;
 
@@ -78,8 +77,9 @@ public class TinkoffCandleProviderImpl implements TinkoffCandleProvider {
                 .setInterval(CandleInterval.CANDLE_INTERVAL_DAY)
                 .setFrom(toTimestamp(from))
                 .setTo(toTimestamp(toExclusive))
-                .setLimit(MAX_CANDLES)
-                // только биржевые свечи: торги выходного дня - не биржевая цена
+                // только биржевые свечи: торги выходного дня - не биржевая цена.
+                // limit не задаём: вместе с источником свечей API отвечает INVALID_ARGUMENT 30220,
+                // а в окно 5 лет и так помещается меньше 2400 дневных свечей
                 .setCandleSourceType(CandleSource.CANDLE_SOURCE_EXCHANGE)
                 .build();
 
