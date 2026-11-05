@@ -40,6 +40,9 @@ spring:
           budget-org-client:
             enabled: true
             url: https://api.budjet.org/
+          moex-iss-client:
+            enabled: true
+            url: https://iss.moex.com/
   datasource:
     hikari:
       connection-test-query: select 1

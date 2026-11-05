@@ -1,13 +1,15 @@
 # Архитектура invest-api
 
 Сервис собирает облигации, купоны, амортизацию и цены из T-Invest API, хранит их в PostgreSQL, считает доходности
-и отдаёт список облигаций с фильтрами и сортировкой. Spring Boot 4, Java 25, Maven multi-module.
+и отдаёт список облигаций с фильтрами и сортировкой. Отдельно собирает ленту новостей Банка России и Мосбиржи.
+Spring Boot 4, Java 25, Maven multi-module.
 
 ```
                       ┌──────────────────────── invest-api ────────────────────────┐
 T-Invest API (gRPC) ◀─┤ tinkoff-supplier ◀── bond-supplier (шедулеры, BondUseCase)   │
-ЦБ РФ (XML)         ◀─┤ cb-rf-supplier   ◀┐                                         │
+ЦБ РФ (XML, RSS)    ◀─┤ cb-rf-supplier   ◀┐                                         │
 api.budjet.org      ◀─┤ budget-org-supp. ◀┴─ currency-service (курсы валют)         │
+Мосбиржа ISS (JSON) ◀─┤ news-supplier (новости, эмитенты, ставка и курсы)           │
                       │                                                             │
 invest-gateway ──────▶│ ui-service: /internal/rest/bonds/**, /internal/rest/maintenance/** │
                       │ common: сущности, репозитории, модели, фильтр/сортировка    │
@@ -26,7 +28,8 @@ invest-gateway ──────▶│ ui-service: /internal/rest/bonds/**, /in
 | `feature/tinkoff-supplier`        | клиент T-Invest API: rate limiter, провайдеры облигаций/купонов/цен/амортизации, расчёт доходностей, синхронизация |
 | `feature/bond-supplier`           | шедулеры синхронизации и `BondUseCase` (страницы облигаций для контроллера)                    |
 | `feature/currency-service`        | курс валют: сначала ЦБ РФ, если пары нет - budget.org                                          |
-| `feature/cb-rf-supplier`          | Feign-клиент курсов ЦБ РФ                                                                      |
+| `feature/cb-rf-supplier`          | Feign-клиент ЦБ РФ: курсы, RSS пресс-релизов и событий, ключевая ставка (SOAP DailyInfo)       |
+| `feature/news-supplier`           | лента новостей: клиент ISS Мосбиржи, эмитенты выпусков, загрузка и чтение новостей, ставка и курсы для шапки ленты |
 | `feature/budget-org-supplier`     | Feign-клиент api.budjet.org                                                                    |
 | `feature/ui-service`              | REST-контроллеры, маппинг в DTO, обработка ошибок                                              |
 | `invest-api-dto`                  | DTO запросов и ответов, общие с клиентами                                                      |
@@ -61,6 +64,21 @@ invest-gateway ──────▶│ ui-service: /internal/rest/bonds/**, /in
    включительно (она могла быть незавершённой). Облигации по одной, каждая в своей транзакции; ошибка по облигации
    пишется в лог и не останавливает остальные.
 
+## Лента новостей
+
+`NewsSyncScheduler` (модуль `news-supplier`) - раз в 15 минут (`ru.invest.api.news.scheduler.cron`) и в фоне при
+старте (`run-on-startup`), своя ShedLock-блокировка `NewsSync`. Шаги независимы, упавший пишется в лог:
+
+1. **эмитенты** - раз в 20 часов: все торгуемые облигации Мосбиржи с эмитентом (`/iss/securities`, ~30 страниц),
+   в `bond_issuer` сохраняются только выпуски из системы;
+2. **Банк России** - RSS пресс-релизов и «Событий и комментариев»;
+3. **Мосбиржа** - новости `/iss/sitenews` новее последней сохранённой (первый раз - 4 страницы, ~3 дня), без
+   технических сообщений; у каждой загружается текст, чтобы найти ISIN выпусков;
+4. **очистка** - новости старше 180 дней.
+
+Правила фильтра и привязки новостей к облигациям - в [business-rules.md](business-rules.md#лента-новостей).
+Ключевая ставка и курсы для шапки ленты (`MarketOverviewUseCase`) не хранятся: запрашиваются у ЦБ и кэшируются.
+
 `PriceSyncScheduler` - частое обновление цен в торговые часы (`scheduler.price`, по умолчанию выключен).
 Оба шедулера делят ShedLock-блокировку `BOND_DATA_SYNC_LOCK` (таблица `shedlock`, `JdbcTemplateLockProvider`
 по часам БД в `SchedulingConfiguration`): пока идёт ночная цепочка, обновление цен пропускается, и при нескольких
@@ -83,6 +101,7 @@ Caffeine, менеджеры в `app/.../CacheConfig`:
 | `BOND_REPOSITORY_CACHE`       | все облигации из БД с ценой, купоном и ценой в рублях | 24 ч, сбрасывается после каждого шага синхронизации |
 | `BOND_TINKOFF_API_CACHE`      | ответ `Bonds` из T-Invest API                    | 24 ч |
 | `CB_RF_ALL`, `BUDGET_ORG`, `CURRENCY_PROVIDER` | курсы валют                     | 12 ч |
+| `MARKET_OVERVIEW`             | ключевая ставка и курсы для шапки ленты; пустой обзор (ЦБ не ответил) не кэшируется | 30 мин |
 | `PRICE`, `COUPON`             | ответы T-Invest по ценам и купонам               | 24 ч |
 
 Список облигаций для UI целиком строится из кэша: фильтрация, сортировка и пагинация идут в памяти
@@ -103,6 +122,9 @@ PostgreSQL, схема задаётся в конфиге (`spring.liquibase.def
 | `price`        | цена (1:1): номинал, текущая цена, % от номинала, НКД                                 |
 | `amortization` | график частичных погашений номинала                                                   |
 | `price_candle` | дневные свечи цены в % от номинала, уникальны по `(uid, candle_date)`; удаляются вместе с облигацией (`on delete cascade`) |
+| `news`         | внешние новости: источник, id у источника (уникальны вместе), заголовок, анонс, ссылка, время публикации |
+| `news_link`    | к чему относится новость: выпуск (`isin`) или эмитент (`emitter_id`); удаляется вместе с новостью |
+| `bond_issuer`  | эмитент выпуска по данным Мосбиржи: id эмитента, название, ИНН; с облигацией связан по ISIN, без внешнего ключа |
 | `shedlock`     | блокировки шедулеров                                                                  |
 
 У всех таблиц аудит: `created_at/by`, `updated_at/by` (шедулер пишет процесс `SCHEDULER_PROCESS`,
@@ -119,7 +141,12 @@ maintenance-эндпоинты - значение заголовка `From`).
 | `GET /internal/rest/bonds/search?query=&limit=`               | нестрогий поиск по тикеру, ISIN и названию среди облигаций в кэше; `limit` 1..50, по умолчанию 20 |
 | `GET /internal/rest/bonds/{ticker}/candles?interval=&from=&to=` | свечи цены в % от номинала; `interval` DAY / WEEK / MONTH (по умолчанию DAY), даты YYYY-MM-DD, по умолчанию - вся история по сегодня |
 | `POST /internal/rest/bonds/{ticker}/calculation`              | доход за период владения; в теле `ProfitCalculationRequest` (даты, количество, цены покупки и продажи) |
+| `GET /internal/rest/bonds/{ticker}/events`                    | события облигации из её данных: купоны, амортизация, оферта, погашение - за 3 месяца назад и вперёд |
+| `GET /internal/rest/bonds/news?source=&page=&size=`           | лента новостей, новые первыми; `source` - CBR_PRESS, CBR_EVENT, MOEX (несколько через запятую), `size` 1..100, по умолчанию 20 |
+| `GET /internal/rest/bonds/{ticker}/news?page=&size=`          | новости облигации: упомянут её ISIN или новость относится к её эмитенту |
+| `GET /internal/rest/bonds/market-overview`                    | ключевая ставка (с какого дня и прошлая) и курсы USD, EUR, CNY с изменением |
 | `POST /internal/rest/maintenance/bond/sync-all`               | синхронизация облигаций                                   |
+| `POST /internal/rest/maintenance/news/sync-all`               | загрузка новостей (в фоне, 202 / 409)                     |
 | `POST /internal/rest/maintenance/bond/{coupon\|amortization\|price\|candle}/sync-all` | синхронизация купонов / амортизации / цен / свечей |
 | `POST /internal/rest/maintenance/bond/{coupon\|amortization\|price\|candle}/sync-by-ticker/{ticker}` | то же для одной облигации |
 
@@ -139,7 +166,8 @@ Maintenance-эндпоинты требуют заголовок `From` (кто 
 | Система             | Зачем                                   | Настройка                                           |
 | ------------------- | --------------------------------------- | --------------------------------------------------- |
 | T-Invest API (gRPC) | облигации, купоны, события, цены, свечи | `invest.connector.token`, `invest.rate-limiter.*`   |
-| ЦБ РФ               | курсы к рублю                           | `spring.cloud.openfeign.client.config.cb-rf-client.url` |
+| ЦБ РФ               | курсы к рублю, RSS новостей, ключевая ставка | `spring.cloud.openfeign.client.config.cb-rf-client.url` |
+| Мосбиржа ISS        | новости биржи, эмитенты облигаций; бесплатно, без ключа | `...moex-iss-client.url`              |
 | api.budjet.org      | курсы пар без рубля и запасной источник | `...budget-org-client.url`                          |
 
 Сертификат invest-public-api.tinkoff.ru подписан корневым сертификатом Минцифры - его нужно добавить в truststore JVM

@@ -17,6 +17,13 @@
 (change-log `classpath:liquibase/db.changelog-master.xml`, default-schema, параметры `appUsername`, `schema`, `sql_schema`).
 Локально приложение слушает `server.port: 8081`, invest-gateway ходит на `http://127.0.0.1:8081`.
 
+Внешние HTTP-клиенты включаются флагами `spring.cloud.openfeign.client.config.<клиент>.enabled` и `url`: `cb-rf-client`
+(https://www.cbr.ru/), `budget-org-client`, `moex-iss-client` (https://iss.moex.com/). Без включённого клиента
+приложение не стартует: на нём держатся сервисы. В `local_config/application-test.yml` их тоже нужно прописать.
+
+Лента новостей: `ru.invest.api.news.scheduler.enabled`, `...run-on-startup`, `...cron` (по умолчанию раз в 15 минут),
+`...zone`. Первая загрузка - эмитенты (~30 запросов к Мосбирже) и новости за ~3 дня, меньше минуты.
+
 Шедулеры: `ru.invest.api.stock.supplier.scheduler.sync.enabled` (ночная цепочка по `sync.cron` - 6 полей Spring:
 `секунды минуты часы день месяц день_недели`), `...sync.run-on-startup` - прогнать цепочку в фоне сразу после старта,
 `...sync.steps.{bond,coupon,amortization,price,candle}` - отдельные шаги, `...scheduler.price.enabled` - частое обновление цен.

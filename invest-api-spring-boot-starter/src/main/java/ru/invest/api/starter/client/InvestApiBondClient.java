@@ -12,11 +12,16 @@ import ru.invest.api.dto.bond.calculation.ProfitCalculationDto;
 import ru.invest.api.dto.bond.calculation.ProfitCalculationRequest;
 import ru.invest.api.dto.bond.candle.CandleDto;
 import ru.invest.api.dto.bond.candle.CandleIntervalDto;
+import ru.invest.api.dto.bond.event.BondEventDto;
+import ru.invest.api.dto.bond.news.MarketOverviewDto;
+import ru.invest.api.dto.bond.news.NewsDto;
+import ru.invest.api.dto.bond.news.NewsSourceDto;
 import ru.invest.api.dto.page.PageDto;
 import ru.invest.api.dto.request.bond.BondParametersRequest;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Клиент к BondController. Базовый путь /internal/rest задаётся в InvestApiBondClientAutoConfiguration.
@@ -84,4 +89,34 @@ public interface InvestApiBondClient {
                                @RequestParam(value = "interval", required = false) CandleIntervalDto interval,
                                @RequestParam(value = "from", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
                                @RequestParam(value = "to", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to);
+
+    /**
+     * События облигации из её графика выплат и дат.
+     */
+    @GetMapping("/bonds/{ticker}/events")
+    List<BondEventDto> getEvents(@PathVariable("ticker") String ticker);
+
+    /**
+     * Общая лента новостей.
+     *
+     * @param source источники, null - все
+     */
+    @GetMapping("/bonds/news")
+    PageDto<NewsDto> getNews(@RequestParam(value = "source", required = false) Set<NewsSourceDto> source,
+                             @RequestParam(value = "page", required = false) Integer page,
+                             @RequestParam(value = "size", required = false) Integer size);
+
+    /**
+     * Новости облигации.
+     */
+    @GetMapping("/bonds/{ticker}/news")
+    PageDto<NewsDto> getBondNews(@PathVariable("ticker") String ticker,
+                                 @RequestParam(value = "page", required = false) Integer page,
+                                 @RequestParam(value = "size", required = false) Integer size);
+
+    /**
+     * Ключевая ставка и курсы валют ЦБ.
+     */
+    @GetMapping("/bonds/market-overview")
+    MarketOverviewDto getMarketOverview();
 }

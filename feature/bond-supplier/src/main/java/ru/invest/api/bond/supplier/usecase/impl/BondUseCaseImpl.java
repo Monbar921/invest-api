@@ -15,7 +15,9 @@ import ru.invest.api.common.model.calculation.ProfitCalculationModel;
 import ru.invest.api.common.model.calculation.ProfitCalculationRequestModel;
 import ru.invest.api.common.model.candle.CandleInterval;
 import ru.invest.api.common.model.candle.CandleModel;
+import ru.invest.api.common.model.event.BondEventModel;
 import ru.invest.api.common.model.parameters.BondParametersModel;
+import ru.invest.api.common.usecase.BondEventUseCase;
 import ru.invest.api.common.usecase.BondSearchUseCase;
 import ru.invest.api.common.usecase.CandleAggregationUseCase;
 import ru.invest.api.common.usecase.BondSortUseCase;
@@ -39,6 +41,8 @@ import java.util.Set;
 public class BondUseCaseImpl implements BondUseCase {
     // раньше этой даты свечей нет: «вся история» без даты начала
     private static final LocalDate HISTORY_START = LocalDate.of(1990, 1, 1);
+    // прошедшие события тоже полезны: видно, был ли недавно купон и как изменился его размер
+    private static final int PAST_EVENT_MONTHS = 3;
 
     private final TinkoffBondCacheRepositoryUseCase tinkoffBondCacheRepositoryUseCase;
     private final TinkoffBondUseCase tinkoffBondUseCase;
@@ -48,6 +52,7 @@ public class BondUseCaseImpl implements BondUseCase {
     private final ProfitCalculationService profitCalculationService;
     private final TinkoffCandleUseCase tinkoffCandleUseCase;
     private final CandleAggregationUseCase candleAggregationUseCase;
+    private final BondEventUseCase bondEventUseCase;
     private final DateTimeMapper dateTimeMapper;
 
     @Override
@@ -84,6 +89,14 @@ public class BondUseCaseImpl implements BondUseCase {
                 .getOrDefault(bond.getUid(), List.of()));
 
         return profitCalculationService.calculate(bond, Optional.ofNullable(request).orElseGet(ProfitCalculationRequestModel::new));
+    }
+
+    @Override
+    public List<BondEventModel> getEvents(final String ticker) {
+        final BondModel bond = tinkoffBondUseCase.findDetailedByTicker(ticker);
+        bond.setAmortizations(tinkoffAmortizationUseCase.findByUids(Set.of(bond.getUid()))
+                .getOrDefault(bond.getUid(), List.of()));
+        return bondEventUseCase.getEvents(bond, dateTimeMapper.getNow().toLocalDate().minusMonths(PAST_EVENT_MONTHS));
     }
 
     @Override

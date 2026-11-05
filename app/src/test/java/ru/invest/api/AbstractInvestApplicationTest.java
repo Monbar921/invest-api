@@ -17,6 +17,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 import ru.invest.api.budget.org.supplier.client.feign.BudgetOrgClient;
 import ru.invest.api.cb.rf.supplier.client.feign.CbRfClient;
 import ru.invest.api.config.InvestApiTestConfiguration;
+import ru.invest.api.news.supplier.client.feign.MoexIssClient;
 import ru.invest.api.tinkoff.supplier.wrapper.InstrumentsGrpcRateLimitedWrapper;
 import ru.invest.api.tinkoff.supplier.wrapper.MarketDataGrpcRateLimitedWrapper;
 import ru.tinkoff.piapi.contract.v1.BondsResponse;
@@ -36,6 +37,8 @@ public abstract class AbstractInvestApplicationTest {
     private BudgetOrgClient budgetOrgClient;
     @MockitoBean
     private CbRfClient cbRfClient;
+    @MockitoBean
+    private MoexIssClient moexIssClient;
     @MockitoBean
     private InstrumentsGrpcRateLimitedWrapper instrumentsGrpcWrapper;
     @MockitoBean

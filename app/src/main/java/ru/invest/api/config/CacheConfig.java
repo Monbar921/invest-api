@@ -22,6 +22,8 @@ import static ru.invest.api.common.constants.CacheConstants.COUPON_CACHE_MANAGER
 import static ru.invest.api.common.constants.CacheConstants.COUPON_CACHE_NAME;
 import static ru.invest.api.common.constants.CacheConstants.CURRENCY_PROVIDER_CACHE_MANAGER;
 import static ru.invest.api.common.constants.CacheConstants.CURRENCY_PROVIDER_CACHE_NAME;
+import static ru.invest.api.common.constants.CacheConstants.MARKET_OVERVIEW_CACHE_MANAGER;
+import static ru.invest.api.common.constants.CacheConstants.MARKET_OVERVIEW_CACHE_NAME;
 import static ru.invest.api.common.constants.CacheConstants.PRICE_CACHE_MANAGER;
 import static ru.invest.api.common.constants.CacheConstants.PRICE_CACHE_NAME;
 
@@ -97,6 +99,18 @@ public class CacheConfig {
         cacheManager.setCaffeine(Caffeine.newBuilder()
                 .maximumSize(3000)
                 .expireAfterWrite(12, TimeUnit.HOURS));
+        return cacheManager;
+    }
+
+    /**
+     * Ключевая ставка и курсы для шапки ленты: курс ЦБ меняется раз в день, ставка - несколько раз в год.
+     */
+    @Bean(MARKET_OVERVIEW_CACHE_MANAGER)
+    public CacheManager marketOverviewCacheManager() {
+        final CaffeineCacheManager cacheManager = new CaffeineCacheManager(MARKET_OVERVIEW_CACHE_NAME);
+        cacheManager.setCaffeine(Caffeine.newBuilder()
+                .maximumSize(1)
+                .expireAfterWrite(30, TimeUnit.MINUTES));
         return cacheManager;
     }
 }

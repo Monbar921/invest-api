@@ -21,10 +21,12 @@ import ru.invest.api.dto.bond.calculation.ProfitCalculationDto;
 import ru.invest.api.dto.bond.calculation.ProfitCalculationRequest;
 import ru.invest.api.dto.bond.candle.CandleDto;
 import ru.invest.api.dto.bond.candle.CandleIntervalDto;
+import ru.invest.api.dto.bond.event.BondEventDto;
 import ru.invest.api.dto.page.PageDto;
 import ru.invest.api.dto.request.bond.BondParametersRequest;
 import ru.invest.api.ui.service.mapper.BondDtoMapper;
 import ru.invest.api.ui.service.mapper.BondParametersRequestMapper;
+import ru.invest.api.ui.service.mapper.NewsDtoMapper;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -42,6 +44,7 @@ public class BondController {
     private final BondUseCase bondUseCase;
     private final BondParametersRequestMapper bondParametersRequestMapper;
     private final BondDtoMapper bondDtoMapper;
+    private final NewsDtoMapper newsDtoMapper;
 
     /**
      * Страница всех облигаций.
@@ -133,5 +136,14 @@ public class BondController {
                                       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) final LocalDate from,
                                       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) final LocalDate to) {
         return bondDtoMapper.toCandleDto(bondUseCase.getCandles(ticker, bondDtoMapper.toCandleInterval(interval), from, to));
+    }
+
+    /**
+     * События облигации из её графика выплат и дат: купоны (с изменением размера), амортизация, оферта, погашение -
+     * за последние 3 месяца и все будущие, по возрастанию даты. Это не внешние новости: они - в /{ticker}/news.
+     */
+    @GetMapping("/{ticker}/events")
+    public List<BondEventDto> getEvents(@PathVariable final String ticker) {
+        return newsDtoMapper.toEventDto(bondUseCase.getEvents(ticker));
     }
 }

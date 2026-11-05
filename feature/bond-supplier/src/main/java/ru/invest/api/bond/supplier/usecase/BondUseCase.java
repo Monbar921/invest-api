@@ -6,6 +6,7 @@ import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.calculation.ProfitCalculationModel;
 import ru.invest.api.common.model.candle.CandleInterval;
 import ru.invest.api.common.model.candle.CandleModel;
+import ru.invest.api.common.model.event.BondEventModel;
 import ru.invest.api.common.model.calculation.ProfitCalculationRequestModel;
 import ru.invest.api.common.model.parameters.BondParametersModel;
 
@@ -50,4 +51,9 @@ public interface BondUseCase {
      * @param to   последний день, null - сегодня
      */
     List<CandleModel> getCandles(String ticker, CandleInterval interval, LocalDate from, LocalDate to);
+
+    /**
+     * События облигации из её данных - купоны, амортизация, оферта, погашение - за последние 3 месяца и все будущие.
+     */
+    List<BondEventModel> getEvents(String ticker);
 }

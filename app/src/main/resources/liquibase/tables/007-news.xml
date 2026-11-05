@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.4.xsd">
+
+    <!-- внешние новости: пресс-релизы и события ЦБ, новости Мосбиржи; уникальны по источнику и его id -->
+    <changeSet id="INVEST-001-create-news-table" author="d.v.kornilovich">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="news"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="news">
+            <column autoIncrement="true" name="id" type="bigserial">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="source" type="varchar(32)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="external_id" type="varchar(200)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="title" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="summary" type="text"/>
+            <column name="url" type="text"/>
+            <column name="published_at" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamp"/>
+            <column name="created_by" type="varchar(200)"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="INVEST-001-create-news-indexes" author="d.v.kornilovich">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <indexExists tableName="news" indexName="news_source_external_id_uq_idx"/>
+            </not>
+        </preConditions>
+
+        <createIndex tableName="news" indexName="news_source_external_id_uq_idx" unique="true">
+            <column name="source"/>
+            <column name="external_id"/>
+        </createIndex>
+        <createIndex tableName="news" indexName="news_published_at_idx">
+            <column name="published_at"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- к чему относится новость: выпуск (ISIN из текста) или эмитент (по названию или по ISIN другого его выпуска) -->
+    <changeSet id="INVEST-001-create-news-link-table" author="d.v.kornilovich">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="news_link"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="news_link">
+            <column autoIncrement="true" name="id" type="bigserial">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="news_id" type="bigint">
+                <constraints nullable="false" foreignKeyName="fk_news_link_news_id" references="news(id)" deleteCascade="true"/>
+            </column>
+            <column name="isin" type="varchar(12)"/>
+            <column name="emitter_id" type="bigint"/>
+        </createTable>
+
+        <createIndex tableName="news_link" indexName="news_link_news_id_idx">
+            <column name="news_id"/>
+        </createIndex>
+        <createIndex tableName="news_link" indexName="news_link_isin_idx">
+            <column name="isin"/>
+        </createIndex>
+        <createIndex tableName="news_link" indexName="news_link_emitter_id_idx">
+            <column name="emitter_id"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- эмитент выпуска по данным Мосбиржи; связь с облигацией - по ISIN, без внешнего ключа: облигации пересоздаются -->
+    <changeSet id="INVEST-001-create-bond-issuer-table" author="d.v.kornilovich">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="bond_issuer"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="bond_issuer">
+            <column autoIncrement="true" name="id" type="bigserial">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="isin" type="varchar(12)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="emitter_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="title" type="text"/>
+            <column name="inn" type="varchar(20)"/>
+            <column name="updated_at" type="timestamp"/>
+            <column name="updated_by" type="varchar(200)"/>
+        </createTable>
+
+        <createIndex tableName="bond_issuer" indexName="bond_issuer_isin_uq_idx" unique="true">
+            <column name="isin"/>
+        </createIndex>
+        <createIndex tableName="bond_issuer" indexName="bond_issuer_emitter_id_idx">
+            <column name="emitter_id"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

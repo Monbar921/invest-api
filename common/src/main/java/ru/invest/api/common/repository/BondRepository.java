@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import ru.invest.api.common.entity.Bond;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -48,6 +49,11 @@ public interface BondRepository extends JpaRepository<Bond, Long> {
     List<Bond> findAllWithPriceAndCoupon();
 
     List<Bond> findByUidIn(Set<String> tickers);
+
+    @Query("select b.isin from Bond b where b.isin is not null")
+    Set<String> findAllIsins();
+
+    List<Bond> findByIsinIn(Collection<String> isins);
 
     /**
      * Облигации с амортизацией - для синхронизации графика частичных погашений.

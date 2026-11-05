@@ -8,4 +8,9 @@ public interface SchedulerConstants {
      * пока идёт цепочка (она сама обновляет цены), частый прогон цен пропускается.
      */
     String BOND_DATA_SYNC_LOCK = "BondDataSync";
+
+    /**
+     * Загрузка новостей: своя блокировка - с синхронизацией облигаций она не пересекается по данным.
+     */
+    String NEWS_SYNC_LOCK = "NewsSync";
 }

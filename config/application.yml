@@ -48,6 +48,13 @@ ru:
               enabled: true
               cron: "0 */15 7-23 * * MON-FRI"
               zone: Europe/Moscow
+      # лента новостей: эмитенты (раз в сутки), RSS Банка России, новости Мосбиржи
+      news:
+        scheduler:
+          enabled: true
+          run-on-startup: true
+          cron: "0 */15 * * * *"
+          zone: Europe/Moscow
 
 spring:
   jpa:
@@ -69,6 +76,9 @@ spring:
           budget-org-client:
             enabled: true
             url: https://api.budjet.org/
+          moex-iss-client:
+            enabled: true
+            url: https://iss.moex.com/
   datasource:
     hikari:
       connection-test-query: select 1
