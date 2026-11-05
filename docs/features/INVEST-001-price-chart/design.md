@@ -37,8 +37,10 @@ EntityManager жил весь запрос и копил все сохранён
 
 ## Чтение
 
-`BondUseCase.getCandles` → `TinkoffCandleUseCase.find` (дневные из БД) → `CandleAggregationUseCaseImpl` (неделя,
-месяц - чистая функция). DTO - `invest-api-dto` `bond/candle/CandleDto`, `CandleIntervalDto`; клиент стартера -
+`BondUseCase.getCandles` → `TinkoffCandleUseCase.find` (дневные из БД) → `withCurrentPrice` (последняя точка - цена
+из таблицы `price`, правило - в [business-rules.md](../../business-rules.md#график-цены)) →
+`CandleAggregationUseCaseImpl` (неделя, месяц - чистая функция). Цену подставляем до агрегации, поэтому неделя и
+месяц тоже кончаются ценой из карточки. Свечи в БД не меняются: ночной шаг всё равно перезапишет последнюю. DTO - `invest-api-dto` `bond/candle/CandleDto`, `CandleIntervalDto`; клиент стартера -
 `InvestApiBondClient.getCandles` (даты с `@DateTimeFormat(iso = DATE)`: без него Feign отправлял дату в локали JVM).
 
 ## UI
@@ -53,5 +55,6 @@ EntityManager жил весь запрос и копил все сохранён
 - `CandleAggregationTest` - неделя, месяц, пустой список.
 - `CandleSyncTest` - первая синхронизация (окно с данными и пустое окно перед ним, дневные биржевые свечи),
   следующая - с последней свечи с перезаписью, ошибка по одной облигации из 20.
-- `BondControllerTest` - день, неделя, месяц, `from`, облигация без свечей, 404, 400 на неверную дату.
+- `BondControllerTest` - день, неделя, месяц, `from`, облигация без свечей, 404, 400 на неверную дату; цена за
+  сегодня добавляется точкой или заменяет закрытие сегодняшней свечи, `to` раньше даты цены её не берёт.
 - UI: `BondPriceChart.test.tsx` (запрос по умолчанию, смена интервала и периода, нет сделок), `lib/dates.test.ts`.

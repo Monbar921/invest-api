@@ -544,6 +544,45 @@ public class BondControllerTest extends AbstractInvestApplicationTest {
     }
 
     @Test
+    @Sql(scripts = "/sql/bonds-for-controller.sql", statements = {
+            "insert into price_candle (bond_id, uid, candle_date, open, high, low, close, volume) values "
+                    + "(4, '1c0a2f3e-0004-4000-8000-000000000004', '2026-09-28', 100, 101, 99, 100.5, 10)",
+            // шедулер цен обновил цену сегодня, а свечи за сегодня ещё нет
+            "update price set price = 990.00, updated_at = now() at time zone 'utc' where id = 4"})
+    public void getCandlesEndsWithCurrentPriceTest() {
+        final List<CandleDto> days = investApiBondClient.getCandles(RUB_LOW, null, null, null);
+        final List<CandleDto> months = investApiBondClient.getCandles(RUB_LOW, CandleIntervalDto.MONTH, null, null);
+
+        // последняя точка графика - цена из карточки, а не вчерашнее закрытие
+        assertThat(days, hasSize(2));
+        assertThat(days.getLast().getDate(), equalTo(LocalDate.now(ZoneOffset.UTC)));
+        assertThat(days.getLast().getClose(), comparesEqualTo(new BigDecimal("99")));
+        assertThat(months.getLast().getClose(), comparesEqualTo(new BigDecimal("99")));
+        // период, который кончается раньше даты цены, она не трогает
+        final List<CandleDto> september = investApiBondClient.getCandles(RUB_LOW, null, null, LocalDate.of(2026, 9, 30));
+        assertThat(september, hasSize(1));
+        assertThat(september.getFirst().getClose(), comparesEqualTo(new BigDecimal("100.5")));
+    }
+
+    @Test
+    @Sql(scripts = "/sql/bonds-for-controller.sql", statements = {
+            // свеча за сегодня уже есть, но цена обновилась позже неё
+            "insert into price_candle (bond_id, uid, candle_date, open, high, low, close, volume) values "
+                    + "(4, '1c0a2f3e-0004-4000-8000-000000000004', (now() at time zone 'utc')::date, 100, 101, 99.5, 100.5, 10)",
+            "update price set price = 990.00, updated_at = now() at time zone 'utc' where id = 4"})
+    public void getCandlesTodayCloseIsCurrentPriceTest() {
+        final List<CandleDto> days = investApiBondClient.getCandles(RUB_LOW, null, null, null);
+
+        assertThat(days, hasSize(1));
+        final CandleDto today = days.getFirst();
+        assertThat(today.getOpen(), comparesEqualTo(new BigDecimal("100")));
+        assertThat(today.getClose(), comparesEqualTo(new BigDecimal("99")));
+        assertThat(today.getLow(), comparesEqualTo(new BigDecimal("99")));
+        assertThat(today.getHigh(), comparesEqualTo(new BigDecimal("101")));
+        assertThat(today.getVolume(), equalTo(10L));
+    }
+
+    @Test
     public void getCandlesUnknownTickerTest() {
         final FeignException exception = assertThrows(FeignException.class,
                 () -> investApiBondClient.getCandles("UNKNOWN", null, null, null));

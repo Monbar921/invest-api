@@ -13,6 +13,7 @@ import ru.invest.api.tinkoff.supplier.wrapper.MarketDataGrpcRateLimitedWrapper;
 import ru.tinkoff.piapi.contract.v1.GetLastPricesRequest;
 import ru.tinkoff.piapi.contract.v1.GetLastPricesResponse;
 import ru.tinkoff.piapi.contract.v1.LastPrice;
+import ru.tinkoff.piapi.contract.v1.LastPriceType;
 
 import java.util.Collections;
 import java.util.Map;
@@ -36,6 +37,9 @@ public class TinkoffPriceProviderImpl implements TinkoffPriceProvider {
 
         final GetLastPricesRequest request = GetLastPricesRequest.newBuilder()
                 .addAllInstrumentId(bonds.keySet())
+                // только биржевая цена, как и у свечей графика: без типа API может отдать цену дилера
+                // (внебиржевые сделки брокера) - у Селигдар 001P-11 это было 89,31% при закрытии биржи 98,83%
+                .setLastPriceType(LastPriceType.LAST_PRICE_EXCHANGE)
                 .build();
 
         final GetLastPricesResponse response = marketDataServiceBlockingStub.getLastPrices(request);

@@ -8,7 +8,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import ru.invest.api.bond.supplier.usecase.BondUseCase;
 import ru.invest.api.common.mapper.DateTimeMapper;
+import ru.invest.api.common.model.AuditModel;
 import ru.invest.api.common.model.BondModel;
+import ru.invest.api.common.model.PriceModel;
 import ru.invest.api.common.model.calculation.ProfitCalculationModel;
 import ru.invest.api.common.model.calculation.ProfitCalculationRequestModel;
 import ru.invest.api.common.model.candle.CandleInterval;
@@ -23,7 +25,10 @@ import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondCacheRepositoryUseCase;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondUseCase;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffCandleUseCase;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -85,10 +90,55 @@ public class BondUseCaseImpl implements BondUseCase {
     public List<CandleModel> getCandles(final String ticker, final CandleInterval interval, final LocalDate from,
                                         final LocalDate to) {
         final BondModel bond = tinkoffBondUseCase.findByTicker(ticker);
-        final List<CandleModel> daily = tinkoffCandleUseCase.find(bond.getUid(),
-                Optional.ofNullable(from).orElse(HISTORY_START),
-                Optional.ofNullable(to).orElseGet(() -> dateTimeMapper.getNow().toLocalDate()));
+        final LocalDate start = Optional.ofNullable(from).orElse(HISTORY_START);
+        final LocalDate end = Optional.ofNullable(to).orElseGet(() -> dateTimeMapper.getNow().toLocalDate());
+        final List<CandleModel> daily = withCurrentPrice(tinkoffCandleUseCase.find(bond.getUid(), start, end),
+                bond.getPrice(), start, end);
         return candleAggregationUseCase.aggregate(daily, interval);
+    }
+
+    /**
+     * Последняя точка графика - текущая цена из синхронизации цен, та же, что в карточке. Свечи грузятся раз в сутки,
+     * цена - чаще, поэтому без этого график отставал бы от карточки. Свеча на дату цены получает её как цену закрытия,
+     * а если такой свечи ещё нет - добавляется точка из одной цены. Цена старше последней свечи график не меняет;
+     * без свечей графика нет, и одна точка из цены его не заменяет.
+     */
+    private List<CandleModel> withCurrentPrice(final List<CandleModel> daily, final PriceModel price,
+                                               final LocalDate from, final LocalDate to) {
+        final BigDecimal current = Optional.ofNullable(price).map(PriceModel::getPercentagePrice).orElse(null);
+        final LocalDate priceDate = Optional.ofNullable(price)
+                .map(model -> Optional.ofNullable(model.getUpdated()).orElse(model.getCreated()))
+                .map(AuditModel::getCommittedAt)
+                .map(LocalDateTime::toLocalDate)
+                .orElse(null);
+        if (daily.isEmpty() || current == null || priceDate == null || priceDate.isBefore(from) || priceDate.isAfter(to)) {
+            return daily;
+        }
+
+        final CandleModel last = daily.getLast();
+        if (last.getDate().isAfter(priceDate)) {
+            return daily;
+        }
+
+        final List<CandleModel> result = new ArrayList<>(daily);
+        if (last.getDate().isEqual(priceDate)) {
+            result.set(result.size() - 1, new CandleModel()
+                    .setDate(priceDate)
+                    .setOpen(last.getOpen())
+                    .setHigh(last.getHigh().max(current))
+                    .setLow(last.getLow().min(current))
+                    .setClose(current)
+                    .setVolume(last.getVolume()));
+        } else {
+            result.add(new CandleModel()
+                    .setDate(priceDate)
+                    .setOpen(current)
+                    .setHigh(current)
+                    .setLow(current)
+                    .setClose(current)
+                    .setVolume(0L));
+        }
+        return result;
     }
 
     // все облигации лежат в кэше: фильтруем и сортируем всю выборку в памяти, страница - срез списка

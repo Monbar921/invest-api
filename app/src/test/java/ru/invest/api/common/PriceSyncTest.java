@@ -22,6 +22,7 @@ import ru.invest.api.tinkoff.supplier.wrapper.MarketDataGrpcRateLimitedWrapper;
 import ru.tinkoff.piapi.contract.v1.GetBondCouponsResponse;
 import ru.tinkoff.piapi.contract.v1.GetLastPricesResponse;
 import ru.tinkoff.piapi.contract.v1.LastPrice;
+import ru.tinkoff.piapi.contract.v1.LastPriceType;
 import ru.tinkoff.piapi.contract.v1.Quotation;
 
 import java.math.BigDecimal;
@@ -36,6 +37,8 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static ru.invest.api.common.constants.SchedulerConstants.SCHEDULER_PROCESS;
 
@@ -94,6 +97,8 @@ public class PriceSyncTest extends AbstractInvestApplicationTest {
         priceSyncUseCase.syncAll(audit);
 
         assertPriceAndInterestSynced();
+        // биржевая цена, как у свечей графика, а не цена дилера
+        verify(marketDataGrpcWrapper).getLastPrices(argThat(request -> request.getLastPriceType() == LastPriceType.LAST_PRICE_EXCHANGE));
     }
 
     @Test
