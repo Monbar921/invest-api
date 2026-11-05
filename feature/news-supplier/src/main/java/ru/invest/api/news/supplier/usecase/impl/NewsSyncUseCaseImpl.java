@@ -19,6 +19,7 @@ import ru.invest.api.common.model.news.NewsSource;
 import ru.invest.api.common.repository.BondIssuerRepository;
 import ru.invest.api.common.repository.BondRepository;
 import ru.invest.api.common.repository.NewsRepository;
+import ru.invest.api.news.supplier.usecase.ExternalNewsUseCase;
 import ru.invest.api.news.supplier.usecase.MoexNewsUseCase;
 import ru.invest.api.news.supplier.usecase.NewsSyncUseCase;
 
@@ -28,11 +29,10 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -42,12 +42,10 @@ public class NewsSyncUseCaseImpl implements NewsSyncUseCase {
     // эмитенты меняются редко, а их список - десятки запросов к бирже
     private static final Duration ISSUER_REFRESH_PERIOD = Duration.ofHours(20);
     private static final Duration NEWS_RETENTION = Duration.ofDays(180);
-    // короче - слишком много случайных совпадений
-    private static final int MIN_ISSUER_NAME_LENGTH = 3;
-    private static final char QUOTE = '"';
 
     private final CbRfNewsUseCase cbRfNewsUseCase;
     private final MoexNewsUseCase moexNewsUseCase;
+    private final ExternalNewsUseCase externalNewsUseCase;
     private final NewsRepository newsRepository;
     private final BondIssuerRepository bondIssuerRepository;
     private final BondRepository bondRepository;
@@ -57,16 +55,23 @@ public class NewsSyncUseCaseImpl implements NewsSyncUseCase {
 
     @Override
     public void syncAll(final AuditModel audit) {
-        // шаги независимы: недоступная биржа не мешает загрузить новости ЦБ
+        // шаги независимы: недоступный источник не мешает загрузить остальные
         runStep("issuers", () -> refreshIssuersIfStale(audit));
-        runStep("cbr", () -> save(cbRfNewsUseCase.getNews(), Map.of(), audit));
-        runStep("moex", () -> save(moexNewsUseCase.getNewsAfter(newsRepository.findLastMoexId().orElse(null)),
-                issuerNames(), audit));
+        final IssuerMatcher matcher = new IssuerMatcher(bondIssuerRepository.findAll());
+        saveStep("cbr", cbRfNewsUseCase::getNews, matcher, audit);
+        saveStep("moex", () -> moexNewsUseCase.getNewsAfter(newsRepository.findLastMoexId().orElse(null)), matcher, audit);
+        saveStep("ratings", externalNewsUseCase::getRatingNews, matcher, audit);
+        saveStep("media", externalNewsUseCase::getMediaNews, matcher, audit);
         runStep("cleanup", () -> {
             final Integer deleted = transactionTemplate.execute(status ->
                     newsRepository.deletePublishedBefore(dateTimeMapper.getNow().minus(NEWS_RETENTION)));
             log.info("News older than {} days deleted: {}", NEWS_RETENTION.toDays(), deleted);
         });
+    }
+
+    private void saveStep(final String step, final Supplier<List<NewsModel>> news, final IssuerMatcher matcher,
+                          final AuditModel audit) {
+        runStep(step, () -> save(news.get(), matcher, audit));
     }
 
     @SuppressWarnings("checkstyle:IllegalCatch")
@@ -119,47 +124,10 @@ public class NewsSyncUseCaseImpl implements NewsSyncUseCase {
         log.info("Bond issuers refreshed: {} saved, {} deleted", toSave.size(), toDelete.size());
     }
 
-    /**
-     * Эмитент -> название из кавычек в нижнем регистре: «ПАО "Селигдар"» -> «селигдар». Ищется в тексте тоже
-     * в кавычках, иначе «Россия» или «Транс» находились бы где угодно. Эмитенты без кавычек в названии
-     * (министерства, области) находятся только по ISIN.
-     */
-    private Map<Long, String> issuerNames() {
-        final Map<Long, String> names = new HashMap<>();
-        bondIssuerRepository.findAll().forEach(issuer -> {
-            final String name = quotedName(issuer.getTitle());
-            if (name != null) {
-                names.putIfAbsent(issuer.getEmitterId(), name);
-            }
-        });
-        return names;
-    }
-
-    private String quotedName(final String title) {
-        final String normalized = normalizeQuotes(title);
-        if (normalized == null) {
-            return null;
-        }
-        final int first = normalized.indexOf(QUOTE);
-        final int last = normalized.lastIndexOf(QUOTE);
-        if (first < 0 || last <= first) {
-            return null;
-        }
-        final String name = StringUtils.trimToNull(normalized.substring(first + 1, last));
-        return name == null || name.length() < MIN_ISSUER_NAME_LENGTH ? null : name.toLowerCase(Locale.ROOT);
-    }
-
-    private String normalizeQuotes(final String text) {
-        return text == null ? null : StringUtils.replaceChars(text, "«»“”„", "\"\"\"\"\"");
-    }
-
-    private void save(final List<NewsModel> news, final Map<Long, String> issuerNames, final AuditModel audit) {
+    private void save(final List<NewsModel> news, final IssuerMatcher matcher, final AuditModel audit) {
         final Map<NewsSource, List<NewsModel>> bySource = news.stream()
                 .collect(Collectors.groupingBy(NewsModel::getSource));
         final Audit created = auditMapper.toEntity(audit);
-        final Map<String, Long> emitterByIsin = bondIssuerRepository.findAll()
-                .stream()
-                .collect(Collectors.toMap(BondIssuer::getIsin, BondIssuer::getEmitterId, (first, second) -> first));
 
         bySource.forEach((source, items) -> {
             final Set<String> known = newsRepository.findBySourceAndExternalIdIn(source,
@@ -168,36 +136,30 @@ public class NewsSyncUseCaseImpl implements NewsSyncUseCase {
                     .map(News::getExternalId)
                     .collect(Collectors.toSet());
             final Map<String, News> fresh = new HashMap<>();
-            items.stream()
-                    .filter(item -> !known.contains(item.getExternalId()))
-                    .forEach(item -> fresh.putIfAbsent(item.getExternalId(),
-                            toEntity(item, emitters(item, issuerNames, emitterByIsin), created)));
+            int skipped = 0;
+            for (final NewsModel item : items) {
+                if (known.contains(item.getExternalId()) || fresh.containsKey(item.getExternalId())) {
+                    continue;
+                }
+                final String text = item.getTitle() + " " + StringUtils.defaultString(item.getBodyForMatching());
+                final Set<String> isins = new LinkedHashSet<>(item.getIsins());
+                isins.addAll(IssuerMatcher.isins(text));
+                final Set<Long> emitters = matcher.emitters(text, isins);
+                // общая лента СМИ: без выпуска или эмитента из системы новость не нужна
+                if (item.isRequiresMatch() && emitters.isEmpty() && isins.stream().noneMatch(matcher::isKnownIsin)) {
+                    skipped++;
+                    continue;
+                }
+                fresh.put(item.getExternalId(), toEntity(item, isins, emitters, created));
+            }
 
             newsRepository.saveAll(fresh.values());
-            log.info("News {}: {} received, {} new", source, items.size(), fresh.size());
+            log.info("News {}: {} received, {} new, {} without our bonds skipped", source, items.size(), fresh.size(), skipped);
         });
     }
 
-    private Set<Long> emitters(final NewsModel news, final Map<Long, String> issuerNames,
-                               final Map<String, Long> emitterByIsin) {
-        final Set<Long> emitters = news.getIsins()
-                .stream()
-                .map(emitterByIsin::get)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toCollection(LinkedHashSet::new));
-        if (!issuerNames.isEmpty()) {
-            final String text = normalizeQuotes(news.getTitle() + " " + StringUtils.defaultString(news.getBodyForMatching()))
-                    .toLowerCase(Locale.ROOT);
-            issuerNames.forEach((emitterId, name) -> {
-                if (text.contains(QUOTE + name + QUOTE)) {
-                    emitters.add(emitterId);
-                }
-            });
-        }
-        return emitters;
-    }
-
-    private News toEntity(final NewsModel model, final Collection<Long> emitterIds, final Audit created) {
+    private News toEntity(final NewsModel model, final Collection<String> isins, final Collection<Long> emitterIds,
+                          final Audit created) {
         final News news = new News()
                 .setSource(model.getSource())
                 .setExternalId(model.getExternalId())
@@ -206,7 +168,7 @@ public class NewsSyncUseCaseImpl implements NewsSyncUseCase {
                 .setUrl(model.getUrl())
                 .setPublishedAt(model.getPublishedAt())
                 .setCreated(created);
-        model.getIsins().forEach(isin -> news.getLinks().add(new NewsLink().setNews(news).setIsin(isin)));
+        isins.forEach(isin -> news.getLinks().add(new NewsLink().setNews(news).setIsin(isin)));
         emitterIds.forEach(emitterId -> news.getLinks().add(new NewsLink().setNews(news).setEmitterId(emitterId)));
         return news;
     }

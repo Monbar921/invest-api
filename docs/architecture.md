@@ -74,7 +74,12 @@ invest-gateway ──────▶│ ui-service: /internal/rest/bonds/**, /in
 2. **Банк России** - RSS пресс-релизов и «Событий и комментариев»;
 3. **Мосбиржа** - новости `/iss/sitenews` новее последней сохранённой (первый раз - 4 страницы, ~3 дня), без
    технических сообщений; у каждой загружается текст, чтобы найти ISIN выпусков;
-4. **очистка** - новости старше 180 дней.
+4. **рейтинги** - списки релизов АКРА и НКР (HTML, разбор jsoup), последние 50;
+5. **СМИ** - RSS-ленты из `ru.invest.api.news.feeds` (`RestNewsHttpClient` - RestClient, а не Feign: у каждой ленты
+   свой адрес);
+6. **очистка** - новости старше 180 дней.
+
+ISIN и эмитенты ищутся в новостях всех источников одним `IssuerMatcher`, построенным по `bond_issuer` в начале прогона.
 
 Правила фильтра и привязки новостей к облигациям - в [business-rules.md](business-rules.md#лента-новостей).
 Ключевая ставка и курсы для шапки ленты (`MarketOverviewUseCase`) не хранятся: запрашиваются у ЦБ и кэшируются.
@@ -168,7 +173,9 @@ Maintenance-эндпоинты требуют заголовок `From` (кто 
 | T-Invest API (gRPC) | облигации, купоны, события, цены, свечи | `invest.connector.token`, `invest.rate-limiter.*`   |
 | ЦБ РФ               | курсы к рублю, RSS новостей, ключевая ставка | `spring.cloud.openfeign.client.config.cb-rf-client.url` |
 | Мосбиржа ISS        | новости биржи, эмитенты облигаций; бесплатно, без ключа | `...moex-iss-client.url`              |
+| АКРА, НКР           | рейтинговые действия (HTML-списки)      | `ru.invest.api.news.acra-url`, `...nkr-url`         |
+| СМИ (RSS)           | Интерфакс, РБК, Коммерсантъ, Ведомости, Финам, Frank Media, Smart-Lab | `ru.invest.api.news.feeds` |
 | api.budjet.org      | курсы пар без рубля и запасной источник | `...budget-org-client.url`                          |
 
-Сертификат invest-public-api.tinkoff.ru подписан корневым сертификатом Минцифры - его нужно добавить в truststore JVM
+Сертификаты invest-public-api.tinkoff.ru и acra-ratings.ru подписаны корневым сертификатом Минцифры - его нужно добавить в truststore JVM
 (в образе это делает Dockerfile, см. [deployment.md](deployment.md)).

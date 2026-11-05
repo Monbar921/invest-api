@@ -9,6 +9,12 @@
 | ЦБ, ключевая ставка | `POST https://www.cbr.ru/DailyInfoWebServ/DailyInfo.asmx`, SOAPAction `KeyRateXML` | ставка по рабочим дням |
 | Мосбиржа, новости | `GET https://iss.moex.com/iss/sitenews.json?start=` | по 50, новые первыми; текст - `/iss/sitenews/{id}.json` |
 | Мосбиржа, эмитенты | `GET https://iss.moex.com/iss/securities.json?engine=stock&market=bonds&is_trading=1&start=` | по 100, `emitent_id`, `emitent_title`, `emitent_inn`; ~3200 выпусков |
+| АКРА | `GET https://www.acra-ratings.ru/press-releases/` | HTML: `.documents-row` - `.item__emit` (эмитент), `a.item__title`, `[data-type=date]` «5 ноя 2026»; сертификат Минцифры |
+| НКР | `GET https://ratings.ru/ratings/press-releases/` | HTML: таблица всех релизов с 2019 года, новые сверху; `a.blue-link`, дата «23.07.2026» в строке |
+| Эксперт РА | `https://raexpert.ru/releases/` | список подгружается скриптом - не используем |
+| НРА | `https://www.ra-national.ru/` | списка релизов нет - не используем |
+| СМИ | RSS: interfax.ru/rss.asp, rssexport.rbc.ru/rbcnews/news/30/full.rss, kommersant.ru/RSS/section-economics.xml, vedomosti.ru/rss/rubric/finance, finam.ru/analysis/conews/rsspoint/, frankmedia.ru/feed, smart-lab.ru/rss/ | 13-200 записей в ленте |
+| Smart-Lab, облигации | `smart-lab.ru/bonds/rss/` | словарь эмитентов, не новости - не используем |
 | e-disclosure | - | 403 на автоматические запросы, не используем |
 
 Ответы ЦБ клиент получает байтами (`byte[]`), XML разбирает `DocumentBuilder` без DTD и внешних сущностей: так
@@ -20,7 +26,11 @@
 | --- | --- |
 | `cb-rf-supplier` `CbRfNewsUseCaseImpl` | RSS ЦБ → `NewsModel`, ключевая ставка; упавшая лента пропускается |
 | `news-supplier` `MoexNewsUseCaseImpl` | новости Мосбиржи новее известной, фильтр шума, ISIN из заголовка и текста; эмитенты выпусков |
-| `NewsSyncUseCaseImpl` | шаги загрузки, привязка к эмитентам по названию в кавычках и по ISIN, дедупликация по `(source, external_id)`, очистка |
+| `NewsSyncUseCaseImpl` | шаги загрузки, фильтр общих лент СМИ, дедупликация по `(source, external_id)`, очистка |
+| `IssuerMatcher` | ISIN в тексте, эмитенты по ISIN их выпусков, по названию в кавычках и по названию без кавычек целыми словами |
+| `ExternalNewsUseCaseImpl` | RSS СМИ из `NewsProperties.feeds`, HTML-списки АКРА и НКР (jsoup) |
+| `RestNewsHttpClient` | GET с таймаутами и User-Agent (без него часть сайтов отвечает 403) |
+| `common` `RssReader` | разбор RSS 2.0 - общий для ЦБ и СМИ |
 | `NewsUseCaseImpl` | лента и новости облигации, страницы; облигации и эмитенты новости подгружаются одним запросом на страницу |
 | `MarketOverviewUseCaseImpl` | ставка и курсы, кэш `MARKET_OVERVIEW` 30 минут |
 | `NewsSyncScheduler`, `NewsSyncStartupRunner` | расписание и запуск при старте в фоне |
@@ -49,6 +59,14 @@
 Временным тестом против настоящих ЦБ и ISS (2026-11-05): 113 новостей ЦБ с анонсами, ставка 14,00% с 27.07.2026
 (прошлая 14,25%), курсы USD/EUR/CNY с изменением, 67 новостей Мосбиржи после фильтра с найденными ISIN, 3187
 выпусков с эмитентами. По итогам в фильтр добавлены «риск-параметры» и «пересмотр баз расчёта индексов».
+
+## Второй этап на живых источниках (2026-11-05)
+
+Временным тестом с настоящими лентами и списком эмитентов Мосбиржи (3187 выпусков): НКР - 28 из 50 релизов
+привязаны к эмитентам, все верно; АКРА (страница, скачанная заранее) - 3 из 10 (остальные - эмитенты без облигаций
+в системе и регионы); Финам - 11 из 100, Smart-Lab - 3 из 20, Интерфакс и Ведомости - по 1, РБК, Коммерсантъ и Frank
+Media - 0. Ложных совпадений не нашлось. Из общих лент без совпадений ничего не сохраняется, так что поток в ленте
+- в основном деловые СМИ и агентства.
 
 ## Тесты
 

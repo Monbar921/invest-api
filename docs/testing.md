@@ -37,7 +37,7 @@ mvn test -pl app -am -Dtest=YieldToMaturityCalculationTest
 | `feature/bond/supplier/BondDataSyncStartupRunnerTest` | прогон при старте не блокирует поток старта |
 | `feature/ui/service/MaintenanceControllerTest` | `sync-all` в фоне: сразу 202, повторный запуск во время работы - 409, после - снова 202 |
 | `common/BondEventTest`             | события облигации: изменение купона, необъявленный купон, оферта, амортизация и погашение |
-| `feature/news/NewsTest`            | загрузка новостей: RSS ЦБ с BOM и HTML, фильтр шума Мосбиржи, ISIN из текста, эмитент по названию и по ISIN другого выпуска, без дублей при повторе, удаление старых; лента, фильтр по источнику, новости облигации, 404; ставка и курсы, обзор без ответа ЦБ; события через API |
+| `feature/news/NewsTest`            | загрузка новостей: СМИ (общая лента - только про эмитентов из системы, деловая - целиком), АКРА и НКР из HTML, эмитент без кавычек; RSS ЦБ с BOM и HTML, фильтр шума Мосбиржи, ISIN из текста, эмитент по названию и по ISIN другого выпуска, без дублей при повторе, удаление старых; лента, фильтр по источнику, новости облигации, 404; ставка и курсы, обзор без ответа ЦБ; события через API |
 | `feature/ui/service/BondControllerTest` | страницы, фильтры, сортировки, пагинация, карточка облигации, поиск, калькулятор, свечи, 404 и 405 на неизвестный путь и метод, 400 на неверную дату |
 
 ## Тестовые данные
@@ -47,7 +47,7 @@ mvn test -pl app -am -Dtest=YieldToMaturityCalculationTest
 | `app/src/test/resources/fixtures/*.pbtxt` | ответы T-Invest API в protobuf text format (`bonds-response`, `coupon-response`), читаются `loadFixture()` / `loadCouponFixture()` |
 | `app/src/test/resources/sql/*.sql`     | наполнение БД для тестов контроллера и расчётов, `clean-up.sql` - очистка между тестами |
 
-Внешние HTTP-клиенты (`CbRfClient`, `BudgetOrgClient`, `MoexIssClient`) подменены моками в `AbstractInvestApplicationTest`;
+Внешние HTTP-клиенты (`CbRfClient`, `BudgetOrgClient`, `MoexIssClient`, `NewsHttpClient`) подменены моками в `AbstractInvestApplicationTest`;
 ответы ЦБ и Мосбиржи в `NewsTest` собираются в коде теста. Таблицы `news` и `bond_issuer` sql-наборы не чистят -
 тест очищает их сам.
 

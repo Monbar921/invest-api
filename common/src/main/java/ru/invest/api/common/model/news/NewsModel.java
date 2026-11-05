@@ -29,6 +29,8 @@ public class NewsModel {
     private Set<Long> emitterIds = Set.of();
     /** Текст новости для поиска эмитентов по названию; в БД не хранится */
     private String bodyForMatching;
+    /** Новость общей ленты СМИ: сохраняется, только если нашёлся выпуск или эмитент из системы; в БД не хранится */
+    private boolean requiresMatch;
     /** Облигации из системы, упомянутые в новости по ISIN - заполняется при чтении */
     private List<NewsBondModel> bonds = List.of();
     /** Названия эмитентов новости - заполняется при чтении */

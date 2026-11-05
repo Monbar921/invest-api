@@ -18,6 +18,17 @@ ru:
             price:
               enabled: false
               cron: "0 0 0 * * ?"
+      # шедулер новостей выключен: NewsTest вызывает загрузку сам; адреса - для мока NewsHttpClient
+      news:
+        acra-url: https://acra.test/press-releases/
+        nkr-url: https://nkr.test/ratings/press-releases/
+        feeds:
+          - source: INTERFAX
+            url: https://interfax.test/rss
+            only-matched: true
+          - source: VEDOMOSTI
+            url: https://vedomosti.test/rss
+            only-matched: false
 spring:
   jpa:
     # без этого EntityManager живёт весь HTTP-запрос: ручная синхронизация свечей копила в нём сотни тысяч

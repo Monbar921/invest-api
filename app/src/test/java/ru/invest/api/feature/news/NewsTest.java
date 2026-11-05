@@ -22,6 +22,7 @@ import ru.invest.api.dto.bond.news.NewsDto;
 import ru.invest.api.dto.bond.news.NewsSourceDto;
 import ru.invest.api.dto.page.PageDto;
 import ru.invest.api.news.supplier.client.feign.MoexIssClient;
+import ru.invest.api.news.supplier.client.http.NewsHttpClient;
 import ru.invest.api.news.supplier.model.IssTableDto;
 import ru.invest.api.news.supplier.usecase.NewsSyncUseCase;
 import ru.invest.api.starter.client.InvestApiBondClient;
@@ -69,6 +70,8 @@ public class NewsTest extends AbstractInvestApplicationTest {
     private static final String AUTO_FINANCE_OTHER = "RU000A10ECY6";
     private static final String PUSHKINO = "RU000A1080Y2";
     private static final String GIDROMASH = "RU000A10EHC1";
+    private static final String VTB_LIKE = "RU000A105A95";
+    private static final String[] RU_MONTHS = {"янв", "фев", "мар", "апр", "мая", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"};
     private static final byte[] UTF8_BOM = {(byte) 0xEF, (byte) 0xBB, (byte) 0xBF};
 
     @Autowired
@@ -85,6 +88,8 @@ public class NewsTest extends AbstractInvestApplicationTest {
     private CbRfClient cbRfClient;
     @Autowired
     private MoexIssClient moexIssClient;
+    @Autowired
+    private NewsHttpClient newsHttpClient;
     @Autowired
     @Qualifier(MARKET_OVERVIEW_CACHE_MANAGER)
     private CacheManager marketOverviewCacheManager;
@@ -128,6 +133,8 @@ public class NewsTest extends AbstractInvestApplicationTest {
                                 List.of(AUTO_FINANCE_OTHER, 202, "Акционерное общество \"Авто Финанс Банк\"", "7700000002"),
                                 List.of(PUSHKINO, 101, "Общество с ограниченной ответственностью \"Пушкинское ПЗ\"", "5000000001"),
                                 List.of(GIDROMASH, 303, "Публичное акционерное общество «Гидромашсервис»", "7800000003"),
+                                // название без кавычек - ищется целыми словами с учётом регистра
+                                List.of(VTB_LIKE, 505, "Банк ВТБ (публичное акционерное общество)", "7702070139"),
                                 // выпуска нет в системе - эмитент не сохраняется
                                 List.of("RU000A0ZZZZ9", 404, "ПАО \"Чужой\"", "1")))));
         when(moexIssClient.getSiteNews(argThat(parameters -> parameters != null && "0".equals(parameters.get("start")))))
@@ -206,6 +213,83 @@ public class NewsTest extends AbstractInvestApplicationTest {
         final FeignException exception = assertThrows(FeignException.class,
                 () -> investApiBondClient.getBondNews("UNKNOWN", null, null));
         assertThat(exception.status(), equalTo(NOT_FOUND));
+    }
+
+    @Test
+    public void mediaAndRatingsTest() {
+        final LocalDate today = dateTimeMapper.getNow().toLocalDate();
+        final String rssToday = DateTimeFormatter.RFC_1123_DATE_TIME.format(today.atTime(12, 0).atOffset(ZoneOffset.ofHours(3)));
+        // общая лента: остаётся только новость про эмитента из системы
+        when(newsHttpClient.get("https://interfax.test/rss")).thenReturn(rss("""
+                <item>
+                  <title>«Гидромашсервис» разместил облигации на 3 млрд рублей</title>
+                  <link>https://www.interfax.ru/business/1</link>
+                  <description>Компания разместила выпуск 002Р-02</description>
+                  <pubDate>%1$s</pubDate>
+                </item>
+                <item>
+                  <title>"Роскосмос" сообщил о разработке "сухого йогурта"</title>
+                  <link>https://www.interfax.ru/russia/2</link>
+                  <pubDate>%1$s</pubDate>
+                </item>
+                """.formatted(rssToday)));
+        // деловая лента - целиком
+        when(newsHttpClient.get("https://vedomosti.test/rss")).thenReturn(rss("""
+                <item>
+                  <title>ЦБ рекомендовал банкам помогать заемщикам еще до просрочки</title>
+                  <link>https://www.vedomosti.ru/finance/1</link>
+                  <guid>https://www.vedomosti.ru/finance/1</guid>
+                  <pubDate>%s</pubDate>
+                </item>
+                """.formatted(rssToday)));
+        final String acraDate = today.getDayOfMonth() + " " + RU_MONTHS[today.getMonthValue() - 1] + " " + today.getYear();
+        when(newsHttpClient.get("https://acra.test/press-releases/")).thenReturn("""
+                <html><head><meta charset="utf-8"></head><body>
+                <div class="documents-row search-table-row"><div class="documents-row__wrapper">
+                  <div class="documents-row__item" data-type="name"><span class="item__emit"> АО &quot;Авто Финанс Банк&quot; </span>
+                    <div class="item__title-row"><a class="item__title" href="/press-releases/7461/">
+                      АКРА ПОДТВЕРДИЛО КРЕДИТНЫЙ РЕЙТИНГ АВТО ФИНАНС БАНКА НА УРОВНЕ A(RU) </a></div></div>
+                  <div class="documents-row__item" data-type="date"> %1$s </div>
+                </div></div>
+                <div class="documents-row search-table-row"><div class="documents-row__wrapper">
+                  <div class="documents-row__item" data-type="name"><span class="item__emit"> Кто-то </span>
+                    <div class="item__title-row"><a class="item__title" href="/press-releases/7462/">
+                      АКРА ПРИСВОИЛО КРЕДИТНЫЙ РЕЙТИНГ ВЫПУСКУ ОБЛИГАЦИЙ (RU000A1080Y2) </a></div></div>
+                  <div class="documents-row__item" data-type="date"> %1$s </div>
+                </div></div>
+                </body></html>
+                """.formatted(acraDate).getBytes(StandardCharsets.UTF_8));
+        final String nkrDate = DateTimeFormatter.ofPattern("dd.MM.yyyy").format(today);
+        when(newsHttpClient.get("https://nkr.test/ratings/press-releases/")).thenReturn("""
+                <html><head><meta charset="utf-8"></head><body><table>
+                <tr><td><a href="/ratings/press-releases/VTB-RA-1/" class="blue-link">НКР подтвердило кредитный рейтинг Банк ВТБ (ПАО) на уровне AAA.ru</a></td>
+                    <td><span class="mt-descr">Банки</span></td><td><span class="mt-descr">%1$s</span></td></tr>
+                <tr><td><a href="/ratings/press-releases/Alfa-RA-1/" class="blue-link">НКР присвоило Альфа-Банку кредитный рейтинг AAA.ru</a></td>
+                    <td><span class="mt-descr">Банки</span></td><td><span class="mt-descr">%1$s</span></td></tr>
+                </table></body></html>
+                """.formatted(nkrDate).getBytes(StandardCharsets.UTF_8));
+
+        newsSyncUseCase.syncAll(auditMapper.toCurrentAuditModel(SCHEDULER_PROCESS));
+
+        // «Роскосмос» из общей ленты не сохранился; деловая лента и релизы агентств - целиком
+        assertThat(investApiBondClient.getNews(Set.of(NewsSourceDto.INTERFAX), null, null).getTotalElements(), equalTo(1L));
+        assertThat(investApiBondClient.getNews(Set.of(NewsSourceDto.VEDOMOSTI), null, null).getTotalElements(), equalTo(1L));
+        assertThat(investApiBondClient.getNews(Set.of(NewsSourceDto.ACRA, NewsSourceDto.NKR), null, null).getTotalElements(),
+                equalTo(4L));
+
+        // СМИ: эмитент в ёлочках
+        assertThat(titles(GIDROMASH), contains("«Гидромашсервис» разместил облигации на 3 млрд рублей"));
+        // АКРА: эмитент из поля списка, выпуск - по ISIN в заголовке
+        assertThat(titles(AUTO_FINANCE), hasItem(startsWith("АКРА ПОДТВЕРДИЛО")));
+        assertThat(titles(PUSHKINO), hasItem(startsWith("АКРА ПРИСВОИЛО")));
+        // НКР: название без кавычек целыми словами; «Альфа-Банку» ни к кому не относится
+        assertThat(titles(VTB_LIKE), contains(startsWith("НКР подтвердило кредитный рейтинг Банк ВТБ")));
+
+        // у релизов агентств нет времени - начало дня по Москве
+        final NewsDto acra = investApiBondClient.getNews(Set.of(NewsSourceDto.ACRA), null, null).getContent().getFirst();
+        assertThat(acra.getPublishedAt().withZoneSameInstant(ZoneOffset.ofHours(3)).toLocalDate(), equalTo(today));
+        assertThat(acra.getPublishedAt().withZoneSameInstant(ZoneOffset.ofHours(3)).getHour(), equalTo(0));
+        assertThat(acra.getUrl(), startsWith("https://acra.test/press-releases/746"));
     }
 
     @Test
