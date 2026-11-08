@@ -1,10 +1,16 @@
 package ru.invest.api.feature.portfolio;
 
 import lombok.SneakyThrows;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.test.context.jdbc.Sql;
 import ru.invest.api.AbstractInvestApplicationTest;
+import ru.invest.api.cb.rf.supplier.client.feign.CbRfClient;
+import ru.invest.api.cb.rf.supplier.model.CurrencyDto;
+import ru.invest.api.cb.rf.supplier.model.CurrencyElementDto;
 import ru.invest.api.dto.portfolio.BrokerDto;
 import ru.invest.api.dto.portfolio.PortfolioDto;
 import ru.invest.api.dto.portfolio.PortfolioPositionDto;
@@ -21,6 +27,7 @@ import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.comparesEqualTo;
@@ -30,8 +37,11 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
 
-@Sql(scripts = "/sql/bonds-for-controller.sql", statements = "truncate table portfolio_position, portfolio_broker restart identity")
+@Sql(scripts = "/sql/bonds-for-controller.sql", statements = "truncate table portfolio_position, portfolio_broker, currency_rate restart identity")
 public class PortfolioTest extends AbstractInvestApplicationTest {
     private static final String BASE_URL = "http://localhost:8099/internal/rest/portfolio";
     private static final String USER_ID_HEADER = "X-User-Id";
@@ -58,6 +68,31 @@ public class PortfolioTest extends AbstractInvestApplicationTest {
 
     @Autowired
     private JsonMapper jsonMapper;
+    // тот же мок, что зарегистрирован через @MockitoBean в AbstractInvestApplicationTest
+    @Autowired
+    private CbRfClient cbRfClient;
+    @Autowired
+    private List<CacheManager> cacheManagers;
+
+    @BeforeEach
+    void setUp() {
+        // курсы кэшируются - иначе пришёл бы курс из предыдущих тестов
+        cacheManagers.forEach(cacheManager -> cacheManager.getCacheNames()
+                .forEach(name -> Optional.ofNullable(cacheManager.getCache(name)).ifPresent(Cache::clear)));
+        // доллар сегодня - 90 ₽, на дату покупки - 80 ₽
+        when(cbRfClient.getCurrencyRates(any())).thenReturn(usdRate("90"));
+        when(cbRfClient.getCurrencyRates(eq("15/01/2026"))).thenReturn(usdRate("80"));
+    }
+
+    private static CurrencyDto usdRate(final String rubles) {
+        final CurrencyElementDto usd = new CurrencyElementDto();
+        usd.setCharCode("USD");
+        usd.setNominal(BigDecimal.ONE);
+        usd.setRate(new BigDecimal(rubles));
+        final CurrencyDto rates = new CurrencyDto();
+        rates.setCurrencies(List.of(usd));
+        return rates;
+    }
 
     @Test
     void requestsWithoutUserAreRejected() {
@@ -124,6 +159,18 @@ public class PortfolioTest extends AbstractInvestApplicationTest {
         final PortfolioTotalDto usd = totals.stream().filter(total -> "usd".equals(total.getCurrency())).findFirst()
                 .orElseThrow();
         assertThat(usd.getRevenue(), comparesEqualTo(new BigDecimal("30")));
+        // в рублях: куплено на 950 $ по 80 ₽ = 76 000 ₽, сейчас 980 $ по 90 ₽ = 88 200 ₽ - доход 12 200 ₽,
+        // а не 30 $ × 90 ₽: в рублях доход включает рост доллара с даты покупки
+        assertThat(usd.getBuyAmountInRub(), comparesEqualTo(new BigDecimal("76000")));
+        assertThat(usd.getCurrentAmountInRub(), comparesEqualTo(new BigDecimal("88200")));
+        assertThat(usd.getRevenueInRub(), comparesEqualTo(new BigDecimal("12200")));
+        assertThat(rub.getCurrentAmountInRub(), comparesEqualTo(rub.getCurrentAmount()));
+        assertThat(rub.getRevenueInRub(), comparesEqualTo(rub.getRevenue()));
+        final PortfolioPositionDto usdPosition = portfolio.getPositions().getFirst();
+        assertThat(usdPosition.getCurrentAmountInRub(), comparesEqualTo(new BigDecimal("88200")));
+        assertThat(usdPosition.getBuyAmountInRub(), comparesEqualTo(new BigDecimal("76000")));
+        assertThat(usdPosition.getRevenueInRub(), comparesEqualTo(new BigDecimal("12200")));
+        assertThat(noPrice.getCurrentAmountInRub(), nullValue());
 
         assertThat(portfolio(BOB).getPositions(), hasSize(1));
     }

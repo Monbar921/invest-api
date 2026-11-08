@@ -14,6 +14,7 @@ import ru.invest.api.currency.service.usecase.CurrencyPriceUseCase;
 import ru.invest.api.tinkoff.supplier.service.PriceConversionService;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -57,17 +58,39 @@ public class PriceConversionServiceImpl implements PriceConversionService {
                 .ifPresent(rate -> price.setCurrentInRub(current.getQuantity().multiply(rate)));
     }
 
-    private BigDecimal getRubRate(final String currency) {
-        if (RU_CURRENCIES.contains(currency)) {
+    @Override
+    public BigDecimal getRubRate(final String currency) {
+        if (StringUtils.isBlank(currency)) {
+            return null;
+        }
+        final String code = currency.toUpperCase();
+        if (RU_CURRENCIES.contains(code)) {
             return BigDecimal.ONE;
         }
 
         try {
-            return Optional.ofNullable(currencyPriceUseCase.calculateAmount(currency, RUB, BigDecimal.ONE))
+            return Optional.ofNullable(currencyPriceUseCase.calculateAmount(code, RUB, BigDecimal.ONE))
                     .map(CurrencyModel::getRate)
                     .orElse(null);
         } catch (final FeignException e) {
-            log.warn("Failed to get {} to RUB rate, bonds in {} are treated as without price: {}", currency, currency, e.getMessage());
+            log.warn("Failed to get {} to RUB rate, bonds in {} are treated as without price: {}", code, code, e.getMessage());
+            return null;
+        }
+    }
+
+    @Override
+    public BigDecimal getRubRate(final String currency, final LocalDate date) {
+        if (StringUtils.isBlank(currency) || date == null) {
+            return null;
+        }
+        final String code = currency.toUpperCase();
+        if (RU_CURRENCIES.contains(code)) {
+            return BigDecimal.ONE;
+        }
+        try {
+            return currencyPriceUseCase.getRate(code, RUB, date);
+        } catch (final FeignException e) {
+            log.warn("Failed to get {} to RUB rate on {}: {}", code, date, e.getMessage());
             return null;
         }
     }

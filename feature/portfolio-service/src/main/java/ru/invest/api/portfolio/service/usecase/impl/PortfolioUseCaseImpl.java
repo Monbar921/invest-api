@@ -21,12 +21,14 @@ import ru.invest.api.portfolio.service.model.PortfolioTotalModel;
 import ru.invest.api.portfolio.service.model.PositionModel;
 import ru.invest.api.portfolio.service.model.PositionRequestModel;
 import ru.invest.api.portfolio.service.usecase.PortfolioUseCase;
+import ru.invest.api.tinkoff.supplier.service.PriceConversionService;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -52,6 +54,7 @@ public class PortfolioUseCaseImpl implements PortfolioUseCase {
     private final PortfolioBrokerRepository brokerRepository;
     private final BondUseCase bondUseCase;
     private final DateTimeMapper dateTimeMapper;
+    private final PriceConversionService priceConversionService;
 
     @Override
     @Transactional(readOnly = true)
@@ -62,9 +65,10 @@ public class PortfolioUseCaseImpl implements PortfolioUseCase {
                 .collect(Collectors.toSet()));
         final Map<Long, String> brokers = brokerRepository.findByUserIdOrderByNameAsc(userId).stream()
                 .collect(Collectors.toMap(PortfolioBroker::getId, PortfolioBroker::getName));
+        final RubRates rates = new RubRates();
         final List<PositionModel> models = positions.stream()
                 .map(position -> toModel(position, bonds.get(position.getTicker()),
-                        position.getBrokerId() == null ? null : brokers.get(position.getBrokerId())))
+                        position.getBrokerId() == null ? null : brokers.get(position.getBrokerId()), rates))
                 .toList();
         return new PortfolioModel(models, totals(models));
     }
@@ -94,7 +98,7 @@ public class PortfolioUseCaseImpl implements PortfolioUseCase {
                 .setBuyDate(buyDate)
                 .setBrokerId(broker == null ? null : broker.getId())
                 .setCreatedAt(LocalDateTime.now(ZoneOffset.UTC)));
-        return toModel(position, bond, broker == null ? null : broker.getName());
+        return toModel(position, bond, broker == null ? null : broker.getName(), new RubRates());
     }
 
     @Override
@@ -110,7 +114,7 @@ public class PortfolioUseCaseImpl implements PortfolioUseCase {
                 .setUpdatedAt(LocalDateTime.now(ZoneOffset.UTC));
         repository.save(position);
         return toModel(position, bondUseCase.getByTickers(List.of(position.getTicker())).get(position.getTicker()),
-                broker == null ? null : broker.getName());
+                broker == null ? null : broker.getName(), new RubRates());
     }
 
     @Override
@@ -183,7 +187,7 @@ public class PortfolioUseCaseImpl implements PortfolioUseCase {
      * (после частичных погашений) и для покупки, и для текущей стоимости. Купоны и НКД не учитываются.
      */
     private static PositionModel toModel(final PortfolioPosition position, final BondModel bond,
-                                         final String broker) {
+                                         final String broker, final RubRates rates) {
         final PriceModel price = bond == null ? null : bond.getPrice();
         final MoneyModel nominalMoney = price == null ? null : price.getNominal();
         final BigDecimal nominal = nominalMoney == null ? null : nominalMoney.getQuantity();
@@ -203,11 +207,19 @@ public class PortfolioUseCaseImpl implements PortfolioUseCase {
                 : currentPrice.subtract(position.getBuyPrice()).multiply(HUNDRED)
                         .divide(position.getBuyPrice(), PERCENT_SCALE, RoundingMode.HALF_UP);
 
+        // рубли: покупка - по курсу на дату покупки, сейчас - по курсу на сегодня; разница включает изменение курса
+        final BigDecimal buyAmountInRub = rates.toRub(buyAmount, currency, position.getBuyDate());
+        final BigDecimal currentAmountInRub = rates.toRub(currentAmount, currency, null);
+        final BigDecimal revenueInRub = buyAmountInRub == null || currentAmountInRub == null
+                ? null
+                : currentAmountInRub.subtract(buyAmountInRub);
+
         return new PositionModel(position.getId(), position.getTicker(),
                 bond == null ? null : bond.getName(),
                 bond == null ? null : bond.getIsin(),
                 currency, position.getQuantity(), position.getBuyDate(), broker, nominal, position.getBuyPrice(),
-                currentPrice, buyAmount, currentAmount, revenue, revenuePercent, position.getCreatedAt());
+                currentPrice, buyAmount, currentAmount, revenue, revenuePercent,
+                buyAmountInRub, currentAmountInRub, revenueInRub, position.getCreatedAt());
     }
 
     private static BigDecimal amount(final BigDecimal nominal, final BigDecimal percent, final BigDecimal quantity) {
@@ -230,12 +242,40 @@ public class PortfolioUseCaseImpl implements PortfolioUseCase {
                     final BigDecimal percent = buy.signum() == 0
                             ? null
                             : revenue.multiply(HUNDRED).divide(buy, PERCENT_SCALE, RoundingMode.HALF_UP);
-                    return new PortfolioTotalModel(entry.getKey(), buy, current, revenue, percent);
+                    // рубли итога - сумма рублей покупок: у каждой свой курс на дату покупки
+                    final boolean allInRub = entry.getValue().stream()
+                            .allMatch(position -> position.revenueInRub() != null);
+                    final BigDecimal buyInRub = allInRub ? sum(entry.getValue(), PositionModel::buyAmountInRub) : null;
+                    final BigDecimal currentInRub = allInRub
+                            ? sum(entry.getValue(), PositionModel::currentAmountInRub)
+                            : null;
+                    return new PortfolioTotalModel(entry.getKey(), buy, current, revenue, percent,
+                            buyInRub, currentInRub, allInRub ? currentInRub.subtract(buyInRub) : null);
                 })
                 .toList();
     }
 
     private static BigDecimal sum(final List<PositionModel> positions, final Function<PositionModel, BigDecimal> field) {
         return positions.stream().map(field).reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    /**
+     * Курсы к рублю на один запрос портфеля: каждая пара «валюта, дата» запрашивается один раз, в том числе неудачно.
+     * Дата null - курс на сегодня (ЦБ, иначе budget.org), иначе - курс ЦБ на эту дату.
+     */
+    private final class RubRates {
+        private final Map<String, Optional<BigDecimal>> rates = new HashMap<>();
+
+        BigDecimal toRub(final BigDecimal amount, final String currency, final LocalDate date) {
+            if (amount == null || currency == null) {
+                return null;
+            }
+            final String code = currency.toUpperCase();
+            return rates.computeIfAbsent(code + "@" + date, key -> Optional.ofNullable(date == null
+                            ? priceConversionService.getRubRate(code)
+                            : priceConversionService.getRubRate(code, date)))
+                    .map(rate -> amount.multiply(rate).setScale(MONEY_SCALE, RoundingMode.HALF_UP))
+                    .orElse(null);
+        }
     }
 }

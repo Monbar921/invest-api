@@ -19,4 +19,10 @@ public class PortfolioTotalDto {
     private BigDecimal revenue;
     /** null - стоимость покупки 0 */
     private BigDecimal revenuePercent;
+    /** Сумма стоимостей покупки в рублях по курсам ЦБ на даты покупок */
+    private BigDecimal buyAmountInRub;
+    /** Сумма текущих стоимостей в рублях по курсу ЦБ на сегодня */
+    private BigDecimal currentAmountInRub;
+    /** Текущая стоимость в рублях − стоимость покупки в рублях; рублёвые суммы null, если у какой-то покупки нет курса */
+    private BigDecimal revenueInRub;
 }

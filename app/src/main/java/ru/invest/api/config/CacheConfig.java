@@ -22,6 +22,8 @@ import static ru.invest.api.common.constants.CacheConstants.COUPON_CACHE_MANAGER
 import static ru.invest.api.common.constants.CacheConstants.COUPON_CACHE_NAME;
 import static ru.invest.api.common.constants.CacheConstants.CURRENCY_PROVIDER_CACHE_MANAGER;
 import static ru.invest.api.common.constants.CacheConstants.CURRENCY_PROVIDER_CACHE_NAME;
+import static ru.invest.api.common.constants.CacheConstants.CURRENCY_RATE_CACHE_MANAGER;
+import static ru.invest.api.common.constants.CacheConstants.CURRENCY_RATE_CACHE_NAME;
 import static ru.invest.api.common.constants.CacheConstants.MARKET_OVERVIEW_CACHE_MANAGER;
 import static ru.invest.api.common.constants.CacheConstants.MARKET_OVERVIEW_CACHE_NAME;
 import static ru.invest.api.common.constants.CacheConstants.PRICE_CACHE_MANAGER;
@@ -71,6 +73,19 @@ public class CacheConfig {
         final CaffeineCacheManager cacheManager = new CaffeineCacheManager(COUPON_CACHE_NAME);
         cacheManager.setCaffeine(Caffeine.newBuilder()
                 .maximumSize(3000)
+                .expireAfterWrite(24, TimeUnit.HOURS));
+        return cacheManager;
+    }
+
+    /**
+     * Курсы ЦБ на дату перед таблицей currency_rate: курс на прошедшую дату не меняется, кэш только экономит запрос
+     * в БД. Пустой результат (ЦБ недоступен, валюты нет) не кэшируется.
+     */
+    @Bean(CURRENCY_RATE_CACHE_MANAGER)
+    public CacheManager currencyRateCacheManager() {
+        final CaffeineCacheManager cacheManager = new CaffeineCacheManager(CURRENCY_RATE_CACHE_NAME);
+        cacheManager.setCaffeine(Caffeine.newBuilder()
+                .maximumSize(10_000)
                 .expireAfterWrite(24, TimeUnit.HOURS));
         return cacheManager;
     }

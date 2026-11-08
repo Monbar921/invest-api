@@ -41,6 +41,15 @@ public class PortfolioPositionDto {
     private BigDecimal revenue;
     /** Доход в % к стоимости покупки; null - цены нет */
     private BigDecimal revenuePercent;
+    /** Стоимость покупки в рублях по курсу ЦБ на дату покупки; null - курса нет */
+    private BigDecimal buyAmountInRub;
+    /** Текущая стоимость в рублях по курсу ЦБ на сегодня; null - цены или курса нет */
+    private BigDecimal currentAmountInRub;
+    /**
+     * Доход в рублях: текущая стоимость в рублях − стоимость покупки в рублях, то есть вместе с изменением курса
+     * валюты с даты покупки; null - цены или одного из курсов нет
+     */
+    private BigDecimal revenueInRub;
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
     private ZonedDateTime createdAt;
 }

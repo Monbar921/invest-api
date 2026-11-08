@@ -17,6 +17,10 @@ import java.time.LocalDateTime;
  * @param currentAmount  номинал × текущая цена × количество; null - цены нет
  * @param revenue        текущая стоимость − стоимость покупки, отрицательный - убыток; null - цены нет
  * @param revenuePercent доход в % к стоимости покупки; null - цены нет
+ * @param buyAmountInRub стоимость покупки в рублях по курсу ЦБ на дату покупки; null - курса нет
+ * @param currentAmountInRub текущая стоимость в рублях по курсу на сегодня; null - цены или курса нет
+ * @param revenueInRub   текущая стоимость в рублях − стоимость покупки в рублях: с изменением курса валюты;
+ *                       null - цены или одного из курсов нет
  * @param createdAt      UTC
  */
 public record PositionModel(Long id,
@@ -34,5 +38,8 @@ public record PositionModel(Long id,
                             BigDecimal currentAmount,
                             BigDecimal revenue,
                             BigDecimal revenuePercent,
+                            BigDecimal buyAmountInRub,
+                            BigDecimal currentAmountInRub,
+                            BigDecimal revenueInRub,
                             LocalDateTime createdAt) {
 }

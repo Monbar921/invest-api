@@ -22,6 +22,9 @@ public interface CacheConstants {
     String CURRENCY_PROVIDER_CACHE_MANAGER = "currencyProviderCacheManager";
     String CURRENCY_PROVIDER_CACHE_NAME = "currencyProviderOrgCache";
 
+    String CURRENCY_RATE_CACHE_MANAGER = "currencyRateCacheManager";
+    String CURRENCY_RATE_CACHE_NAME = "currencyRateCache";
+
     String MARKET_OVERVIEW_CACHE_MANAGER = "marketOverviewCacheManager";
     String MARKET_OVERVIEW_CACHE_NAME = "marketOverviewCache";
 }

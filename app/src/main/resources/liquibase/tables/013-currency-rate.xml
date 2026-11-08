@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.4.xsd">
+
+    <!-- курсы ЦБ к рублю на дату: курс на прошедшую дату не меняется, поэтому хранится и читается отсюда, а к ЦБ
+         идём только за датами, которых ещё нет. Будущие даты не сохраняются -->
+    <changeSet id="INVEST-001-create-currency-rate-table" author="d.v.kornilovich">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="currency_rate"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="currency_rate">
+            <column autoIncrement="true" name="id" type="bigserial">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="rate_date" type="date">
+                <constraints nullable="false"/>
+            </column>
+            <!-- код валюты в верхнем регистре: USD, CNY -->
+            <column name="currency" type="varchar(10)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- рублей за одну единицу валюты (номинал ЦБ уже учтён) -->
+            <column name="rate" type="numeric(20, 10)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="source" type="varchar(16)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addUniqueConstraint tableName="currency_rate" columnNames="rate_date, currency"
+                             constraintName="currency_rate_date_currency_uq"/>
+    </changeSet>
+</databaseChangeLog>
