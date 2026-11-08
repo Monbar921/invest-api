@@ -147,6 +147,24 @@ public class TelegramTest extends AbstractInvestApplicationTest {
     }
 
     @Test
+    void codeSentAsPlainMessageLinksChat() {
+        // Telegram Desktop может открыть чат без параметра start - пользователь отправляет код из приложения сам
+        final String token = token(createLink(ALICE));
+
+        message(CHAT_1, "  " + token + " ");
+
+        assertThat(lastReply(CHAT_1), containsString("Telegram подключён"));
+        assertThat(chatOf(ALICE), equalTo(List.of(CHAT_1)));
+    }
+
+    @Test
+    void unknownCodeAsPlainMessageIsRejected() {
+        message(CHAT_1, "A".repeat(43));
+
+        assertThat(lastReply(CHAT_1), containsString("Ссылка недействительна"));
+    }
+
+    @Test
     void unknownTokenIsRejected() {
         message(CHAT_1, "/start not-a-real-token");
 

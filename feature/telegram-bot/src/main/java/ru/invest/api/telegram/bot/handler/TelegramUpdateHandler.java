@@ -11,6 +11,7 @@ import ru.invest.api.telegram.bot.model.LinkResult;
 import ru.invest.api.telegram.bot.usecase.TelegramLinkUseCase;
 
 import java.util.Locale;
+import java.util.regex.Pattern;
 
 /**
  * Команды бота. Обрабатываются только личные чаты: группы и каналы игнорируются.
@@ -28,13 +29,18 @@ public class TelegramUpdateHandler implements LongPollingSingleThreadUpdateConsu
             Получите новую в приложении: «Подключить Telegram».""";
     static final String START_WITHOUT_TOKEN = """
             Это бот уведомлений по облигациям.
-            Чтобы подключить его, нажмите «Подключить Telegram» в приложении и откройте ссылку.""";
+            Чтобы подключить его, нажмите «Подключить Telegram» в приложении и откройте ссылку
+            или отправьте сюда код подключения из приложения.""";
     static final String UNLINKED = "Telegram отключён, уведомления больше не придут. Подключить снова - из приложения.";
     static final String NOT_LINKED = "Этот чат не подключён к приложению.";
     static final String HELP = """
-            /start - подключение (по ссылке из приложения)
+            /start - подключение (по ссылке или коду из приложения)
             /stop - отключить уведомления
             /help - эта подсказка""";
+
+    // токен ссылки привязки: 32 байта в base64url. Telegram Desktop иногда теряет параметр start у ссылки - тогда
+    // пользователь отправляет код из приложения обычным сообщением
+    private static final Pattern LINK_TOKEN = Pattern.compile("[A-Za-z0-9_-]{43}");
 
     private final TelegramLinkUseCase linkUseCase;
     private final TelegramMessageSender sender;
@@ -63,7 +69,14 @@ public class TelegramUpdateHandler implements LongPollingSingleThreadUpdateConsu
         // в группах команда приходит как /start@bot_name; в личном чате суффикс тоже допустим
         final String command = parts[0].toLowerCase(Locale.ROOT).replaceFirst("@.*$", "");
         final String argument = parts.length > 1 ? parts[1].strip() : "";
+        // сам токен в лог не пишем
+        log.info("Telegram message: command={}, argument={}", command.startsWith("/") ? command : "<text>",
+                argument.isEmpty() ? "none" : "present");
 
+        if (parts.length == 1 && LINK_TOKEN.matcher(parts[0]).matches()) {
+            sender.send(chatId, link(message, parts[0]));
+            return;
+        }
         switch (command) {
             case "/start" -> sender.send(chatId, argument.isEmpty() ? START_WITHOUT_TOKEN : link(message, argument));
             case "/stop" -> sender.send(chatId, linkUseCase.unlinkByChat(chatId) ? UNLINKED : NOT_LINKED);
