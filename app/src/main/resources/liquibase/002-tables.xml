@@ -15,4 +15,5 @@
     <include file="tables/009-alert.xml" relativeToChangelogFile="true"/>
     <include file="tables/010-alert-price.xml" relativeToChangelogFile="true"/>
     <include file="tables/011-alert-events.xml" relativeToChangelogFile="true"/>
+    <include file="tables/012-portfolio.xml" relativeToChangelogFile="true"/>
 </databaseChangeLog>

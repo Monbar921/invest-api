@@ -11,7 +11,9 @@ import ru.invest.api.common.model.calculation.ProfitCalculationRequestModel;
 import ru.invest.api.common.model.parameters.BondParametersModel;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 public interface BondUseCase {
     /**
@@ -33,6 +35,11 @@ public interface BondUseCase {
      * Облигация с ценой и купоном вместе с графиком выплат.
      */
     BondModel getByTicker(String ticker);
+
+    /**
+     * Облигации с текущей ценой по тикерам, ключ - тикер; облигаций, которых нет, в ответе нет.
+     */
+    Map<String, BondModel> getByTickers(Collection<String> tickers);
 
     /**
      * Нестрогий поиск облигаций по тикеру, ISIN и названию - см. {@link ru.invest.api.common.usecase.BondSearchUseCase}.

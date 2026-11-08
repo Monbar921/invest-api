@@ -14,6 +14,7 @@ public enum ExceptionErrorCode {
     EXTERNAL_SERVICE_ERROR,
     TELEGRAM_DISABLED,
     ALERT_INVALID,
+    PORTFOLIO_INVALID,
 
     UNAUTHORIZED
 }

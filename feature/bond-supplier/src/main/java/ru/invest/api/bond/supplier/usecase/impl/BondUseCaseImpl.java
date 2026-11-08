@@ -31,10 +31,13 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -73,6 +76,12 @@ public class BondUseCaseImpl implements BondUseCase {
     @Override
     public BondModel getByTicker(final String ticker) {
         return tinkoffBondUseCase.findDetailedByTicker(ticker);
+    }
+
+    @Override
+    public Map<String, BondModel> getByTickers(final Collection<String> tickers) {
+        return tinkoffBondUseCase.findByTickers(tickers).stream()
+                .collect(Collectors.toMap(BondModel::getTicker, Function.identity(), (first, second) -> first));
     }
 
     @Override

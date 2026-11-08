@@ -21,6 +21,7 @@
         <module>news-supplier</module>
         <module>alert-service</module>
         <module>telegram-bot</module>
+        <module>portfolio-service</module>
     </modules>
 
     <dependencies>

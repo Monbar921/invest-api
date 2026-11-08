@@ -1,0 +1,199 @@
+package ru.invest.api.portfolio.service.usecase.impl;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import ru.invest.api.bond.supplier.usecase.BondUseCase;
+import ru.invest.api.common.entity.PortfolioPosition;
+import ru.invest.api.common.exception.GeneralNotFoundEntityException;
+import ru.invest.api.common.exception.GeneralUnprocessableEntityException;
+import ru.invest.api.common.exception.enums.ExceptionErrorCode;
+import ru.invest.api.common.mapper.DateTimeMapper;
+import ru.invest.api.common.model.BondModel;
+import ru.invest.api.common.model.MoneyModel;
+import ru.invest.api.common.model.PriceModel;
+import ru.invest.api.common.repository.PortfolioPositionRepository;
+import ru.invest.api.portfolio.service.model.PortfolioModel;
+import ru.invest.api.portfolio.service.model.PortfolioTotalModel;
+import ru.invest.api.portfolio.service.model.PositionModel;
+import ru.invest.api.portfolio.service.model.PositionRequestModel;
+import ru.invest.api.portfolio.service.usecase.PortfolioUseCase;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+public class PortfolioUseCaseImpl implements PortfolioUseCase {
+    private static final String NOT_FOUND = "Portfolio position %d not found";
+    private static final int MAX_POSITIONS = 200;
+    private static final int MAX_QUANTITY = 1_000_000;
+    // цена покупки в % от номинала; верхний предел - как у порога цены в уведомлениях
+    private static final BigDecimal MIN_PRICE = new BigDecimal("0.01");
+    private static final BigDecimal MAX_PRICE = BigDecimal.valueOf(300);
+    private static final BigDecimal HUNDRED = BigDecimal.valueOf(100);
+    private static final int MONEY_SCALE = 2;
+    private static final int PERCENT_SCALE = 2;
+
+    private final PortfolioPositionRepository repository;
+    private final BondUseCase bondUseCase;
+    private final DateTimeMapper dateTimeMapper;
+
+    @Override
+    @Transactional(readOnly = true)
+    public PortfolioModel getPortfolio(final String userId) {
+        final List<PortfolioPosition> positions = repository.findByUserIdOrderByTickerAscBuyDateAscIdAsc(userId);
+        final Map<String, BondModel> bonds = bondUseCase.getByTickers(positions.stream()
+                .map(PortfolioPosition::getTicker)
+                .collect(Collectors.toSet()));
+        final List<PositionModel> models = positions.stream()
+                .map(position -> toModel(position, bonds.get(position.getTicker())))
+                .toList();
+        return new PortfolioModel(models, totals(models));
+    }
+
+    @Override
+    @Transactional
+    public PositionModel create(final String userId, final PositionRequestModel request) {
+        if (request.ticker() == null || request.ticker().isBlank()) {
+            throw unprocessable("ticker is required");
+        }
+        final LocalDate buyDate = validate(request);
+        // 404, если такой облигации нет
+        final BondModel bond = bondUseCase.getByTickers(List.of(request.ticker())).get(request.ticker());
+        if (bond == null) {
+            throw new GeneralNotFoundEntityException(ExceptionErrorCode.BOND_NOT_FOUND,
+                    "Bond not found for ticker %s".formatted(request.ticker()));
+        }
+        if (repository.countByUserId(userId) >= MAX_POSITIONS) {
+            throw unprocessable("No more than %d positions per user".formatted(MAX_POSITIONS));
+        }
+        final PortfolioPosition position = repository.save(new PortfolioPosition()
+                .setUserId(userId)
+                .setTicker(bond.getTicker())
+                .setQuantity(request.quantity())
+                .setBuyPrice(request.buyPrice())
+                .setBuyDate(buyDate)
+                .setCreatedAt(LocalDateTime.now(ZoneOffset.UTC)));
+        return toModel(position, bond);
+    }
+
+    @Override
+    @Transactional
+    public PositionModel update(final String userId, final Long id, final PositionRequestModel request) {
+        final PortfolioPosition position = find(userId, id);
+        final LocalDate buyDate = validate(request);
+        position.setQuantity(request.quantity())
+                .setBuyPrice(request.buyPrice())
+                .setBuyDate(buyDate)
+                .setUpdatedAt(LocalDateTime.now(ZoneOffset.UTC));
+        repository.save(position);
+        return toModel(position, bondUseCase.getByTickers(List.of(position.getTicker())).get(position.getTicker()));
+    }
+
+    @Override
+    @Transactional
+    public void delete(final String userId, final Long id) {
+        repository.delete(find(userId, id));
+    }
+
+    /**
+     * @return дата покупки; не задана - сегодня
+     */
+    private LocalDate validate(final PositionRequestModel request) {
+        if (request.quantity() == null || request.quantity() < 1 || request.quantity() > MAX_QUANTITY) {
+            throw unprocessable("quantity must be from 1 to %d".formatted(MAX_QUANTITY));
+        }
+        if (request.buyPrice() == null
+                || request.buyPrice().compareTo(MIN_PRICE) < 0
+                || request.buyPrice().compareTo(MAX_PRICE) > 0) {
+            throw unprocessable("buyPrice must be from %s to %s %% of nominal".formatted(MIN_PRICE.toPlainString(),
+                    MAX_PRICE.toPlainString()));
+        }
+        final LocalDate today = dateTimeMapper.getNow().toLocalDate();
+        final LocalDate buyDate = Optional.ofNullable(request.buyDate()).orElse(today);
+        if (buyDate.isAfter(today)) {
+            throw unprocessable("buyDate must not be in the future");
+        }
+        return buyDate;
+    }
+
+    private PortfolioPosition find(final String userId, final Long id) {
+        return repository.findByIdAndUserId(id, userId)
+                .orElseThrow(() -> new GeneralNotFoundEntityException(ExceptionErrorCode.NOT_FOUND,
+                        NOT_FOUND.formatted(id)));
+    }
+
+    private static GeneralUnprocessableEntityException unprocessable(final String message) {
+        return new GeneralUnprocessableEntityException(ExceptionErrorCode.PORTFOLIO_INVALID, message);
+    }
+
+    /**
+     * Доход - только от изменения цены: номинал × (текущая цена − цена покупки) × количество. Номинал - текущий
+     * (после частичных погашений) и для покупки, и для текущей стоимости. Купоны и НКД не учитываются.
+     */
+    private static PositionModel toModel(final PortfolioPosition position, final BondModel bond) {
+        final PriceModel price = bond == null ? null : bond.getPrice();
+        final MoneyModel nominalMoney = price == null ? null : price.getNominal();
+        final BigDecimal nominal = nominalMoney == null ? null : nominalMoney.getQuantity();
+        final String currency = nominalMoney != null && nominalMoney.getCurrency() != null
+                ? nominalMoney.getCurrency()
+                : Optional.ofNullable(bond).map(BondModel::getCurrency).orElse(null);
+        final BigDecimal currentPrice = price == null ? null : price.getPercentagePrice();
+        final BigDecimal quantity = BigDecimal.valueOf(position.getQuantity());
+
+        final BigDecimal buyAmount = amount(nominal, position.getBuyPrice(), quantity);
+        final BigDecimal currentAmount = amount(nominal, currentPrice, quantity);
+        final BigDecimal revenue = buyAmount == null || currentAmount == null
+                ? null
+                : currentAmount.subtract(buyAmount);
+        final BigDecimal revenuePercent = currentPrice == null
+                ? null
+                : currentPrice.subtract(position.getBuyPrice()).multiply(HUNDRED)
+                        .divide(position.getBuyPrice(), PERCENT_SCALE, RoundingMode.HALF_UP);
+
+        return new PositionModel(position.getId(), position.getTicker(),
+                bond == null ? null : bond.getName(),
+                bond == null ? null : bond.getIsin(),
+                currency, position.getQuantity(), position.getBuyDate(), nominal, position.getBuyPrice(),
+                currentPrice, buyAmount, currentAmount, revenue, revenuePercent, position.getCreatedAt());
+    }
+
+    private static BigDecimal amount(final BigDecimal nominal, final BigDecimal percent, final BigDecimal quantity) {
+        if (nominal == null || percent == null) {
+            return null;
+        }
+        return nominal.multiply(percent).multiply(quantity).divide(HUNDRED, MONEY_SCALE, RoundingMode.HALF_UP);
+    }
+
+    /** По валюте номинала, в порядке позиций; позиции без текущей цены не входят */
+    private static List<PortfolioTotalModel> totals(final List<PositionModel> positions) {
+        final Map<String, List<PositionModel>> byCurrency = positions.stream()
+                .filter(position -> position.currency() != null && position.revenue() != null)
+                .collect(Collectors.groupingBy(PositionModel::currency, LinkedHashMap::new, Collectors.toList()));
+        return byCurrency.entrySet().stream()
+                .map(entry -> {
+                    final BigDecimal buy = sum(entry.getValue(), PositionModel::buyAmount);
+                    final BigDecimal current = sum(entry.getValue(), PositionModel::currentAmount);
+                    final BigDecimal revenue = current.subtract(buy);
+                    final BigDecimal percent = buy.signum() == 0
+                            ? null
+                            : revenue.multiply(HUNDRED).divide(buy, PERCENT_SCALE, RoundingMode.HALF_UP);
+                    return new PortfolioTotalModel(entry.getKey(), buy, current, revenue, percent);
+                })
+                .toList();
+    }
+
+    private static BigDecimal sum(final List<PositionModel> positions, final Function<PositionModel, BigDecimal> field) {
+        return positions.stream().map(field).reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+}

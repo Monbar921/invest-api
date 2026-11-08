@@ -15,6 +15,7 @@ import ru.invest.api.tinkoff.supplier.mapper.TinkoffBondEntityMapper;
 import ru.invest.api.tinkoff.supplier.service.PriceConversionService;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondUseCase;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -44,6 +45,15 @@ public class TinkoffBondUseCaseImpl implements TinkoffBondUseCase {
                         ExceptionErrorCode.BOND_NOT_FOUND, BOND_NOT_FOUND_MESSAGE.formatted(ticker)));
 
         return tinkoffBondEntityMapper.toModel(bond);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<BondModel> findByTickers(final Collection<String> tickers) {
+        if (CollectionUtils.isEmpty(tickers)) {
+            return List.of();
+        }
+        return tinkoffBondEntityMapper.toModel(bondRepository.findWithPriceByTickerIn(tickers));
     }
 
     @Override
