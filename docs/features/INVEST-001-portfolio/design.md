@@ -14,7 +14,8 @@ UI /portfolio ──▶ invest-gateway /api/portfolio/** ──X-User-Id──�
 
 - `feature/portfolio-service` - новый модуль: `PortfolioUseCase` (CRUD, расчёт стоимости и дохода, итоги), модели
   `PositionModel`, `PortfolioModel`, `PortfolioTotalModel`, `PositionRequestModel`. Зависит от `bond-supplier`.
-- `common` - сущность `PortfolioPosition`, `PortfolioPositionRepository`; в `BondRepository` -
+- `common` - сущности `PortfolioPosition`, `PortfolioBroker`, репозитории `PortfolioPositionRepository`,
+  `PortfolioBrokerRepository`; в `BondRepository` -
   `findWithPriceByTickerIn` (облигации с ценой и купоном по списку тикеров); код ошибки `PORTFOLIO_INVALID`.
 - `tinkoff-supplier` / `bond-supplier` - `TinkoffBondUseCase.findByTickers`, `BondUseCase.getByTickers`: облигации
   портфеля читаются одним запросом из БД, мимо кэша, без рублёвой цены (`currentInRub` портфелю не нужна).
@@ -28,6 +29,9 @@ UI /portfolio ──▶ invest-gateway /api/portfolio/** ──X-User-Id──�
 `buy_date`, `created_at`, `updated_at`. Индекс по `user_id`. Уникальности по тикеру нет - покупок одной облигации
 может быть несколько.
 
+Таблица `portfolio_broker` (второй changeSet того же файла): `user_id`, `name`, `created_at`; уникальный индекс
+`(user_id, lower(name))`. У `portfolio_position` - `broker_id` с внешним ключом `on delete set null`.
+
 ## API
 
 | Метод и путь                                     | Что                                                                |
@@ -36,6 +40,12 @@ UI /portfolio ──▶ invest-gateway /api/portfolio/** ──X-User-Id──�
 | `POST /internal/rest/portfolio/positions`        | `{ticker, quantity, buyPrice, buyDate?}` → `201`                   |
 | `PUT /internal/rest/portfolio/positions/{id}`    | `{quantity, buyPrice, buyDate?}`; тикер из тела не используется   |
 | `DELETE /internal/rest/portfolio/positions/{id}` | `204`                                                              |
+| `GET /internal/rest/portfolio/brokers`           | брокеры пользователя по имени `[{id, name}]`                       |
+
+Брокер в покупке передаётся **именем** (`broker`), а не id: use case ищет его у пользователя без учёта регистра и
+пробелов по краям, не нашёл - создаёт (не больше 50 у пользователя, иначе `422`). Пустое имя - без брокера; так же
+брокер снимается при изменении. Так UI не нужен отдельный запрос «создать брокера» перед сохранением покупки, и
+брокер не появляется в списке, если покупку в итоге не сохранили.
 
 Ошибки: без `X-User-Id` - `401`; чужая или несуществующая покупка, неизвестная облигация - `404`; `quantity` вне
 1..1 000 000, `buyPrice` вне 0,01..300 - `400` (bean validation); нет тикера, дата покупки в будущем, больше 200
@@ -47,8 +57,13 @@ UI /portfolio ──▶ invest-gateway /api/portfolio/** ──X-User-Id──�
 `src/pages/PortfolioPage.tsx`, запросы - `src/api/portfolio.ts`, хуки `usePortfolio` / `usePortfolioMutations`.
 Карточки итогов по валютам, таблица покупок (прибыль зелёная, убыток красный), окно добавления и изменения.
 При выборе облигации цена покупки подставляется из её текущей цены, пока пользователь не ввёл свою.
+`components/BrokerSelect.tsx` - Select с поиском по брокерам пользователя (`useBrokers`); набранное имя, которого нет
+в списке, предлагается пунктом «+ Добавить «…»». После сохранения покупки список брокеров перечитывается.
 
 ## Решения и отвергнутые варианты
+
+- **Брокер - отдельная таблица, а не текст у покупки.** Иначе список для выбора пришлось бы собирать из покупок,
+  и брокер пропадал бы вместе с последней покупкой; а «Т-Инвестиции» и «т-инвестиции» были бы разными.
 
 - **Доход без купонов.** Нужен доход от цены покупки; купоны потребовали бы графика выплат по каждой покупке.
   Полный доход за период считает калькулятор.

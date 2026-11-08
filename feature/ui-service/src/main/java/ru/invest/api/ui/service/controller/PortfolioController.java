@@ -14,11 +14,14 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import ru.invest.api.dto.portfolio.BrokerDto;
 import ru.invest.api.dto.portfolio.PortfolioDto;
 import ru.invest.api.dto.portfolio.PortfolioPositionDto;
 import ru.invest.api.dto.portfolio.PortfolioPositionRequest;
 import ru.invest.api.portfolio.service.usecase.PortfolioUseCase;
 import ru.invest.api.ui.service.mapper.PortfolioDtoMapper;
+
+import java.util.List;
 
 /**
  * Портфель облигаций пользователя: покупки и доход от цены покупки до текущей. Пользователь - X-User-Id от gateway,
@@ -60,6 +63,15 @@ public class PortfolioController {
                                        @RequestBody @Valid final PortfolioPositionRequest request) {
         return portfolioDtoMapper.toDto(portfolioUseCase.update(UserIdHeader.require(userId), id,
                 portfolioDtoMapper.toModel(request)));
+    }
+
+    /**
+     * Брокеры пользователя по имени - для выбора у покупки. Новый брокер появляется, когда его впервые указывают
+     * у покупки, и остаётся, даже если покупок с ним больше нет.
+     */
+    @GetMapping("/brokers")
+    public List<BrokerDto> getBrokers(@RequestHeader(value = UserIdHeader.NAME, required = false) final String userId) {
+        return portfolioDtoMapper.toBrokerDto(portfolioUseCase.getBrokers(UserIdHeader.require(userId)));
     }
 
     @DeleteMapping("/positions/{id}")

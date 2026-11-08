@@ -25,6 +25,8 @@ public class PortfolioPositionDto {
     private String currency;
     private int quantity;
     private LocalDate buyDate;
+    /** Имя брокера; null - не указан */
+    private String broker;
     /** Текущий номинал одной облигации */
     private BigDecimal nominal;
     /** Цена покупки, % от номинала */

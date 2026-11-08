@@ -5,9 +5,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.jdbc.Sql;
 import ru.invest.api.AbstractInvestApplicationTest;
+import ru.invest.api.dto.portfolio.BrokerDto;
 import ru.invest.api.dto.portfolio.PortfolioDto;
 import ru.invest.api.dto.portfolio.PortfolioPositionDto;
 import ru.invest.api.dto.portfolio.PortfolioTotalDto;
+import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.math.BigDecimal;
@@ -29,7 +31,7 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 
-@Sql(scripts = "/sql/bonds-for-controller.sql", statements = "truncate table portfolio_position restart identity")
+@Sql(scripts = "/sql/bonds-for-controller.sql", statements = "truncate table portfolio_position, portfolio_broker restart identity")
 public class PortfolioTest extends AbstractInvestApplicationTest {
     private static final String BASE_URL = "http://localhost:8099/internal/rest/portfolio";
     private static final String USER_ID_HEADER = "X-User-Id";
@@ -179,6 +181,66 @@ public class PortfolioTest extends AbstractInvestApplicationTest {
         assertThat(send("DELETE", path, ALICE, null).statusCode(), equalTo(NO_CONTENT));
         assertThat(portfolio(ALICE).getPositions(), empty());
         assertThat(portfolio(ALICE).getTotals(), empty());
+    }
+
+    @Test
+    void brokerIsCreatedOnceAndOfferedForNextPurchases() {
+        final Map<String, Object> first = body(AUTO_FINANCE, 1, "99");
+        first.put("broker", "Т-Инвестиции");
+        assertThat(read(post(ALICE, first).body(), PortfolioPositionDto.class).getBroker(), equalTo("Т-Инвестиции"));
+
+        // то же имя в другом регистре и с пробелами - тот же брокер, не новый
+        final Map<String, Object> second = body(OFZ, 1, "60");
+        second.put("broker", "  т-инвестиции ");
+        assertThat(read(post(ALICE, second).body(), PortfolioPositionDto.class).getBroker(), equalTo("Т-Инвестиции"));
+
+        final Map<String, Object> third = body(OFZ, 1, "60");
+        third.put("broker", "Альфа");
+        post(ALICE, third);
+        // без брокера
+        create(ALICE, AUTO_FINANCE, 1, "100");
+
+        assertThat(brokers(ALICE).stream().map(BrokerDto::getName).toList(), contains("Альфа", "Т-Инвестиции"));
+        assertThat(brokers(BOB), empty());
+        assertThat(portfolio(ALICE).getPositions().stream().map(PortfolioPositionDto::getBroker).toList(),
+                contains("Т-Инвестиции", null, "Т-Инвестиции", "Альфа"));
+    }
+
+    @Test
+    void brokerStaysAfterItsPurchasesAreGone() {
+        final Map<String, Object> request = body(AUTO_FINANCE, 1, "99");
+        request.put("broker", "Сбер");
+        final PortfolioPositionDto position = read(post(ALICE, request).body(), PortfolioPositionDto.class);
+
+        // покупку перевели на другого брокера, потом удалили - «Сбер» по-прежнему в списке
+        final Map<String, Object> change = body(null, 1, "99");
+        change.put("broker", "ВТБ");
+        final HttpResponse<String> updated = send("PUT", "/positions/" + position.getId(), ALICE, change);
+        assertThat(read(updated.body(), PortfolioPositionDto.class).getBroker(), equalTo("ВТБ"));
+        final Map<String, Object> cleared = body(null, 1, "99");
+        cleared.put("broker", "");
+        assertThat(read(send("PUT", "/positions/" + position.getId(), ALICE, cleared).body(),
+                PortfolioPositionDto.class).getBroker(), nullValue());
+        send("DELETE", "/positions/" + position.getId(), ALICE, null);
+
+        assertThat(brokers(ALICE).stream().map(BrokerDto::getName).toList(), contains("ВТБ", "Сбер"));
+        assertThat(send("GET", "/brokers", null, null).statusCode(), equalTo(UNAUTHORIZED));
+    }
+
+    @Test
+    void tooLongBrokerIsRejected() {
+        final Map<String, Object> request = body(AUTO_FINANCE, 1, "99");
+        request.put("broker", "x".repeat(101));
+
+        assertThat(post(ALICE, request).statusCode(), equalTo(BAD_REQUEST));
+        assertThat(brokers(ALICE), empty());
+    }
+
+    private List<BrokerDto> brokers(final String userId) {
+        final HttpResponse<String> response = send("GET", "/brokers", userId, null);
+        assertThat(response.statusCode(), equalTo(OK));
+        return jsonMapper.readValue(response.body(), new TypeReference<>() {
+        });
     }
 
     private PortfolioPositionDto create(final String userId, final String ticker, final int quantity,

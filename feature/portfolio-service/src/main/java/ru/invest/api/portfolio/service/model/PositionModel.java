@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
  *
  * @param bondName       null - облигации уже нет в системе
  * @param currency       валюта номинала; null - облигации нет
+ * @param broker         имя брокера; null - не указан
  * @param nominal        текущий номинал одной облигации; null - облигации или цены нет
  * @param buyPrice       цена покупки, % от номинала
  * @param currentPrice   текущая цена, % от номинала; null - цены нет
@@ -25,6 +26,7 @@ public record PositionModel(Long id,
                             String currency,
                             int quantity,
                             LocalDate buyDate,
+                            String broker,
                             BigDecimal nominal,
                             BigDecimal buyPrice,
                             BigDecimal currentPrice,

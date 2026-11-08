@@ -47,6 +47,10 @@ public class PortfolioPosition {
     @Column(name = "buy_date")
     private LocalDate buyDate;
 
+    /** Брокер ({@link PortfolioBroker}); null - не указан */
+    @Column(name = "broker_id")
+    private Long brokerId;
+
     /** UTC */
     @Column(name = "created_at")
     private LocalDateTime createdAt;

@@ -8,6 +8,9 @@ import java.time.LocalDate;
  *
  * @param buyPrice цена покупки, % от номинала
  * @param buyDate  null - сегодня
+ * @param broker   имя брокера: такой у пользователя уже есть (без учёта регистра) - он, нет - создаётся;
+ *                 null или пусто - без брокера
  */
-public record PositionRequestModel(String ticker, Integer quantity, BigDecimal buyPrice, LocalDate buyDate) {
+public record PositionRequestModel(String ticker, Integer quantity, BigDecimal buyPrice, LocalDate buyDate,
+                                   String broker) {
 }

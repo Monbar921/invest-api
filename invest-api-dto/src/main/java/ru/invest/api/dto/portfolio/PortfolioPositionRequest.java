@@ -5,6 +5,7 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
@@ -22,6 +23,8 @@ import java.time.LocalDate;
 public class PortfolioPositionRequest {
     /** Самое большое количество облигаций в одной покупке; на бэке то же ограничение */
     public static final int MAX_QUANTITY = 1_000_000;
+    /** Длина имени брокера - как в БД */
+    public static final int MAX_BROKER_LENGTH = 100;
 
     /** Обязателен при создании */
     private String ticker;
@@ -36,4 +39,10 @@ public class PortfolioPositionRequest {
     private BigDecimal buyPrice;
     /** Не задана - сегодня */
     private LocalDate buyDate;
+    /**
+     * Имя брокера: уже есть у пользователя (без учёта регистра) - он, нет - создаётся и доступен для следующих
+     * покупок. Не задано или пусто - без брокера.
+     */
+    @Size(max = MAX_BROKER_LENGTH, message = "broker must not be longer than 100 characters")
+    private String broker;
 }

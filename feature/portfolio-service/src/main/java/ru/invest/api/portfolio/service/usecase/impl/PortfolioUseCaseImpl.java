@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.invest.api.bond.supplier.usecase.BondUseCase;
+import ru.invest.api.common.entity.PortfolioBroker;
 import ru.invest.api.common.entity.PortfolioPosition;
 import ru.invest.api.common.exception.GeneralNotFoundEntityException;
 import ru.invest.api.common.exception.GeneralUnprocessableEntityException;
@@ -12,7 +13,9 @@ import ru.invest.api.common.mapper.DateTimeMapper;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.MoneyModel;
 import ru.invest.api.common.model.PriceModel;
+import ru.invest.api.common.repository.PortfolioBrokerRepository;
 import ru.invest.api.common.repository.PortfolioPositionRepository;
+import ru.invest.api.portfolio.service.model.BrokerModel;
 import ru.invest.api.portfolio.service.model.PortfolioModel;
 import ru.invest.api.portfolio.service.model.PortfolioTotalModel;
 import ru.invest.api.portfolio.service.model.PositionModel;
@@ -36,6 +39,7 @@ import java.util.stream.Collectors;
 public class PortfolioUseCaseImpl implements PortfolioUseCase {
     private static final String NOT_FOUND = "Portfolio position %d not found";
     private static final int MAX_POSITIONS = 200;
+    private static final int MAX_BROKERS = 50;
     private static final int MAX_QUANTITY = 1_000_000;
     // цена покупки в % от номинала; верхний предел - как у порога цены в уведомлениях
     private static final BigDecimal MIN_PRICE = new BigDecimal("0.01");
@@ -45,6 +49,7 @@ public class PortfolioUseCaseImpl implements PortfolioUseCase {
     private static final int PERCENT_SCALE = 2;
 
     private final PortfolioPositionRepository repository;
+    private final PortfolioBrokerRepository brokerRepository;
     private final BondUseCase bondUseCase;
     private final DateTimeMapper dateTimeMapper;
 
@@ -55,8 +60,11 @@ public class PortfolioUseCaseImpl implements PortfolioUseCase {
         final Map<String, BondModel> bonds = bondUseCase.getByTickers(positions.stream()
                 .map(PortfolioPosition::getTicker)
                 .collect(Collectors.toSet()));
+        final Map<Long, String> brokers = brokerRepository.findByUserIdOrderByNameAsc(userId).stream()
+                .collect(Collectors.toMap(PortfolioBroker::getId, PortfolioBroker::getName));
         final List<PositionModel> models = positions.stream()
-                .map(position -> toModel(position, bonds.get(position.getTicker())))
+                .map(position -> toModel(position, bonds.get(position.getTicker()),
+                        position.getBrokerId() == null ? null : brokers.get(position.getBrokerId())))
                 .toList();
         return new PortfolioModel(models, totals(models));
     }
@@ -77,14 +85,16 @@ public class PortfolioUseCaseImpl implements PortfolioUseCase {
         if (repository.countByUserId(userId) >= MAX_POSITIONS) {
             throw unprocessable("No more than %d positions per user".formatted(MAX_POSITIONS));
         }
+        final PortfolioBroker broker = resolveBroker(userId, request.broker());
         final PortfolioPosition position = repository.save(new PortfolioPosition()
                 .setUserId(userId)
                 .setTicker(bond.getTicker())
                 .setQuantity(request.quantity())
                 .setBuyPrice(request.buyPrice())
                 .setBuyDate(buyDate)
+                .setBrokerId(broker == null ? null : broker.getId())
                 .setCreatedAt(LocalDateTime.now(ZoneOffset.UTC)));
-        return toModel(position, bond);
+        return toModel(position, bond, broker == null ? null : broker.getName());
     }
 
     @Override
@@ -92,18 +102,49 @@ public class PortfolioUseCaseImpl implements PortfolioUseCase {
     public PositionModel update(final String userId, final Long id, final PositionRequestModel request) {
         final PortfolioPosition position = find(userId, id);
         final LocalDate buyDate = validate(request);
+        final PortfolioBroker broker = resolveBroker(userId, request.broker());
         position.setQuantity(request.quantity())
                 .setBuyPrice(request.buyPrice())
                 .setBuyDate(buyDate)
+                .setBrokerId(broker == null ? null : broker.getId())
                 .setUpdatedAt(LocalDateTime.now(ZoneOffset.UTC));
         repository.save(position);
-        return toModel(position, bondUseCase.getByTickers(List.of(position.getTicker())).get(position.getTicker()));
+        return toModel(position, bondUseCase.getByTickers(List.of(position.getTicker())).get(position.getTicker()),
+                broker == null ? null : broker.getName());
     }
 
     @Override
     @Transactional
     public void delete(final String userId, final Long id) {
         repository.delete(find(userId, id));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<BrokerModel> getBrokers(final String userId) {
+        return brokerRepository.findByUserIdOrderByNameAsc(userId).stream()
+                .map(broker -> new BrokerModel(broker.getId(), broker.getName()))
+                .toList();
+    }
+
+    /**
+     * Брокер по имени без учёта регистра и пробелов по краям; такого у пользователя ещё нет - создаётся и дальше
+     * доступен для других покупок. Пустое имя - без брокера.
+     */
+    private PortfolioBroker resolveBroker(final String userId, final String name) {
+        final String trimmed = name == null ? "" : name.strip();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+        return brokerRepository.findByUserIdAndNameIgnoreCase(userId, trimmed).orElseGet(() -> {
+            if (brokerRepository.countByUserId(userId) >= MAX_BROKERS) {
+                throw unprocessable("No more than %d brokers per user".formatted(MAX_BROKERS));
+            }
+            return brokerRepository.save(new PortfolioBroker()
+                    .setUserId(userId)
+                    .setName(trimmed)
+                    .setCreatedAt(LocalDateTime.now(ZoneOffset.UTC)));
+        });
     }
 
     /**
@@ -141,7 +182,8 @@ public class PortfolioUseCaseImpl implements PortfolioUseCase {
      * Доход - только от изменения цены: номинал × (текущая цена − цена покупки) × количество. Номинал - текущий
      * (после частичных погашений) и для покупки, и для текущей стоимости. Купоны и НКД не учитываются.
      */
-    private static PositionModel toModel(final PortfolioPosition position, final BondModel bond) {
+    private static PositionModel toModel(final PortfolioPosition position, final BondModel bond,
+                                         final String broker) {
         final PriceModel price = bond == null ? null : bond.getPrice();
         final MoneyModel nominalMoney = price == null ? null : price.getNominal();
         final BigDecimal nominal = nominalMoney == null ? null : nominalMoney.getQuantity();
@@ -164,7 +206,7 @@ public class PortfolioUseCaseImpl implements PortfolioUseCase {
         return new PositionModel(position.getId(), position.getTicker(),
                 bond == null ? null : bond.getName(),
                 bond == null ? null : bond.getIsin(),
-                currency, position.getQuantity(), position.getBuyDate(), nominal, position.getBuyPrice(),
+                currency, position.getQuantity(), position.getBuyDate(), broker, nominal, position.getBuyPrice(),
                 currentPrice, buyAmount, currentAmount, revenue, revenuePercent, position.getCreatedAt());
     }
 

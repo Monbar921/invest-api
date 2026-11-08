@@ -45,4 +45,40 @@
             <column name="user_id"/>
         </createIndex>
     </changeSet>
+
+    <!-- брокеры пользователя: список для выбора у покупки. Брокер остаётся, даже если покупок с ним больше нет -
+         его можно выбрать у следующих покупок. Имя уникально у пользователя без учёта регистра -->
+    <changeSet id="INVEST-001-create-portfolio-broker-table" author="d.v.kornilovich">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="portfolio_broker"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="portfolio_broker">
+            <column autoIncrement="true" name="id" type="bigserial">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="user_id" type="varchar(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name" type="varchar(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <sql>create unique index portfolio_broker_user_name_uq_idx on portfolio_broker (user_id, lower(name))</sql>
+
+        <!-- брокер у покупки необязателен -->
+        <addColumn tableName="portfolio_position">
+            <column name="broker_id" type="bigint"/>
+        </addColumn>
+        <addForeignKeyConstraint baseTableName="portfolio_position" baseColumnNames="broker_id"
+                                 constraintName="fk_portfolio_position_broker_id"
+                                 referencedTableName="portfolio_broker" referencedColumnNames="id"
+                                 onDelete="SET NULL"/>
+    </changeSet>
 </databaseChangeLog>
