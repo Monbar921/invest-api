@@ -21,6 +21,12 @@ public class MarketOverviewDto {
     private LocalDate keyRateSince;
     /** Ставка до последнего изменения */
     private BigDecimal previousKeyRate;
+    /** Изменение ставки с начала года, п.п. */
+    private BigDecimal keyRateYearChange;
+    /** Дата последнего прошедшего заседания по ставке */
+    private LocalDate keyRateMeetingDate;
+    /** Изменение ставки по итогам последнего заседания, п.п.; 0 - ставку сохранили */
+    private BigDecimal keyRateMeetingChange;
     private List<CurrencyRateDto> currencies;
 
     /**

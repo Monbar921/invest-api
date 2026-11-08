@@ -21,6 +21,12 @@ public class MarketOverviewModel {
     private LocalDate keyRateSince;
     /** Ставка до последнего изменения */
     private BigDecimal previousKeyRate;
+    /** Изменение ставки с начала года, п.п.; null - нет ставки на 1 января */
+    private BigDecimal keyRateYearChange;
+    /** Последнее прошедшее заседание Совета директоров по ставке; null - календарь заседаний не задан */
+    private LocalDate keyRateMeetingDate;
+    /** Изменение ставки по итогам последнего заседания, п.п.; 0 - ставку сохранили */
+    private BigDecimal keyRateMeetingChange;
     private List<CurrencyRateModel> currencies = List.of();
 
     /**

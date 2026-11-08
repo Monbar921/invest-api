@@ -149,7 +149,7 @@ maintenance-эндпоинты - значение заголовка `From`).
 | `GET /internal/rest/bonds/{ticker}/events`                    | события облигации из её данных: купоны, амортизация, оферта, погашение - за 3 месяца назад и вперёд |
 | `GET /internal/rest/bonds/news?source=&page=&size=`           | лента новостей, новые первыми; `source` - CBR_PRESS, CBR_EVENT, MOEX (несколько через запятую), `size` 1..100, по умолчанию 20 |
 | `GET /internal/rest/bonds/{ticker}/news?page=&size=`          | новости облигации: упомянут её ISIN или новость относится к её эмитенту |
-| `GET /internal/rest/bonds/market-overview`                    | ключевая ставка (с какого дня и прошлая) и курсы USD, EUR, CNY с изменением |
+| `GET /internal/rest/bonds/market-overview`                    | ключевая ставка (с какого дня и прошлая, изменение с начала года и на последнем заседании) и курсы USD, EUR, CNY с изменением |
 | `POST /internal/rest/maintenance/bond/sync-all`               | синхронизация облигаций                                   |
 | `POST /internal/rest/maintenance/news/sync-all`               | загрузка новостей (в фоне, 202 / 409)                     |
 | `POST /internal/rest/maintenance/bond/{coupon\|amortization\|price\|candle}/sync-all` | синхронизация купонов / амортизации / цен / свечей |

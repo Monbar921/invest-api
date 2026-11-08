@@ -7,6 +7,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 import ru.invest.api.common.model.news.NewsSource;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -27,6 +28,12 @@ public class NewsProperties {
      */
     private String acraUrl;
     private String nkrUrl;
+
+    /**
+     * Даты заседаний Совета директоров Банка России по ключевой ставке (дни решения). ЦБ публикует календарь на год
+     * вперёд, API для него нет - список дополняется вручную раз в год.
+     */
+    private List<LocalDate> keyRateMeetings = new ArrayList<>();
 
     @Data
     @NoArgsConstructor

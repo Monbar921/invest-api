@@ -304,6 +304,7 @@ public class NewsTest extends AbstractInvestApplicationTest {
                 <KR><DT>2026-10-26T00:00:00+03:00</DT><Rate>17.00</Rate></KR>
                 <KR><DT>2026-10-28T00:00:00+03:00</DT><Rate>16.50</Rate></KR>
                 <KR><DT>2026-09-15T00:00:00+03:00</DT><Rate>17.00</Rate></KR>
+                <KR><DT>2025-12-30T00:00:00+03:00</DT><Rate>18.00</Rate></KR>
                 </KeyRate></KeyRateXMLResult></KeyRateXMLResponse></soap:Body></soap:Envelope>
                 """.strip().getBytes(StandardCharsets.UTF_8));
         // сегодня доллар 81,50, вчера и раньше - 81,20; других валют ЦБ не вернул
@@ -317,6 +318,11 @@ public class NewsTest extends AbstractInvestApplicationTest {
         // дни ЦБ приходят не по порядку - ставка действует с первого дня после смены
         assertThat(overview.getKeyRateSince(), equalTo(LocalDate.of(2026, 10, 27)));
         assertThat(overview.getPreviousKeyRate(), comparesEqualTo(new BigDecimal("17.00")));
+        // 1 января действовала ставка последнего рабочего дня 2025 года
+        assertThat(overview.getKeyRateYearChange(), comparesEqualTo(new BigDecimal("-1.50")));
+        // заседание 23.10 (пятница), новая ставка - с 27.10
+        assertThat(overview.getKeyRateMeetingDate(), equalTo(LocalDate.of(2026, 10, 23)));
+        assertThat(overview.getKeyRateMeetingChange(), comparesEqualTo(new BigDecimal("-0.50")));
         assertThat(overview.getCurrencies(), hasSize(1));
         assertThat(overview.getCurrencies().getFirst().getCode(), equalTo("USD"));
         assertThat(overview.getCurrencies().getFirst().getRate(), comparesEqualTo(new BigDecimal("81.50")));

@@ -11,11 +11,13 @@ import ru.invest.api.common.model.CurrencyModel;
 import ru.invest.api.common.model.news.KeyRateModel;
 import ru.invest.api.common.model.news.MarketOverviewModel;
 import ru.invest.api.common.model.news.MarketOverviewModel.CurrencyRateModel;
+import ru.invest.api.news.supplier.config.NewsProperties;
 import ru.invest.api.news.supplier.usecase.MarketOverviewUseCase;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -38,6 +40,7 @@ public class MarketOverviewUseCaseImpl implements MarketOverviewUseCase {
     private final CbRfNewsUseCase cbRfNewsUseCase;
     private final CbRfCurrencyUseCase cbRfCurrencyUseCase;
     private final DateTimeMapper dateTimeMapper;
+    private final NewsProperties newsProperties;
 
     @Override
     // ЦБ не ответил совсем - не кэшируем пустой обзор, следующий запрос попробует снова
@@ -55,7 +58,8 @@ public class MarketOverviewUseCaseImpl implements MarketOverviewUseCase {
     }
 
     /**
-     * Ставка на сегодня, с какого дня она действует и какой была до этого. ЦБ не ответил - ставки в обзоре нет.
+     * Ставка на сегодня, с какого дня она действует, какой была до этого, изменение с начала года и на последнем
+     * заседании. ЦБ не ответил - ставки в обзоре нет.
      */
     @SuppressWarnings("checkstyle:IllegalCatch")
     private void fillKeyRate(final MarketOverviewModel overview, final LocalDate today) {
@@ -78,6 +82,28 @@ public class MarketOverviewUseCaseImpl implements MarketOverviewUseCase {
         overview.setKeyRate(current)
                 .setKeyRateSince(rates.get(index).getDate())
                 .setPreviousKeyRate(index > 0 ? rates.get(index - 1).getRate() : null);
+
+        rateOn(rates, today.withDayOfYear(1))
+                .ifPresent(yearStart -> overview.setKeyRateYearChange(current.subtract(yearStart)));
+        // решение объявляют в пятницу, действует оно со следующего рабочего дня: заседание сегодня ещё не учитываем
+        newsProperties.getKeyRateMeetings().stream()
+                .filter(meeting -> meeting.isBefore(today))
+                .max(Comparator.naturalOrder())
+                .ifPresent(meeting -> {
+                    overview.setKeyRateMeetingDate(meeting);
+                    rateOn(rates, meeting)
+                            .ifPresent(before -> overview.setKeyRateMeetingChange(current.subtract(before)));
+                });
+    }
+
+    /**
+     * Ставка, действовавшая в этот день: последний рабочий день ЦБ не позже даты. Истории не хватило - пусто.
+     */
+    private static Optional<BigDecimal> rateOn(final List<KeyRateModel> rates, final LocalDate date) {
+        return rates.stream()
+                .filter(rate -> !rate.getDate().isAfter(date))
+                .reduce((first, second) -> second)
+                .map(KeyRateModel::getRate);
     }
 
     /**
