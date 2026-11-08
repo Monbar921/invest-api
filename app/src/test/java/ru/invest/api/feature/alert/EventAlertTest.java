@@ -15,6 +15,7 @@ import org.telegram.telegrambots.meta.generics.TelegramClient;
 import ru.invest.api.AbstractInvestApplicationTest;
 import ru.invest.api.alert.service.usecase.AlertCheckUseCase;
 import ru.invest.api.alert.service.usecase.NewsAlertCheckUseCase;
+import ru.invest.api.common.repository.NewsRepository;
 import ru.invest.api.dto.alert.AlertDto;
 import ru.invest.api.dto.alert.AlertTypeDto;
 import ru.invest.api.dto.alert.NotificationDto;
@@ -71,6 +72,8 @@ public class EventAlertTest extends AbstractInvestApplicationTest {
     private JsonMapper jsonMapper;
     @Autowired
     private JdbcTemplate jdbcTemplate;
+    @Autowired
+    private NewsRepository newsRepository;
 
     @Test
     void onlyNewsAfterCreationAreSent() {
@@ -110,6 +113,28 @@ public class EventAlertTest extends AbstractInvestApplicationTest {
         assertThat(notifications().getFirst().getText(), containsString("\nАКРА, "));
         // биржевая новость уже просмотрена - не придёт и позже
         assertThat(newsAlertCheckUseCase.checkAll(), equalTo(0));
+    }
+
+    @Test
+    void ratingIsNotDuplicatedWhenNewsAreOn() {
+        create(Map.of("ticker", TICKER, "type", "BOND_NEWS"));
+        create(Map.of("ticker", TICKER, "type", "ISSUER_RATING"));
+
+        insertNews("NKR", "НКР подтвердило рейтинг АО «Авто Финанс Банк»", TICKER);
+
+        // одно сообщение - от «Новостей»; рейтинговое правило только отмечает новость просмотренной
+        assertThat(newsAlertCheckUseCase.checkAll(), equalTo(1));
+        assertThat(notifications().getFirst().getText(), containsString("Новость по облигации"));
+        assertThat(newsAlertCheckUseCase.checkAll(), equalTo(0));
+    }
+
+    @Test
+    void nonNumericMoexIdDoesNotBreakNewsLoading() {
+        jdbcTemplate.update("""
+                insert into news (source, external_id, title, published_at, created_at)
+                values ('MOEX', '91234', 'Числовой id', now(), now()), ('MOEX', 'manual-edit', 'Ручная правка', now(), now())""");
+
+        assertThat(newsRepository.findLastMoexId().orElse(null), equalTo(91234L));
     }
 
     @Test

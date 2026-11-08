@@ -78,6 +78,11 @@ public class NewsAlertCheckUseCaseImpl implements NewsAlertCheckUseCase {
         final List<NewsModel> keyRateNews = alerts.stream().anyMatch(alert -> alert.getType() == AlertType.KEY_RATE)
                 ? keyRateDecisions()
                 : List.of();
+        // у кого на облигацию включены «Новости» - рейтинговое действие придёт ими, второе сообщение не нужно
+        final Set<String> newsCovered = alerts.stream()
+                .filter(alert -> alert.getType() == AlertType.BOND_NEWS)
+                .map(alert -> alert.getUserId() + ":" + alert.getTicker())
+                .collect(Collectors.toSet());
         final Map<String, Bond> bonds = bondRepository.findByTickerIn(byTicker.keySet()).stream()
                 .collect(Collectors.toMap(Bond::getTicker, Function.identity(), (first, second) -> first));
 
@@ -90,7 +95,9 @@ public class NewsAlertCheckUseCaseImpl implements NewsAlertCheckUseCase {
                                 alert.getType() == AlertType.KEY_RATE
                                         ? keyRateNews
                                         : byTicker.getOrDefault(alert.getTicker(), List.of()),
-                                Optional.ofNullable(alert.getTicker()).map(bonds::get).map(Bond::getName).orElse(null)))
+                                Optional.ofNullable(alert.getTicker()).map(bonds::get).map(Bond::getName).orElse(null),
+                                alert.getType() == AlertType.ISSUER_RATING
+                                        && newsCovered.contains(alert.getUserId() + ":" + alert.getTicker())))
                         .orElse(0))).orElse(0);
             } catch (final RuntimeException e) {
                 log.error("News alert check failed for alert {}", found.getId(), e);
@@ -100,7 +107,11 @@ public class NewsAlertCheckUseCaseImpl implements NewsAlertCheckUseCase {
         return queued;
     }
 
-    private int check(final BondAlert alert, final List<NewsModel> news, final String bondName) {
+    /**
+     * @param silent только сдвинуть отметку, не уведомлять: новость уже придёт другим правилом
+     */
+    private int check(final BondAlert alert, final List<NewsModel> news, final String bondName,
+                      final boolean silent) {
         final long seen = Optional.ofNullable(alert.getCursorId()).orElse(Long.MAX_VALUE);
         final List<NewsModel> fresh = news.stream()
                 .filter(item -> item.getId() != null && item.getId() > seen)
@@ -115,6 +126,9 @@ public class NewsAlertCheckUseCaseImpl implements NewsAlertCheckUseCase {
             return 0;
         }
         alert.setCursorId(fresh.getLast().getId());
+        if (silent) {
+            return 0;
+        }
 
         final List<NewsModel> matching = fresh.stream()
                 .filter(item -> alert.getType() != AlertType.ISSUER_RATING || RATING_SOURCES.contains(item.getSource()))

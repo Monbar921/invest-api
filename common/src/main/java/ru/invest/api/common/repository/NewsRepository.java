@@ -40,7 +40,9 @@ public interface NewsRepository extends JpaRepository<News, Long> {
     @Query("select max(n.id) from News n")
     Optional<Long> findMaxId();
 
-    @Query(value = "select max(cast(external_id as bigint)) from news where source = 'MOEX'", nativeQuery = true)
+    // только числовые id: одна строка с другим id (ручная правка, тестовые данные) не должна ломать загрузку Мосбиржи
+    @Query(value = "select max(cast(external_id as bigint)) from news where source = 'MOEX' and external_id ~ '^[0-9]+$'",
+            nativeQuery = true)
     Optional<Long> findLastMoexId();
 
     @Modifying

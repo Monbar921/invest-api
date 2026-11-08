@@ -79,7 +79,7 @@ public class PriceAlertCheckUseCaseImpl implements PriceAlertCheckUseCase {
             return 0;
         }
         final Map<String, BondModel> bonds = bondsByTicker();
-        final Map<String, BigDecimal> previousCloses = previousCloses(byTicker.keySet(), bonds, today);
+        final Map<String, PriceCandle> previousCloses = previousCloses(byTicker.keySet(), bonds, today);
 
         int queued = 0;
         for (final Map.Entry<String, List<Long>> entry : byTicker.entrySet()) {
@@ -123,7 +123,7 @@ public class PriceAlertCheckUseCaseImpl implements PriceAlertCheckUseCase {
                 .orElse(0))).orElse(0);
     }
 
-    private int check(final BondAlert alert, final BondModel bond, final BigDecimal previousClose,
+    private int check(final BondAlert alert, final BondModel bond, final PriceCandle previousClose,
                       final LocalDate today) {
         final BigDecimal value = value(alert.getType(), bond);
         if (value == null) {
@@ -132,7 +132,7 @@ public class PriceAlertCheckUseCaseImpl implements PriceAlertCheckUseCase {
         return switch (alert.getType()) {
             case PRICE_LEVEL, YTM_LEVEL, YTO_LEVEL -> checkLevel(alert, bond, value);
             case PRICE_CHANGE -> checkChange(alert, bond, value);
-            case PRICE_DAILY_CHANGE -> checkDaily(alert, bond, value, previousClose, today);
+            case PRICE_DAILY_CHANGE -> checkDaily(alert, bond, value, previousClose);
             default -> 0;
         };
     }
@@ -175,17 +175,22 @@ public class PriceAlertCheckUseCaseImpl implements PriceAlertCheckUseCase {
                 alert.getCreatedAt().toLocalDate(), bond));
     }
 
+    /**
+     * Изменение от закрытия прошлого торгового дня. Ключ - дата этого закрытия, а не «сегодня»: в выходные цена и
+     * закрытие не меняются, и правило не должно повторять то же уведомление каждый день.
+     */
     private int checkDaily(final BondAlert alert, final BondModel bond, final BigDecimal value,
-                           final BigDecimal previousClose, final LocalDate today) {
-        if (previousClose == null || previousClose.signum() == 0) {
+                           final PriceCandle previousClose) {
+        if (previousClose == null || previousClose.getClose() == null || previousClose.getClose().signum() == 0) {
             return 0;
         }
-        final BigDecimal change = change(value, previousClose);
+        final BigDecimal close = previousClose.getClose();
+        final BigDecimal change = change(value, close);
         if (!hits(change, alert.getDirection(), alert.getThreshold())) {
             return 0;
         }
-        return fire(alert, "%s:%d:%s".formatted(alert.getType(), alert.getId(), today),
-                AlertTexts.daily(change, value, previousClose, bond));
+        return fire(alert, "%s:%d:%s".formatted(alert.getType(), alert.getId(), previousClose.getCandleDate()),
+                AlertTexts.daily(change, value, close, bond));
     }
 
     private int fire(final BondAlert alert, final String dedupKey, final String text) {
@@ -230,8 +235,8 @@ public class PriceAlertCheckUseCaseImpl implements PriceAlertCheckUseCase {
     }
 
     /** Закрытие прошлого торгового дня по uid; свечей нет - изменения за день не считаем */
-    private Map<String, BigDecimal> previousCloses(final Set<String> tickers, final Map<String, BondModel> bonds,
-                                                   final LocalDate today) {
+    private Map<String, PriceCandle> previousCloses(final Set<String> tickers, final Map<String, BondModel> bonds,
+                                                    final LocalDate today) {
         final Set<String> uids = tickers.stream()
                 .map(bonds::get)
                 .filter(Objects::nonNull)
@@ -242,6 +247,6 @@ public class PriceAlertCheckUseCaseImpl implements PriceAlertCheckUseCase {
         }
         return candleRepository.findLastBefore(uids, today).stream()
                 .filter(candle -> candle.getClose() != null)
-                .collect(Collectors.toMap(PriceCandle::getUid, PriceCandle::getClose, (first, second) -> first));
+                .collect(Collectors.toMap(PriceCandle::getUid, Function.identity(), (first, second) -> first));
     }
 }

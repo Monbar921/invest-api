@@ -173,7 +173,10 @@ public class PriceAlertTest extends AbstractInvestApplicationTest {
         assertThat(notifications().getFirst().getText(), containsString(
                 "Цена за день +3%: сейчас 103% от номинала (закрытие прошлого дня 100%)"));
         assertThat(checkAtPrice("1040"), equalTo(0));
-        // следующий день - снова от закрытия прошлого торгового дня
+        // выходной: закрытие то же - не повторяем то же уведомление
+        assertThat(priceAlertCheckUseCase.checkAll(TODAY.plusDays(1)), equalTo(0));
+        // новое закрытие (торговый день прошёл) - снова от него
+        insertCandle(TODAY, "100.5");
         assertThat(priceAlertCheckUseCase.checkAll(TODAY.plusDays(1)), equalTo(1));
     }
 
