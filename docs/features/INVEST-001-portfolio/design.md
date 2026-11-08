@@ -69,7 +69,9 @@ UI /portfolio ──▶ invest-gateway /api/portfolio/** ──X-User-Id──�
 - стоимость покупки × `PriceConversionService.getRubRate(currency, buyDate)` → `CurrencyPriceUseCase.getRate` →
   `CurrencyRateHistoryUseCase.getRubRate` (currency-service): кэш `CURRENCY_RATE` → таблица `currency_rate` →
   `CbRfCurrencyUseCase.getCurrencies(date)` (`XML_daily.asp?date_req=`), ответ ЦБ сохраняется в таблицу целиком.
-  Только ЦБ: у budget.org истории нет;
+  Только ЦБ: у budget.org истории нет. Сохранение - `CurrencyRateStore.storeMissing` в своей транзакции
+  (`REQUIRES_NEW`): курс запрашивается и из read-only транзакции чтения портфеля, где вставка запрещена. Ошибка
+  сохранения только пишется в лог - курс уже получен, ответ не падает;
 - доход в рублях - разница, итог - суммы по покупкам.
 
 Каждая пара «валюта, дата» запрашивается один раз на запрос портфеля. UI показывает рубли только у нерублёвых сумм;

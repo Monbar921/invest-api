@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import ru.invest.api.cb.rf.supplier.usecase.CbRfCurrencyUseCase;
 import ru.invest.api.common.entity.CurrencyRate;
@@ -14,13 +14,10 @@ import ru.invest.api.currency.service.usecase.CurrencyRateHistoryUseCase;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import static ru.invest.api.common.constants.CacheConstants.CURRENCY_RATE_CACHE_MANAGER;
 import static ru.invest.api.common.constants.CacheConstants.CURRENCY_RATE_CACHE_NAME;
@@ -36,6 +33,7 @@ public class CurrencyRateHistoryUseCaseImpl implements CurrencyRateHistoryUseCas
 
     private final CurrencyRateRepository repository;
     private final CbRfCurrencyUseCase cbRfCurrencyUseCase;
+    private final CurrencyRateStore rateStore;
 
     @Override
     @Cacheable(value = CURRENCY_RATE_CACHE_NAME, cacheManager = CURRENCY_RATE_CACHE_MANAGER, unless = "#result == null")
@@ -72,28 +70,18 @@ public class CurrencyRateHistoryUseCaseImpl implements CurrencyRateHistoryUseCas
                 .orElse(null);
     }
 
+    /**
+     * Сохранить курсы не получилось (БД недоступна, параллельный запрос уже сохранил ту же дату) - курс уже известен,
+     * запрос не падает: в следующий раз дата просто снова придёт от ЦБ.
+     */
     private void store(final LocalDate date, final List<CurrencyModel> rates) {
-        final Set<String> stored = repository.findByRateDate(date).stream()
-                .map(CurrencyRate::getCurrency)
-                .collect(Collectors.toSet());
-        final LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
-        final List<CurrencyRate> missing = rates.stream()
-                .filter(rate -> !stored.contains(rate.getBase().toUpperCase()))
-                .map(rate -> new CurrencyRate()
-                        .setRateDate(date)
-                        .setCurrency(rate.getBase().toUpperCase())
-                        .setRate(rate.getRate())
-                        .setSource(CurrencyRate.SOURCE_CB_RF)
-                        .setCreatedAt(now))
-                .toList();
-        if (missing.isEmpty()) {
+        if (rates.isEmpty()) {
             return;
         }
         try {
-            repository.saveAll(missing);
-        } catch (final DataIntegrityViolationException e) {
-            // параллельный запрос уже сохранил курсы на эту дату - они те же самые
-            log.debug("Currency rates for {} are already stored: {}", date, e.getMessage());
+            rateStore.storeMissing(date, rates);
+        } catch (final DataAccessException e) {
+            log.warn("Failed to store currency rates for {}: {}", date, e.getMessage());
         }
     }
 }

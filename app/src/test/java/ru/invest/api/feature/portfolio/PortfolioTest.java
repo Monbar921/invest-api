@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.jdbc.Sql;
 import ru.invest.api.AbstractInvestApplicationTest;
 import ru.invest.api.cb.rf.supplier.client.feign.CbRfClient;
@@ -68,6 +69,8 @@ public class PortfolioTest extends AbstractInvestApplicationTest {
 
     @Autowired
     private JsonMapper jsonMapper;
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
     // тот же мок, что зарегистрирован через @MockitoBean в AbstractInvestApplicationTest
     @Autowired
     private CbRfClient cbRfClient;
@@ -173,6 +176,26 @@ public class PortfolioTest extends AbstractInvestApplicationTest {
         assertThat(noPrice.getCurrentAmountInRub(), nullValue());
 
         assertThat(portfolio(BOB).getPositions(), hasSize(1));
+    }
+
+    /**
+     * Портфель читается в read-only транзакции, а курс на дату покупки, которого ещё нет в таблице, сохраняется -
+     * в своей транзакции. Курс сохранён, повторный запрос портфеля берёт его из таблицы.
+     */
+    @Test
+    void buyDateRateIsStoredWhileReadingPortfolio() {
+        create(ALICE, USD_BOND, 1, "95");
+        // как после перезапуска: курс есть только у ЦБ
+        jdbcTemplate.update("truncate table currency_rate");
+        cacheManagers.forEach(cacheManager -> cacheManager.getCacheNames()
+                .forEach(name -> Optional.ofNullable(cacheManager.getCache(name)).ifPresent(Cache::clear)));
+
+        final PortfolioPositionDto position = portfolio(ALICE).getPositions().getFirst();
+
+        assertThat(position.getBuyAmountInRub(), comparesEqualTo(new BigDecimal("76000")));
+        assertThat(jdbcTemplate.queryForObject(
+                "select rate from currency_rate where currency = 'USD' and rate_date = ?", BigDecimal.class, BUY_DATE),
+                comparesEqualTo(new BigDecimal("80")));
     }
 
     @Test
