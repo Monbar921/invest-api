@@ -32,11 +32,14 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.comparesEqualTo;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.lessThan;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
@@ -163,6 +166,12 @@ public class PortfolioTest extends AbstractInvestApplicationTest {
         final PortfolioTotalDto usd = totals.stream().filter(total -> "usd".equals(total.getCurrency())).findFirst()
                 .orElseThrow();
         assertThat(usd.getRevenue(), comparesEqualTo(new BigDecimal("30")));
+        // весь портфель в рублях: 11 270 + 88 200 = 99 470 ₽, куплено на 11 250 + 76 000 = 87 250 ₽
+        assertThat(portfolio.getSummary().getCurrentAmountInRub(), comparesEqualTo(new BigDecimal("99470")));
+        assertThat(portfolio.getSummary().getBuyAmountInRub(), comparesEqualTo(new BigDecimal("87250")));
+        assertThat(portfolio.getSummary().getRevenueInRub(), comparesEqualTo(new BigDecimal("12220")));
+        // 12 220 / 87 250 = 14,01%
+        assertThat(portfolio.getSummary().getRevenuePercent(), comparesEqualTo(new BigDecimal("14.01")));
         // в рублях: куплено на 950 $ по 80 ₽ = 76 000 ₽, сейчас 980 $ по 90 ₽ = 88 200 ₽ - доход 12 200 ₽,
         // а не 30 $ × 90 ₽: в рублях доход включает рост доллара с даты покупки
         assertThat(usd.getBuyAmountInRub(), comparesEqualTo(new BigDecimal("76000")));
@@ -252,6 +261,7 @@ public class PortfolioTest extends AbstractInvestApplicationTest {
         assertThat(send("DELETE", path, ALICE, null).statusCode(), equalTo(NO_CONTENT));
         assertThat(positions(portfolio(ALICE)), empty());
         assertThat(portfolio(ALICE).getTotals(), empty());
+        assertThat(portfolio(ALICE).getSummary(), nullValue());
     }
 
     @Test
@@ -289,6 +299,37 @@ public class PortfolioTest extends AbstractInvestApplicationTest {
         assertThat(autoFinance.getPositions().stream().map(PortfolioPositionDto::getBuyDate).toList(),
                 contains(BUY_DATE, LocalDate.of(2026, 2, 1), LocalDate.of(2026, 3, 1)));
         assertThat(groups.get(1).getBrokers(), empty());
+    }
+
+    @Test
+    void couponRateAndYieldToMaturityAtBuyPrice() {
+        // без НКД доходность к погашению не считается
+        jdbcTemplate.update("update price set aci_value = 5.00, aci_currency = 'rub' where ticker = ?", AUTO_FINANCE);
+        create(ALICE, AUTO_FINANCE, 10, "95");
+        create(ALICE, AUTO_FINANCE, 10, "105");
+
+        final PortfolioGroupDto group = portfolio(ALICE).getGroups().getFirst();
+
+        // купонная доходность 18,5% к цене 100,5% - это 18,59% от номинала
+        assertThat(group.getCouponRate(), comparesEqualTo(new BigDecimal("18.59")));
+        // точные значения зависят от сегодняшней даты - проверяем соотношения: купленная дешевле приносит больше,
+        // а по средней цене 100% доходность - между доходностями покупок
+        final BigDecimal cheap = group.getPositions().get(0).getYieldToMaturity();
+        final BigDecimal expensive = group.getPositions().get(1).getYieldToMaturity();
+        assertThat(cheap, notNullValue());
+        assertThat(expensive, notNullValue());
+        assertThat(cheap, greaterThan(expensive));
+        assertThat(group.getYieldToMaturity(), allOf(greaterThan(expensive), lessThan(cheap)));
+    }
+
+    @Test
+    void yieldToMaturityIsUnknownWithoutAccruedInterest() {
+        create(ALICE, AUTO_FINANCE, 10, "95");
+
+        final PortfolioGroupDto group = portfolio(ALICE).getGroups().getFirst();
+
+        assertThat(group.getYieldToMaturity(), nullValue());
+        assertThat(group.getPositions().getFirst().getYieldToMaturity(), nullValue());
     }
 
     @Test

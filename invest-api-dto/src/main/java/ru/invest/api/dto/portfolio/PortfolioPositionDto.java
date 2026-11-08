@@ -52,6 +52,8 @@ public class PortfolioPositionDto {
      * валюты с даты покупки; null - цены или одного из курсов нет
      */
     private BigDecimal revenueInRub;
+    /** Доходность к погашению, если купить сегодня по цене этой покупки (с сегодняшним НКД), % годовых */
+    private BigDecimal yieldToMaturity;
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
     private ZonedDateTime createdAt;
 }

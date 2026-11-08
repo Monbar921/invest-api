@@ -11,12 +11,14 @@ import ru.invest.api.common.exception.GeneralUnprocessableEntityException;
 import ru.invest.api.common.exception.enums.ExceptionErrorCode;
 import ru.invest.api.common.mapper.DateTimeMapper;
 import ru.invest.api.common.model.BondModel;
+import ru.invest.api.common.model.CouponModel;
 import ru.invest.api.common.model.MoneyModel;
 import ru.invest.api.common.model.PriceModel;
 import ru.invest.api.common.repository.PortfolioBrokerRepository;
 import ru.invest.api.common.repository.PortfolioPositionRepository;
 import ru.invest.api.portfolio.service.model.BrokerModel;
 import ru.invest.api.portfolio.service.model.PortfolioModel;
+import ru.invest.api.portfolio.service.model.PortfolioTotalModel;
 import ru.invest.api.portfolio.service.model.PositionModel;
 import ru.invest.api.portfolio.service.model.PositionRequestModel;
 import ru.invest.api.portfolio.service.usecase.PortfolioUseCase;
@@ -59,9 +61,10 @@ public class PortfolioUseCaseImpl implements PortfolioUseCase {
     @Transactional(readOnly = true)
     public PortfolioModel getPortfolio(final String userId) {
         final List<PortfolioPosition> positions = repository.findByUserIdOrderByTickerAscBuyDateAscIdAsc(userId);
-        final Map<String, BondModel> bonds = bondUseCase.getByTickers(positions.stream()
-                .map(PortfolioPosition::getTicker)
-                .collect(Collectors.toSet()));
+        // с графиком купонов и амортизации - для купона и доходности к погашению по цене покупки
+        final Map<String, BondModel> bonds = new HashMap<>();
+        positions.stream().map(PortfolioPosition::getTicker).distinct()
+                .forEach(ticker -> findWithSchedule(ticker).ifPresent(bond -> bonds.put(ticker, bond)));
         final Map<Long, String> brokers = brokerRepository.findByUserIdOrderByNameAsc(userId).stream()
                 .collect(Collectors.toMap(PortfolioBroker::getId, PortfolioBroker::getName));
         final RubRates rates = new RubRates();
@@ -69,7 +72,9 @@ public class PortfolioUseCaseImpl implements PortfolioUseCase {
                 .map(position -> toModel(position, bonds.get(position.getTicker()),
                         position.getBrokerId() == null ? null : brokers.get(position.getBrokerId()), rates))
                 .toList();
-        return new PortfolioModel(PortfolioAggregator.groups(models), PortfolioAggregator.totals(models));
+        final List<PortfolioTotalModel> totals = PortfolioAggregator.totals(models);
+        return new PortfolioModel(PortfolioAggregator.groups(models, metrics(bonds)), totals,
+                PortfolioAggregator.summary(totals));
     }
 
     @Override
@@ -80,11 +85,7 @@ public class PortfolioUseCaseImpl implements PortfolioUseCase {
         }
         final LocalDate buyDate = validate(request);
         // 404, если такой облигации нет
-        final BondModel bond = bondUseCase.getByTickers(List.of(request.ticker())).get(request.ticker());
-        if (bond == null) {
-            throw new GeneralNotFoundEntityException(ExceptionErrorCode.BOND_NOT_FOUND,
-                    "Bond not found for ticker %s".formatted(request.ticker()));
-        }
+        final BondModel bond = bondUseCase.getWithSchedule(request.ticker());
         if (repository.countByUserId(userId) >= MAX_POSITIONS) {
             throw unprocessable("No more than %d positions per user".formatted(MAX_POSITIONS));
         }
@@ -107,7 +108,7 @@ public class PortfolioUseCaseImpl implements PortfolioUseCase {
     public PositionModel update(final String userId, final Long id, final PositionRequestModel request) {
         final PortfolioPosition position = find(userId, id);
         final LocalDate buyDate = validate(request);
-        final BondModel bond = bondUseCase.getByTickers(List.of(position.getTicker())).get(position.getTicker());
+        final BondModel bond = findWithSchedule(position.getTicker()).orElse(null);
         validateBuyAmountRub(request.buyAmountRub(), currency(bond));
         final PortfolioBroker broker = resolveBroker(userId, request.broker());
         position.setQuantity(request.quantity())
@@ -210,8 +211,8 @@ public class PortfolioUseCaseImpl implements PortfolioUseCase {
      * Доход - только от изменения цены: номинал × (текущая цена − цена покупки) × количество. Номинал - текущий
      * (после частичных погашений) и для покупки, и для текущей стоимости. Купоны и НКД не учитываются.
      */
-    private static PositionModel toModel(final PortfolioPosition position, final BondModel bond,
-                                         final String broker, final RubRates rates) {
+    private PositionModel toModel(final PortfolioPosition position, final BondModel bond,
+                                  final String broker, final RubRates rates) {
         final PriceModel price = bond == null ? null : bond.getPrice();
         final MoneyModel nominalMoney = price == null ? null : price.getNominal();
         final BigDecimal nominal = nominalMoney == null ? null : nominalMoney.getQuantity();
@@ -245,7 +246,60 @@ public class PortfolioUseCaseImpl implements PortfolioUseCase {
                 currency, position.getQuantity(), position.getBuyDate(), broker, nominal, position.getBuyPrice(),
                 currentPrice, buyAmount, currentAmount, revenue, revenuePercent,
                 position.getBuyAmountRub(), buyAmountInRub, currentAmountInRub, revenueInRub,
-                position.getCreatedAt());
+                yieldAtPrice(bond, position.getBuyPrice()), position.getCreatedAt());
+    }
+
+    /** Облигация с графиками; её уже нет в системе - пусто (покупка остаётся в портфеле без цены) */
+    private Optional<BondModel> findWithSchedule(final String ticker) {
+        try {
+            return Optional.of(bondUseCase.getWithSchedule(ticker));
+        } catch (final GeneralNotFoundEntityException e) {
+            return Optional.empty();
+        }
+    }
+
+    private BigDecimal yieldAtPrice(final BondModel bond, final BigDecimal pricePercent) {
+        return bond == null ? null : rounded(bondUseCase.getYieldToMaturityAtPrice(bond, pricePercent));
+    }
+
+    private BondMetrics metrics(final Map<String, BondModel> bonds) {
+        return new BondMetrics() {
+            @Override
+            public BigDecimal couponRate(final String ticker) {
+                return PortfolioUseCaseImpl.couponRate(bonds.get(ticker));
+            }
+
+            @Override
+            public BigDecimal currentYieldToMaturity(final String ticker) {
+                return Optional.ofNullable(bonds.get(ticker))
+                        .map(BondModel::getCoupon)
+                        .map(CouponModel::getYieldToMaturity)
+                        .map(PortfolioUseCaseImpl::rounded)
+                        .orElse(null);
+            }
+
+            @Override
+            public BigDecimal yieldToMaturityAtPrice(final String ticker, final BigDecimal pricePercent) {
+                return yieldAtPrice(bonds.get(ticker), pricePercent);
+            }
+        };
+    }
+
+    /**
+     * Купон в % годовых от номинала. Купонная доходность облигации - годовые купоны к текущей цене, поэтому
+     * к номиналу: доходность × текущая цена в % / 100.
+     */
+    private static BigDecimal couponRate(final BondModel bond) {
+        if (bond == null || bond.getCoupon() == null || bond.getCoupon().getInterest() == null
+                || bond.getPrice() == null || bond.getPrice().getPercentagePrice() == null) {
+            return null;
+        }
+        return bond.getCoupon().getInterest().multiply(bond.getPrice().getPercentagePrice())
+                .divide(HUNDRED, PERCENT_SCALE, RoundingMode.HALF_UP);
+    }
+
+    private static BigDecimal rounded(final BigDecimal percent) {
+        return percent == null ? null : percent.setScale(PERCENT_SCALE, RoundingMode.HALF_UP);
     }
 
     private static BigDecimal amount(final BigDecimal nominal, final BigDecimal percent, final BigDecimal quantity) {

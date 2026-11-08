@@ -18,6 +18,10 @@ import java.util.List;
  * @param buyAmountInRub     null - хотя бы у одной покупки нет рублёвой суммы
  * @param currentAmountInRub null - цены или курса нет
  * @param revenueInRub       null - нет одной из рублёвых сумм
+ * @param couponRate         купон, % годовых от номинала; null - посчитать нельзя
+ * @param yieldToMaturity    доходность к погашению по средней цене покупки (как если бы купить сегодня по ней,
+ *                           с сегодняшним НКД), % годовых
+ * @param currentYieldToMaturity доходность к погашению по текущей цене, % годовых
  * @param positions          покупки по дате
  */
 public record PortfolioGroupModel(String ticker,
@@ -38,5 +42,8 @@ public record PortfolioGroupModel(String ticker,
                                   BigDecimal buyAmountInRub,
                                   BigDecimal currentAmountInRub,
                                   BigDecimal revenueInRub,
+                                  BigDecimal couponRate,
+                                  BigDecimal yieldToMaturity,
+                                  BigDecimal currentYieldToMaturity,
                                   List<PositionModel> positions) {
 }

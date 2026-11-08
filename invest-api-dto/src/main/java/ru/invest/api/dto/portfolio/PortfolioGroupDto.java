@@ -46,6 +46,12 @@ public class PortfolioGroupDto {
     private BigDecimal currentAmountInRub;
     /** null - нет одной из рублёвых сумм */
     private BigDecimal revenueInRub;
+    /** Купон, % годовых от номинала; null - посчитать нельзя */
+    private BigDecimal couponRate;
+    /** Доходность к погашению по средней цене покупки (как если бы купить сегодня по ней, с сегодняшним НКД) */
+    private BigDecimal yieldToMaturity;
+    /** Доходность к погашению по текущей цене */
+    private BigDecimal currentYieldToMaturity;
     /** Покупки по дате */
     private List<PortfolioPositionDto> positions;
 }

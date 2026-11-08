@@ -10,6 +10,7 @@ import ru.invest.api.bond.supplier.usecase.BondUseCase;
 import ru.invest.api.common.mapper.DateTimeMapper;
 import ru.invest.api.common.model.AuditModel;
 import ru.invest.api.common.model.BondModel;
+import ru.invest.api.common.model.MoneyModel;
 import ru.invest.api.common.model.PriceModel;
 import ru.invest.api.common.model.calculation.ProfitCalculationModel;
 import ru.invest.api.common.model.calculation.ProfitCalculationRequestModel;
@@ -21,6 +22,7 @@ import ru.invest.api.common.usecase.BondEventUseCase;
 import ru.invest.api.common.usecase.BondSearchUseCase;
 import ru.invest.api.common.usecase.CandleAggregationUseCase;
 import ru.invest.api.common.usecase.BondSortUseCase;
+import ru.invest.api.tinkoff.supplier.service.CouponCalculationService;
 import ru.invest.api.tinkoff.supplier.service.ProfitCalculationService;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffAmortizationUseCase;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondCacheRepositoryUseCase;
@@ -28,6 +30,7 @@ import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondUseCase;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffCandleUseCase;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -46,6 +49,8 @@ public class BondUseCaseImpl implements BondUseCase {
     private static final LocalDate HISTORY_START = LocalDate.of(1990, 1, 1);
     // прошедшие события тоже полезны: видно, был ли недавно купон и как изменился его размер
     private static final int PAST_EVENT_MONTHS = 3;
+    private static final BigDecimal PERCENT = BigDecimal.valueOf(100);
+    private static final int PRICE_SCALE = 10;
 
     private final TinkoffBondCacheRepositoryUseCase tinkoffBondCacheRepositoryUseCase;
     private final TinkoffBondUseCase tinkoffBondUseCase;
@@ -53,6 +58,7 @@ public class BondUseCaseImpl implements BondUseCase {
     private final BondSearchUseCase bondSearchUseCase;
     private final TinkoffAmortizationUseCase tinkoffAmortizationUseCase;
     private final ProfitCalculationService profitCalculationService;
+    private final CouponCalculationService couponCalculationService;
     private final TinkoffCandleUseCase tinkoffCandleUseCase;
     private final CandleAggregationUseCase candleAggregationUseCase;
     private final BondEventUseCase bondEventUseCase;
@@ -104,6 +110,36 @@ public class BondUseCaseImpl implements BondUseCase {
     public List<BondEventModel> getEvents(final String ticker) {
         return bondEventUseCase.getEvents(getWithSchedule(ticker),
                 dateTimeMapper.getNow().toLocalDate().minusMonths(PAST_EVENT_MONTHS));
+    }
+
+    @Override
+    public BigDecimal getYieldToMaturityAtPrice(final BondModel bond, final BigDecimal pricePercent) {
+        final PriceModel price = bond == null ? null : bond.getPrice();
+        if (price == null || pricePercent == null || bond.getCoupon() == null
+                || price.getNominal() == null || price.getNominal().getQuantity() == null
+                || price.getCurrent() == null || price.getCurrent().getCurrency() == null
+                || !price.getCurrent().getCurrency().equalsIgnoreCase(price.getNominal().getCurrency())) {
+            return null;
+        }
+        // та же облигация, но цена - заданная: расчёт берёт цену покупки из current, НКД - сегодняшний
+        final MoneyModel current = new MoneyModel()
+                .setCurrency(price.getCurrent().getCurrency())
+                .setQuantity(price.getNominal().getQuantity().multiply(pricePercent)
+                        .divide(PERCENT, PRICE_SCALE, RoundingMode.HALF_UP));
+        final BondModel atPrice = new BondModel()
+                .setTicker(bond.getTicker())
+                .setCurrency(bond.getCurrency())
+                .setMaturityDate(bond.getMaturityDate())
+                .setOfferDate(bond.getOfferDate())
+                .setAmortizationFlag(bond.isAmortizationFlag())
+                .setAmortizations(bond.getAmortizations())
+                .setCoupon(bond.getCoupon())
+                .setPrice(new PriceModel()
+                        .setNominal(price.getNominal())
+                        .setCurrent(current)
+                        .setAci(price.getAci())
+                        .setPercentagePrice(pricePercent));
+        return couponCalculationService.calculateYieldToMaturity(bond.getCoupon(), atPrice);
     }
 
     @Override

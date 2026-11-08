@@ -1,6 +1,7 @@
 package ru.invest.api.portfolio.service.usecase.impl;
 
 import ru.invest.api.portfolio.service.model.PortfolioGroupModel;
+import ru.invest.api.portfolio.service.model.PortfolioSummaryModel;
 import ru.invest.api.portfolio.service.model.PortfolioTotalModel;
 import ru.invest.api.portfolio.service.model.PositionModel;
 
@@ -29,15 +30,15 @@ final class PortfolioAggregator {
     /**
      * Покупки одной облигации (по тикеру) - одна строка; строки в порядке тикеров, покупки внутри - по дате.
      */
-    static List<PortfolioGroupModel> groups(final List<PositionModel> positions) {
+    static List<PortfolioGroupModel> groups(final List<PositionModel> positions, final BondMetrics metrics) {
         return positions.stream()
                 .collect(Collectors.groupingBy(PositionModel::ticker, LinkedHashMap::new, Collectors.toList()))
                 .values().stream()
-                .map(PortfolioAggregator::group)
+                .map(group -> group(group, metrics))
                 .toList();
     }
 
-    private static PortfolioGroupModel group(final List<PositionModel> positions) {
+    private static PortfolioGroupModel group(final List<PositionModel> positions, final BondMetrics metrics) {
         final PositionModel first = positions.getFirst();
         final int quantity = positions.stream().mapToInt(PositionModel::quantity).sum();
         // у покупок одной облигации цена и номинал общие: нет цены у одной - нет у всех
@@ -47,15 +48,19 @@ final class PortfolioAggregator {
         final BigDecimal revenue = buyAmount == null || currentAmount == null ? null : currentAmount.subtract(buyAmount);
         final BigDecimal buyAmountInRub = sumOrNull(positions, PositionModel::buyAmountInRub);
         final BigDecimal currentAmountInRub = sumOrNull(positions, PositionModel::currentAmountInRub);
+        final BigDecimal buyPrice = averageBuyPrice(positions, quantity);
         return new PortfolioGroupModel(first.ticker(), first.bondName(), first.isin(), first.currency(), quantity,
                 positions.stream().map(PositionModel::broker).filter(Objects::nonNull).distinct().sorted().toList(),
                 positions.stream().map(PositionModel::buyDate).min(Comparator.naturalOrder()).orElse(null),
                 positions.stream().map(PositionModel::buyDate).max(Comparator.naturalOrder()).orElse(null),
-                first.nominal(), averageBuyPrice(positions, quantity), first.currentPrice(), buyAmount, currentAmount,
+                first.nominal(), buyPrice, first.currentPrice(), buyAmount, currentAmount,
                 revenue, percent(revenue, buyAmount), buyAmountInRub, currentAmountInRub,
                 buyAmountInRub == null || currentAmountInRub == null
                         ? null
                         : currentAmountInRub.subtract(buyAmountInRub),
+                metrics.couponRate(first.ticker()),
+                metrics.yieldToMaturityAtPrice(first.ticker(), buyPrice),
+                metrics.currentYieldToMaturity(first.ticker()),
                 positions.stream()
                         .sorted(Comparator.comparing(PositionModel::buyDate).thenComparing(PositionModel::id))
                         .toList());
@@ -90,6 +95,22 @@ final class PortfolioAggregator {
                             buyInRub, currentInRub, allInRub ? currentInRub.subtract(buyInRub) : null);
                 })
                 .toList();
+    }
+
+    /**
+     * Весь портфель в рублях - сложение рублёвых сумм итогов. Хотя бы у одной валюты их нет (нет курса) - null:
+     * сумма без этой валюты выдавала бы себя за весь портфель.
+     */
+    static PortfolioSummaryModel summary(final List<PortfolioTotalModel> totals) {
+        if (totals.isEmpty() || totals.stream().anyMatch(total -> total.revenueInRub() == null)) {
+            return null;
+        }
+        final BigDecimal buy = totals.stream().map(PortfolioTotalModel::buyAmountInRub)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        final BigDecimal current = totals.stream().map(PortfolioTotalModel::currentAmountInRub)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        final BigDecimal revenue = current.subtract(buy);
+        return new PortfolioSummaryModel(buy, current, revenue, percent(revenue, buy));
     }
 
     /** Доход в % к стоимости покупки; null - посчитать нельзя */

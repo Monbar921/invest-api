@@ -10,6 +10,7 @@ import ru.invest.api.common.model.event.BondEventModel;
 import ru.invest.api.common.model.calculation.ProfitCalculationRequestModel;
 import ru.invest.api.common.model.parameters.BondParametersModel;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
@@ -70,4 +71,13 @@ public interface BondUseCase {
      * @throws ru.invest.api.common.exception.GeneralNotFoundEntityException облигации нет
      */
     BondModel getWithSchedule(String ticker);
+
+    /**
+     * Доходность к погашению, как если бы облигацию купили сегодня по цене pricePercent (% от номинала) плюс
+     * сегодняшний НКД - тот же расчёт, что у yieldToMaturity облигации, только с другой ценой.
+     *
+     * @param bond облигация с графиком купонов и амортизации ({@link #getWithSchedule})
+     * @return % годовых; null - посчитать нельзя (нет графика, НКД, цена в другой валюте, чем номинал)
+     */
+    BigDecimal getYieldToMaturityAtPrice(BondModel bond, BigDecimal pricePercent);
 }

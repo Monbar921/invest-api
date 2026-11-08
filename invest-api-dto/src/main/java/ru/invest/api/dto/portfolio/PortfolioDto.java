@@ -14,4 +14,6 @@ public class PortfolioDto {
     private List<PortfolioGroupDto> groups;
     /** По одному итогу на валюту номинала */
     private List<PortfolioTotalDto> totals;
+    /** Весь портфель в рублях; null - портфель пуст или у какой-то валюты нет курса */
+    private PortfolioSummaryDto summary;
 }

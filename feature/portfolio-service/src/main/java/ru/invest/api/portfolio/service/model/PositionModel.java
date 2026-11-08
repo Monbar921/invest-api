@@ -23,6 +23,8 @@ import java.time.LocalDateTime;
  * @param currentAmountInRub текущая стоимость в рублях по курсу на сегодня; null - цены или курса нет
  * @param revenueInRub   текущая стоимость в рублях − стоимость покупки в рублях: с изменением курса валюты;
  *                       null - цены или одного из курсов нет
+ * @param yieldToMaturity доходность к погашению, если купить сегодня по цене этой покупки (с сегодняшним НКД),
+ *                        % годовых; null - посчитать нельзя
  * @param createdAt      UTC
  */
 public record PositionModel(Long id,
@@ -44,5 +46,6 @@ public record PositionModel(Long id,
                             BigDecimal buyAmountInRub,
                             BigDecimal currentAmountInRub,
                             BigDecimal revenueInRub,
+                            BigDecimal yieldToMaturity,
                             LocalDateTime createdAt) {
 }
