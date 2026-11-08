@@ -10,7 +10,9 @@ import java.time.LocalDate;
  * @param buyDate  null - сегодня
  * @param broker   имя брокера: такой у пользователя уже есть (без учёта регистра) - он, нет - создаётся;
  *                 null или пусто - без брокера
+ * @param buyAmountRub сколько рублей заплачено за покупку валютной облигации (без НКД и комиссии); null - по курсу ЦБ
+ *                     на дату покупки. У рублёвой облигации не задаётся
  */
 public record PositionRequestModel(String ticker, Integer quantity, BigDecimal buyPrice, LocalDate buyDate,
-                                   String broker) {
+                                   String broker, BigDecimal buyAmountRub) {
 }

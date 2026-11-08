@@ -10,8 +10,8 @@ import java.util.List;
 @Accessors(chain = true)
 @NoArgsConstructor
 public class PortfolioDto {
-    /** По тикеру, затем по дате покупки */
-    private List<PortfolioPositionDto> positions;
+    /** Покупки одной облигации - одной строкой, по тикеру */
+    private List<PortfolioGroupDto> groups;
     /** По одному итогу на валюту номинала */
     private List<PortfolioTotalDto> totals;
 }

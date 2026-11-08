@@ -5,6 +5,7 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -45,4 +46,11 @@ public class PortfolioPositionRequest {
      */
     @Size(max = MAX_BROKER_LENGTH, message = "broker must not be longer than 100 characters")
     private String broker;
+    /**
+     * Сколько рублей заплачено за покупку валютной облигации, без НКД и комиссии (из отчёта брокера). Не задано -
+     * рублёвая стоимость покупки по курсу ЦБ на дату покупки. У рублёвой облигации - 422.
+     */
+    @Positive(message = "buyAmountRub must be positive")
+    @DecimalMax(value = "1000000000000", message = "buyAmountRub is too large")
+    private BigDecimal buyAmountRub;
 }

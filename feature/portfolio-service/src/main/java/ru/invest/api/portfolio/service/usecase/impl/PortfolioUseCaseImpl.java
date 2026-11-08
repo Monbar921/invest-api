@@ -17,7 +17,6 @@ import ru.invest.api.common.repository.PortfolioBrokerRepository;
 import ru.invest.api.common.repository.PortfolioPositionRepository;
 import ru.invest.api.portfolio.service.model.BrokerModel;
 import ru.invest.api.portfolio.service.model.PortfolioModel;
-import ru.invest.api.portfolio.service.model.PortfolioTotalModel;
 import ru.invest.api.portfolio.service.model.PositionModel;
 import ru.invest.api.portfolio.service.model.PositionRequestModel;
 import ru.invest.api.portfolio.service.usecase.PortfolioUseCase;
@@ -29,11 +28,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Function;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -49,6 +47,7 @@ public class PortfolioUseCaseImpl implements PortfolioUseCase {
     private static final BigDecimal HUNDRED = BigDecimal.valueOf(100);
     private static final int MONEY_SCALE = 2;
     private static final int PERCENT_SCALE = 2;
+    private static final Set<String> RUB_CODES = Set.of("RUB", "RUR");
 
     private final PortfolioPositionRepository repository;
     private final PortfolioBrokerRepository brokerRepository;
@@ -70,7 +69,7 @@ public class PortfolioUseCaseImpl implements PortfolioUseCase {
                 .map(position -> toModel(position, bonds.get(position.getTicker()),
                         position.getBrokerId() == null ? null : brokers.get(position.getBrokerId()), rates))
                 .toList();
-        return new PortfolioModel(models, totals(models));
+        return new PortfolioModel(PortfolioAggregator.groups(models), PortfolioAggregator.totals(models));
     }
 
     @Override
@@ -89,6 +88,7 @@ public class PortfolioUseCaseImpl implements PortfolioUseCase {
         if (repository.countByUserId(userId) >= MAX_POSITIONS) {
             throw unprocessable("No more than %d positions per user".formatted(MAX_POSITIONS));
         }
+        validateBuyAmountRub(request.buyAmountRub(), currency(bond));
         final PortfolioBroker broker = resolveBroker(userId, request.broker());
         final PortfolioPosition position = repository.save(new PortfolioPosition()
                 .setUserId(userId)
@@ -96,6 +96,7 @@ public class PortfolioUseCaseImpl implements PortfolioUseCase {
                 .setQuantity(request.quantity())
                 .setBuyPrice(request.buyPrice())
                 .setBuyDate(buyDate)
+                .setBuyAmountRub(request.buyAmountRub())
                 .setBrokerId(broker == null ? null : broker.getId())
                 .setCreatedAt(LocalDateTime.now(ZoneOffset.UTC)));
         return toModel(position, bond, broker == null ? null : broker.getName(), new RubRates());
@@ -106,15 +107,17 @@ public class PortfolioUseCaseImpl implements PortfolioUseCase {
     public PositionModel update(final String userId, final Long id, final PositionRequestModel request) {
         final PortfolioPosition position = find(userId, id);
         final LocalDate buyDate = validate(request);
+        final BondModel bond = bondUseCase.getByTickers(List.of(position.getTicker())).get(position.getTicker());
+        validateBuyAmountRub(request.buyAmountRub(), currency(bond));
         final PortfolioBroker broker = resolveBroker(userId, request.broker());
         position.setQuantity(request.quantity())
                 .setBuyPrice(request.buyPrice())
                 .setBuyDate(buyDate)
+                .setBuyAmountRub(request.buyAmountRub())
                 .setBrokerId(broker == null ? null : broker.getId())
                 .setUpdatedAt(LocalDateTime.now(ZoneOffset.UTC));
         repository.save(position);
-        return toModel(position, bondUseCase.getByTickers(List.of(position.getTicker())).get(position.getTicker()),
-                broker == null ? null : broker.getName(), new RubRates());
+        return toModel(position, bond, broker == null ? null : broker.getName(), new RubRates());
     }
 
     @Override
@@ -172,6 +175,27 @@ public class PortfolioUseCaseImpl implements PortfolioUseCase {
         return buyDate;
     }
 
+    /**
+     * Рублёвая сумма покупки - только у валютной облигации: у рублёвой она равна стоимости покупки. Облигации больше
+     * нет в системе (валюта неизвестна) - сумма принимается.
+     */
+    private static void validateBuyAmountRub(final BigDecimal buyAmountRub, final String currency) {
+        if (buyAmountRub != null && currency != null && RUB_CODES.contains(currency.toUpperCase())) {
+            throw unprocessable("buyAmountRub is only for bonds in foreign currency");
+        }
+    }
+
+    /** Валюта номинала облигации; null - облигации нет */
+    private static String currency(final BondModel bond) {
+        if (bond == null) {
+            return null;
+        }
+        return Optional.ofNullable(bond.getPrice())
+                .map(PriceModel::getNominal)
+                .map(MoneyModel::getCurrency)
+                .orElse(bond.getCurrency());
+    }
+
     private PortfolioPosition find(final String userId, final Long id) {
         return repository.findByIdAndUserId(id, userId)
                 .orElseThrow(() -> new GeneralNotFoundEntityException(ExceptionErrorCode.NOT_FOUND,
@@ -191,9 +215,7 @@ public class PortfolioUseCaseImpl implements PortfolioUseCase {
         final PriceModel price = bond == null ? null : bond.getPrice();
         final MoneyModel nominalMoney = price == null ? null : price.getNominal();
         final BigDecimal nominal = nominalMoney == null ? null : nominalMoney.getQuantity();
-        final String currency = nominalMoney != null && nominalMoney.getCurrency() != null
-                ? nominalMoney.getCurrency()
-                : Optional.ofNullable(bond).map(BondModel::getCurrency).orElse(null);
+        final String currency = currency(bond);
         final BigDecimal currentPrice = price == null ? null : price.getPercentagePrice();
         final BigDecimal quantity = BigDecimal.valueOf(position.getQuantity());
 
@@ -207,8 +229,11 @@ public class PortfolioUseCaseImpl implements PortfolioUseCase {
                 : currentPrice.subtract(position.getBuyPrice()).multiply(HUNDRED)
                         .divide(position.getBuyPrice(), PERCENT_SCALE, RoundingMode.HALF_UP);
 
-        // рубли: покупка - по курсу на дату покупки, сейчас - по курсу на сегодня; разница включает изменение курса
-        final BigDecimal buyAmountInRub = rates.toRub(buyAmount, currency, position.getBuyDate());
+        // рубли: покупка - сколько заплачено по отчёту брокера, не ввели - по курсу ЦБ на дату покупки; сейчас - по
+        // курсу на сегодня; разница включает изменение курса
+        final BigDecimal buyAmountInRub = position.getBuyAmountRub() != null
+                ? position.getBuyAmountRub()
+                : rates.toRub(buyAmount, currency, position.getBuyDate());
         final BigDecimal currentAmountInRub = rates.toRub(currentAmount, currency, null);
         final BigDecimal revenueInRub = buyAmountInRub == null || currentAmountInRub == null
                 ? null
@@ -219,7 +244,8 @@ public class PortfolioUseCaseImpl implements PortfolioUseCase {
                 bond == null ? null : bond.getIsin(),
                 currency, position.getQuantity(), position.getBuyDate(), broker, nominal, position.getBuyPrice(),
                 currentPrice, buyAmount, currentAmount, revenue, revenuePercent,
-                buyAmountInRub, currentAmountInRub, revenueInRub, position.getCreatedAt());
+                position.getBuyAmountRub(), buyAmountInRub, currentAmountInRub, revenueInRub,
+                position.getCreatedAt());
     }
 
     private static BigDecimal amount(final BigDecimal nominal, final BigDecimal percent, final BigDecimal quantity) {
@@ -227,36 +253,6 @@ public class PortfolioUseCaseImpl implements PortfolioUseCase {
             return null;
         }
         return nominal.multiply(percent).multiply(quantity).divide(HUNDRED, MONEY_SCALE, RoundingMode.HALF_UP);
-    }
-
-    /** По валюте номинала, в порядке позиций; позиции без текущей цены не входят */
-    private static List<PortfolioTotalModel> totals(final List<PositionModel> positions) {
-        final Map<String, List<PositionModel>> byCurrency = positions.stream()
-                .filter(position -> position.currency() != null && position.revenue() != null)
-                .collect(Collectors.groupingBy(PositionModel::currency, LinkedHashMap::new, Collectors.toList()));
-        return byCurrency.entrySet().stream()
-                .map(entry -> {
-                    final BigDecimal buy = sum(entry.getValue(), PositionModel::buyAmount);
-                    final BigDecimal current = sum(entry.getValue(), PositionModel::currentAmount);
-                    final BigDecimal revenue = current.subtract(buy);
-                    final BigDecimal percent = buy.signum() == 0
-                            ? null
-                            : revenue.multiply(HUNDRED).divide(buy, PERCENT_SCALE, RoundingMode.HALF_UP);
-                    // рубли итога - сумма рублей покупок: у каждой свой курс на дату покупки
-                    final boolean allInRub = entry.getValue().stream()
-                            .allMatch(position -> position.revenueInRub() != null);
-                    final BigDecimal buyInRub = allInRub ? sum(entry.getValue(), PositionModel::buyAmountInRub) : null;
-                    final BigDecimal currentInRub = allInRub
-                            ? sum(entry.getValue(), PositionModel::currentAmountInRub)
-                            : null;
-                    return new PortfolioTotalModel(entry.getKey(), buy, current, revenue, percent,
-                            buyInRub, currentInRub, allInRub ? currentInRub.subtract(buyInRub) : null);
-                })
-                .toList();
-    }
-
-    private static BigDecimal sum(final List<PositionModel> positions, final Function<PositionModel, BigDecimal> field) {
-        return positions.stream().map(field).reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     /**

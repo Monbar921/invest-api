@@ -36,9 +36,9 @@ UI /portfolio ──▶ invest-gateway /api/portfolio/** ──X-User-Id──�
 
 | Метод и путь                                     | Что                                                                |
 | ------------------------------------------------ | ------------------------------------------------------------------ |
-| `GET /internal/rest/portfolio`                   | `{positions, totals}`: покупки по тикеру и дате, итоги по валютам |
-| `POST /internal/rest/portfolio/positions`        | `{ticker, quantity, buyPrice, buyDate?}` → `201`                   |
-| `PUT /internal/rest/portfolio/positions/{id}`    | `{quantity, buyPrice, buyDate?}`; тикер из тела не используется   |
+| `GET /internal/rest/portfolio`                   | `{groups, totals}`: строка на облигацию с покупками, итоги по валютам |
+| `POST /internal/rest/portfolio/positions`        | `{ticker, quantity, buyPrice, buyDate?, broker?, buyAmountRub?}` → `201` |
+| `PUT /internal/rest/portfolio/positions/{id}`    | `{quantity, buyPrice, buyDate?, broker?, buyAmountRub?}`; тикер из тела не используется |
 | `DELETE /internal/rest/portfolio/positions/{id}` | `204`                                                              |
 | `GET /internal/rest/portfolio/brokers`           | брокеры пользователя по имени `[{id, name}]`                       |
 
@@ -54,11 +54,22 @@ UI /portfolio ──▶ invest-gateway /api/portfolio/** ──X-User-Id──�
 
 ## UI (invest-api-ui)
 
+Строка на облигацию и раскрытие покупок - см. «Строка на облигацию». 
 `src/pages/PortfolioPage.tsx`, запросы - `src/api/portfolio.ts`, хуки `usePortfolio` / `usePortfolioMutations`.
 Карточки итогов по валютам, таблица покупок (прибыль зелёная, убыток красный), окно добавления и изменения.
 При выборе облигации цена покупки подставляется из её текущей цены, пока пользователь не ввёл свою.
 `components/BrokerSelect.tsx` - Select с поиском по брокерам пользователя (`useBrokers`); набранное имя, которого нет
 в списке, предлагается пунктом «+ Добавить «…»». После сохранения покупки список брокеров перечитывается.
+
+## Строка на облигацию
+
+`PortfolioAggregator` (portfolio-service) сводит готовые модели покупок: `groups` - по тикеру в порядке покупок,
+`totals` - по валюте. Свод только складывает суммы покупок, цены и курсы в нём не запрашиваются. Группировка на бэке,
+а не в UI: правила сложения (средняя цена, `null` при неполной сумме) - в одном месте, как и итоги.
+
+В UI строка с одной покупкой - сразу с «изменить» / «удалить»; с несколькими - свод с «средняя» под ценой,
+«N брокера» (имена в подсказке), диапазоном дат и «+» (новая покупка этой облигации с текущей ценой по умолчанию);
+стрелка раскрывает покупки, у каждой свои действия.
 
 ## Рубли
 
@@ -66,7 +77,8 @@ UI /portfolio ──▶ invest-gateway /api/portfolio/** ──X-User-Id──�
 
 - текущая стоимость × `PriceConversionService.getRubRate(currency)` - курс на сегодня, тот же, что у `currentInRub`
   облигаций (ЦБ, иначе budget.org, кэш 12 часов);
-- стоимость покупки × `PriceConversionService.getRubRate(currency, buyDate)` → `CurrencyPriceUseCase.getRate` →
+- стоимость покупки - `buy_amount_rub`, если пользователь указал, сколько заплачено в рублях; иначе
+  стоимость покупки × `PriceConversionService.getRubRate(currency, buyDate)` → `CurrencyPriceUseCase.getRate` →
   `CurrencyRateHistoryUseCase.getRubRate` (currency-service): кэш `CURRENCY_RATE` → таблица `currency_rate` →
   `CbRfCurrencyUseCase.getCurrencies(date)` (`XML_daily.asp?date_req=`), ответ ЦБ сохраняется в таблицу целиком.
   Только ЦБ: у budget.org истории нет. Сохранение - `CurrencyRateStore.storeMissing` в своей транзакции
@@ -78,6 +90,12 @@ UI /portfolio ──▶ invest-gateway /api/portfolio/** ──X-User-Id──�
 подпись «куплено на» убрана.
 
 ## Решения и отвергнутые варианты
+
+- **Сколько заплачено в рублях - общей суммой покупки** (решение пользователя, 2026-11-08), а не ценой одной
+  облигации в рублях или курсом: сумму можно скопировать из отчёта брокера. Без НКД и комиссии - чтобы рублёвая
+  стоимость покупки была той же величиной, что и стоимость покупки в валюте.
+- **Свод - по облигации, а не по облигации и брокеру** (решение пользователя, 2026-11-08): одна облигация у двух
+  брокеров - одна строка, брокеры видны в ней и в раскрытых покупках.
 
 - **Курсы на дату - в таблице, а не только в кэше.** Решение пользователя (2026-11-08): курс на прошедшую дату не
   меняется; кэш в памяти пропадает при перезапуске, и портфель с покупками на разные даты делал бы запрос к ЦБ на

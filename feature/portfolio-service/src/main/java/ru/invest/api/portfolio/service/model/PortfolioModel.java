@@ -3,7 +3,7 @@ package ru.invest.api.portfolio.service.model;
 import java.util.List;
 
 /**
- * Портфель пользователя: позиции по тикеру и дате покупки и итоги по валютам.
+ * Портфель пользователя: покупки, сгруппированные по облигации (по тикеру), и итоги по валютам.
  */
-public record PortfolioModel(List<PositionModel> positions, List<PortfolioTotalModel> totals) {
+public record PortfolioModel(List<PortfolioGroupModel> groups, List<PortfolioTotalModel> totals) {
 }

@@ -17,7 +17,8 @@ public interface PortfolioUseCase {
      * @throws ru.invest.api.common.exception.GeneralNotFoundEntityException     облигации нет
      * @throws ru.invest.api.common.exception.GeneralUnprocessableEntityException нет тикера, количество, цена или
      *                                                                            дата вне пределов, позиций больше 200,
-     *                                                                            брокеров больше 50
+     *                                                                            брокеров больше 50, рублёвая
+     *                                                                            сумма у рублёвой облигации
      */
     PositionModel create(String userId, PositionRequestModel request);
 

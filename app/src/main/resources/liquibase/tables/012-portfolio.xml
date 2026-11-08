@@ -81,4 +81,18 @@
                                  referencedTableName="portfolio_broker" referencedColumnNames="id"
                                  onDelete="SET NULL"/>
     </changeSet>
+
+    <!-- сколько рублей фактически заплачено за покупку валютной облигации (без НКД и комиссии), по отчёту брокера;
+         null - рублёвая стоимость покупки считается по курсу ЦБ на дату покупки -->
+    <changeSet id="INVEST-001-add-portfolio-position-buy-amount-rub" author="d.v.kornilovich">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="portfolio_position" columnName="buy_amount_rub"/>
+            </not>
+        </preConditions>
+
+        <addColumn tableName="portfolio_position">
+            <column name="buy_amount_rub" type="numeric(18, 2)"/>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>

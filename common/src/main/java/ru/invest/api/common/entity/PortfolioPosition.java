@@ -47,6 +47,13 @@ public class PortfolioPosition {
     @Column(name = "buy_date")
     private LocalDate buyDate;
 
+    /**
+     * Сколько рублей заплачено за покупку валютной облигации (без НКД и комиссии); null - рублёвая стоимость покупки
+     * считается по курсу ЦБ на дату покупки
+     */
+    @Column(name = "buy_amount_rub")
+    private BigDecimal buyAmountRub;
+
     /** Брокер ({@link PortfolioBroker}); null - не указан */
     @Column(name = "broker_id")
     private Long brokerId;

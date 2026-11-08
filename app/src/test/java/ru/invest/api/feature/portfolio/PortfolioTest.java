@@ -14,6 +14,7 @@ import ru.invest.api.cb.rf.supplier.model.CurrencyDto;
 import ru.invest.api.cb.rf.supplier.model.CurrencyElementDto;
 import ru.invest.api.dto.portfolio.BrokerDto;
 import ru.invest.api.dto.portfolio.PortfolioDto;
+import ru.invest.api.dto.portfolio.PortfolioGroupDto;
 import ru.invest.api.dto.portfolio.PortfolioPositionDto;
 import ru.invest.api.dto.portfolio.PortfolioTotalDto;
 import tools.jackson.core.type.TypeReference;
@@ -142,9 +143,9 @@ public class PortfolioTest extends AbstractInvestApplicationTest {
 
         final PortfolioDto portfolio = portfolio(ALICE);
 
-        assertThat(portfolio.getPositions().stream().map(PortfolioPositionDto::getTicker).toList(),
+        assertThat(positions(portfolio).stream().map(PortfolioPositionDto::getTicker).toList(),
                 contains(USD_BOND, NO_PRICE_BOND, AUTO_FINANCE, OFZ));
-        final PortfolioPositionDto noPrice = portfolio.getPositions().get(1);
+        final PortfolioPositionDto noPrice = positions(portfolio).get(1);
         assertThat(noPrice.getCurrentPrice(), nullValue());
         assertThat(noPrice.getRevenue(), nullValue());
         assertThat(noPrice.getRevenuePercent(), nullValue());
@@ -169,13 +170,13 @@ public class PortfolioTest extends AbstractInvestApplicationTest {
         assertThat(usd.getRevenueInRub(), comparesEqualTo(new BigDecimal("12200")));
         assertThat(rub.getCurrentAmountInRub(), comparesEqualTo(rub.getCurrentAmount()));
         assertThat(rub.getRevenueInRub(), comparesEqualTo(rub.getRevenue()));
-        final PortfolioPositionDto usdPosition = portfolio.getPositions().getFirst();
+        final PortfolioPositionDto usdPosition = positions(portfolio).getFirst();
         assertThat(usdPosition.getCurrentAmountInRub(), comparesEqualTo(new BigDecimal("88200")));
         assertThat(usdPosition.getBuyAmountInRub(), comparesEqualTo(new BigDecimal("76000")));
         assertThat(usdPosition.getRevenueInRub(), comparesEqualTo(new BigDecimal("12200")));
         assertThat(noPrice.getCurrentAmountInRub(), nullValue());
 
-        assertThat(portfolio(BOB).getPositions(), hasSize(1));
+        assertThat(positions(portfolio(BOB)), hasSize(1));
     }
 
     /**
@@ -190,7 +191,7 @@ public class PortfolioTest extends AbstractInvestApplicationTest {
         cacheManagers.forEach(cacheManager -> cacheManager.getCacheNames()
                 .forEach(name -> Optional.ofNullable(cacheManager.getCache(name)).ifPresent(Cache::clear)));
 
-        final PortfolioPositionDto position = portfolio(ALICE).getPositions().getFirst();
+        final PortfolioPositionDto position = positions(portfolio(ALICE)).getFirst();
 
         assertThat(position.getBuyAmountInRub(), comparesEqualTo(new BigDecimal("76000")));
         assertThat(jdbcTemplate.queryForObject(
@@ -203,7 +204,7 @@ public class PortfolioTest extends AbstractInvestApplicationTest {
         create(ALICE, AUTO_FINANCE, 1, "99");
         create(ALICE, AUTO_FINANCE, 2, "101");
 
-        assertThat(portfolio(ALICE).getPositions(), hasSize(2));
+        assertThat(positions(portfolio(ALICE)), hasSize(2));
     }
 
     @Test
@@ -229,7 +230,7 @@ public class PortfolioTest extends AbstractInvestApplicationTest {
         future.put("buyDate", LocalDate.now().plusDays(2).toString());
         assertThat(post(ALICE, future).statusCode(), equalTo(UNPROCESSABLE));
 
-        assertThat(portfolio(ALICE).getPositions(), empty());
+        assertThat(positions(portfolio(ALICE)), empty());
     }
 
     @Test
@@ -249,8 +250,85 @@ public class PortfolioTest extends AbstractInvestApplicationTest {
         assertThat(changed.getRevenue(), comparesEqualTo(BigDecimal.ZERO));
 
         assertThat(send("DELETE", path, ALICE, null).statusCode(), equalTo(NO_CONTENT));
-        assertThat(portfolio(ALICE).getPositions(), empty());
+        assertThat(positions(portfolio(ALICE)), empty());
         assertThat(portfolio(ALICE).getTotals(), empty());
+    }
+
+    @Test
+    void purchasesOfOneBondAreOneLine() {
+        final Map<String, Object> first = body(AUTO_FINANCE, 10, "98.5");
+        first.put("broker", "Альфа");
+        post(ALICE, first);
+        final Map<String, Object> second = body(AUTO_FINANCE, 30, "100.5");
+        second.put("broker", "Т-Инвестиции");
+        second.put("buyDate", "2026-03-01");
+        post(ALICE, second);
+        final Map<String, Object> third = body(AUTO_FINANCE, 10, "99");
+        third.put("broker", "Альфа");
+        third.put("buyDate", "2026-02-01");
+        post(ALICE, third);
+        create(ALICE, OFZ, 2, "70");
+
+        final List<PortfolioGroupDto> groups = portfolio(ALICE).getGroups();
+
+        assertThat(groups.stream().map(PortfolioGroupDto::getTicker).toList(), contains(AUTO_FINANCE, OFZ));
+        final PortfolioGroupDto autoFinance = groups.getFirst();
+        assertThat(autoFinance.getQuantity(), equalTo(50));
+        assertThat(autoFinance.getBrokers(), contains("Альфа", "Т-Инвестиции"));
+        assertThat(autoFinance.getFirstBuyDate(), equalTo(BUY_DATE));
+        assertThat(autoFinance.getLastBuyDate(), equalTo(LocalDate.of(2026, 3, 1)));
+        // (98,5 × 10 + 100,5 × 30 + 99 × 10) / 50 = 99,8
+        assertThat(autoFinance.getBuyPrice(), comparesEqualTo(new BigDecimal("99.8")));
+        // 9850 + 30150 + 9900 = 49 900; сейчас 100,5% × 1000 × 50 = 50 250
+        assertThat(autoFinance.getBuyAmount(), comparesEqualTo(new BigDecimal("49900")));
+        assertThat(autoFinance.getCurrentAmount(), comparesEqualTo(new BigDecimal("50250")));
+        assertThat(autoFinance.getRevenue(), comparesEqualTo(new BigDecimal("350")));
+        // 350 / 49 900 = 0,70%
+        assertThat(autoFinance.getRevenuePercent(), comparesEqualTo(new BigDecimal("0.70")));
+        // покупки внутри строки - по дате
+        assertThat(autoFinance.getPositions().stream().map(PortfolioPositionDto::getBuyDate).toList(),
+                contains(BUY_DATE, LocalDate.of(2026, 2, 1), LocalDate.of(2026, 3, 1)));
+        assertThat(groups.get(1).getBrokers(), empty());
+    }
+
+    @Test
+    void paidRublesReplaceCbRateForPurchaseCost() {
+        final Map<String, Object> request = body(USD_BOND, 1, "95");
+        // брокер списал 76 500 ₽ за 950 $ - по курсу 80,53, а не 80 у ЦБ
+        request.put("buyAmountRub", new BigDecimal("76500"));
+        final PortfolioPositionDto created = read(post(ALICE, request).body(), PortfolioPositionDto.class);
+
+        assertThat(created.getBuyAmountRub(), comparesEqualTo(new BigDecimal("76500")));
+        assertThat(created.getBuyAmountInRub(), comparesEqualTo(new BigDecimal("76500")));
+        // сейчас 980 $ × 90 = 88 200 ₽
+        assertThat(created.getRevenueInRub(), comparesEqualTo(new BigDecimal("11700")));
+        // вторая покупка без суммы - по курсу ЦБ на дату покупки: 950 $ × 80
+        create(ALICE, USD_BOND, 1, "95");
+
+        final PortfolioDto portfolio = portfolio(ALICE);
+        final PortfolioGroupDto group = portfolio.getGroups().getFirst();
+        assertThat(group.getBuyAmountInRub(), comparesEqualTo(new BigDecimal("152500")));
+        assertThat(group.getRevenueInRub(), comparesEqualTo(new BigDecimal("23900")));
+        assertThat(portfolio.getTotals().getFirst().getRevenueInRub(), comparesEqualTo(new BigDecimal("23900")));
+        // доход в долларах от рублёвой суммы не зависит
+        assertThat(group.getRevenue(), comparesEqualTo(new BigDecimal("60")));
+
+        // без суммы при изменении - снова по курсу ЦБ
+        final HttpResponse<String> cleared = send("PUT", "/positions/" + created.getId(), ALICE, body(null, 1, "95"));
+        assertThat(read(cleared.body(), PortfolioPositionDto.class).getBuyAmountInRub(),
+                comparesEqualTo(new BigDecimal("76000")));
+    }
+
+    @Test
+    void paidRublesAreRejectedForRubleBondAndWhenNotPositive() {
+        final Map<String, Object> rubleBond = body(AUTO_FINANCE, 1, "99");
+        rubleBond.put("buyAmountRub", new BigDecimal("990"));
+        assertThat(post(ALICE, rubleBond).statusCode(), equalTo(UNPROCESSABLE));
+
+        final Map<String, Object> zero = body(USD_BOND, 1, "95");
+        zero.put("buyAmountRub", BigDecimal.ZERO);
+        assertThat(post(ALICE, zero).statusCode(), equalTo(BAD_REQUEST));
+        assertThat(positions(portfolio(ALICE)), empty());
     }
 
     @Test
@@ -272,7 +350,7 @@ public class PortfolioTest extends AbstractInvestApplicationTest {
 
         assertThat(brokers(ALICE).stream().map(BrokerDto::getName).toList(), contains("Альфа", "Т-Инвестиции"));
         assertThat(brokers(BOB), empty());
-        assertThat(portfolio(ALICE).getPositions().stream().map(PortfolioPositionDto::getBroker).toList(),
+        assertThat(positions(portfolio(ALICE)).stream().map(PortfolioPositionDto::getBroker).toList(),
                 contains("Т-Инвестиции", null, "Т-Инвестиции", "Альфа"));
     }
 
@@ -333,6 +411,11 @@ public class PortfolioTest extends AbstractInvestApplicationTest {
 
     private HttpResponse<String> post(final String userId, final Map<String, Object> body) {
         return send("POST", "/positions", userId, body);
+    }
+
+    /** Все покупки портфеля подряд: строки облигаций по тикеру, покупки внутри - по дате */
+    private static List<PortfolioPositionDto> positions(final PortfolioDto portfolio) {
+        return portfolio.getGroups().stream().flatMap(group -> group.getPositions().stream()).toList();
     }
 
     private PortfolioDto portfolio(final String userId) {
