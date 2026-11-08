@@ -26,6 +26,11 @@
             <artifactId>news-supplier</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>ru.invest.api</groupId>
+            <artifactId>telegram-bot</artifactId>
+            <version>${project.version}</version>
+        </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>

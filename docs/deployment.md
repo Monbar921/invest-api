@@ -38,6 +38,14 @@
 Первая загрузка свечей - вся история, около двух запросов на облигацию при 5 в секунду: ~10 минут; дальше ночной шаг
 запрашивает только свежие свечи, около 5 минут.
 
+Telegram-бот: `ru.invest.api.telegram.enabled` (по умолчанию выключен), токен бота от @BotFather - только в
+переменной окружения `TELEGRAM_BOT_TOKEN`, имя бота без @ - `TELEGRAM_BOT_USERNAME`, включение -
+`TELEGRAM_BOT_ENABLED=true`. Telegram в России заблокирован: либо Telegram идёт через TUN VPN (`proxy.type: NONE`, так
+на ПК разработчика), либо через локальный прокси - `TELEGRAM_PROXY_TYPE=HTTP` (или `SOCKS`), `TELEGRAM_PROXY_HOST`,
+`TELEGRAM_PROXY_PORT`. Настройка sing-box - [proxy.md](features/INVEST-001-telegram-bot/proxy.md). Бот должен
+работать в одном экземпляре приложения (long polling). Если Telegram недоступен, приложение стартует и работает,
+в логе раз в 5 минут `Telegram is unavailable`.
+
 Swagger: http://localhost:8081/swagger-ui.html.
 
 ## Локальный стенд в k3d

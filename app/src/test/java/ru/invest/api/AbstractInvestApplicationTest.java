@@ -12,6 +12,7 @@ import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.telegram.telegrambots.meta.generics.TelegramClient;
 import org.testcontainers.containers.Network;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 import ru.invest.api.budget.org.supplier.client.feign.BudgetOrgClient;
@@ -46,6 +47,9 @@ public abstract class AbstractInvestApplicationTest {
     private InstrumentsGrpcRateLimitedWrapper instrumentsGrpcWrapper;
     @MockitoBean
     private MarketDataGrpcRateLimitedWrapper marketDataGrpcWrapper;
+    // клиент Telegram API: тесты получают мок через @Autowired TelegramClient
+    @MockitoBean
+    private TelegramClient telegramClient;
 
     public static final PostgreSQLContainer postgreSQLContainer = new PostgreSQLContainer("postgres:17.6")
             .withDatabaseName("invest")

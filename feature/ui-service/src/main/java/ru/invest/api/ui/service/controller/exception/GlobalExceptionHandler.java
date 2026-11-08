@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import ru.invest.api.common.exception.GeneralNotFoundEntityException;
+import ru.invest.api.common.exception.GeneralUnauthorizedException;
 import ru.invest.api.common.exception.GeneralUnprocessableEntityException;
 import ru.ttech.piapi.core.connector.exception.ServiceRuntimeException;
 
@@ -32,6 +33,16 @@ public class GlobalExceptionHandler {
         log.warn("Entity not found: {}", ex.getMessage());
         final ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
         problem.setTitle("Not Found");
+        problem.setDetail(ex.getMessage());
+        return problem;
+    }
+
+    // эндпоинты пользователя без X-User-Id: запрос пришёл не через gateway
+    @ExceptionHandler(GeneralUnauthorizedException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public ProblemDetail handleUnauthorized(final GeneralUnauthorizedException ex) {
+        final ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.UNAUTHORIZED);
+        problem.setTitle("Unauthorized");
         problem.setDetail(ex.getMessage());
         return problem;
     }

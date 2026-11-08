@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.4.xsd">
+
+    <!-- чат Telegram пользователя: один чат на пользователя (sub Keycloak), чат - только у одного пользователя -->
+    <changeSet id="INVEST-001-create-telegram-link-table" author="d.v.kornilovich">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="telegram_link"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="telegram_link">
+            <column name="user_id" type="varchar(100)">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="chat_id" type="bigint">
+                <constraints nullable="false" unique="true" uniqueConstraintName="telegram_link_chat_id_uq"/>
+            </column>
+            <column name="username" type="varchar(100)"/>
+            <column name="linked_at" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <!-- одноразовый токен ссылки t.me/<bot>?start=<токен>; хранится SHA-256 токена, не сам токен -->
+    <changeSet id="INVEST-001-create-telegram-link-token-table" author="d.v.kornilovich">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="telegram_link_token"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="telegram_link_token">
+            <column name="token_hash" type="varchar(64)">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="user_id" type="varchar(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="expires_at" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createIndex tableName="telegram_link_token" indexName="telegram_link_token_user_id_idx">
+            <column name="user_id"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

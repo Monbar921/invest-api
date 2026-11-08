@@ -1,0 +1,31 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>ru.invest.api</groupId>
+        <artifactId>feature</artifactId>
+        <version>${revision}</version>
+    </parent>
+
+    <!-- Telegram-бот: long polling через прокси, привязка чата к пользователю, отправка сообщений -->
+    <artifactId>telegram-bot</artifactId>
+
+    <properties>
+        <telegrambots.version>10.3.0</telegrambots.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.telegram</groupId>
+            <artifactId>telegrambots-longpolling</artifactId>
+            <version>${telegrambots.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.telegram</groupId>
+            <artifactId>telegrambots-client</artifactId>
+            <version>${telegrambots.version}</version>
+        </dependency>
+    </dependencies>
+
+</project>

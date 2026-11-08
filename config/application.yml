@@ -83,6 +83,18 @@ ru:
           - source: FRANK_MEDIA
             url: https://frankmedia.ru/feed
             only-matched: false
+      # Telegram-бот (docs/features/INVEST-001-telegram-bot); токен - только из переменной окружения
+      telegram:
+        enabled: ${TELEGRAM_BOT_ENABLED:false}
+        bot-token: ${TELEGRAM_BOT_TOKEN:}
+        bot-username: ${TELEGRAM_BOT_USERNAME:}
+        link-token-ttl: PT10M
+        availability-check-interval: PT5M
+        # NONE - напрямую или через TUN VPN; HTTP / SOCKS - локальный прокси (sing-box), см. proxy.md
+        proxy:
+          type: ${TELEGRAM_PROXY_TYPE:NONE}
+          host: ${TELEGRAM_PROXY_HOST:127.0.0.1}
+          port: ${TELEGRAM_PROXY_PORT:2080}
 
 spring:
   jpa:

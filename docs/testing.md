@@ -18,7 +18,7 @@ mvn test -pl app -am -Dtest=YieldToMaturityCalculationTest
 - PostgreSQL 17 в Testcontainers, контейнер переиспользуется между запусками (`withReuse(true)`), миграции Liquibase
   применяются как в проде;
 - внешние системы замоканы `@MockitoBean`: `InstrumentsGrpcRateLimitedWrapper`, `MarketDataGrpcRateLimitedWrapper`
-  (T-Invest), `CbRfClient`, `BudgetOrgClient`;
+  (T-Invest), `CbRfClient`, `BudgetOrgClient`, `TelegramClient` (Telegram Bot API);
 - REST вызывается через тот же Feign-клиент, что получают потребители (`@EnableInvestApiBondClient`
   в `InvestApiTestConfiguration`) - заодно проверяется стартер;
 - шедулеры в тестах выключены (`scheduler.*.enabled: false`), шаги синхронизации вызываются напрямую.
@@ -38,6 +38,7 @@ mvn test -pl app -am -Dtest=YieldToMaturityCalculationTest
 | `feature/ui/service/MaintenanceControllerTest` | `sync-all` в фоне: сразу 202, повторный запуск во время работы - 409, после - снова 202 |
 | `common/BondEventTest`             | события облигации: изменение купона, необъявленный купон, оферта, амортизация и погашение |
 | `feature/news/NewsTest`            | загрузка новостей: СМИ (общая лента - только про эмитентов из системы, деловая - целиком), АКРА и НКР из HTML, эмитент без кавычек; RSS ЦБ с BOM и HTML, фильтр шума Мосбиржи, ISIN из текста, эмитент по названию и по ISIN другого выпуска, без дублей при повторе, удаление старых; лента, фильтр по источнику, новости облигации, 404; ставка и курсы, обзор без ответа ЦБ; события через API |
+| `feature/telegram/TelegramTest`   | REST `/alerts/telegram` с `X-User-Id` и без (`401`); ссылка привязки и хеш в БД; `/start` с токеном, повторный, чужой, истёкший и неизвестный токен; переход чата к другому пользователю и смена чата; `/stop`, `DELETE`; группы игнорируются; ошибка отправки - статус «недоступен». Обработчик команд вызывается напрямую, long polling выключен (`ru.invest.api.telegram.polling: false`) |
 | `feature/ui/service/BondControllerTest` | страницы, фильтры, сортировки, пагинация, карточка облигации, поиск, калькулятор, свечи, 404 и 405 на неизвестный путь и метод, 400 на неверную дату |
 
 ## Тестовые данные

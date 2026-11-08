@@ -10,6 +10,7 @@ T-Invest API (gRPC) ◀─┤ tinkoff-supplier ◀── bond-supplier (шеду
 ЦБ РФ (XML, RSS)    ◀─┤ cb-rf-supplier   ◀┐                                         │
 api.budjet.org      ◀─┤ budget-org-supp. ◀┴─ currency-service (курсы валют)         │
 Мосбиржа ISS (JSON) ◀─┤ news-supplier (новости, эмитенты, ставка и курсы)           │
+api.telegram.org    ◀─┤ telegram-bot (long polling, привязка чата; прокси - опционально) │
                       │                                                             │
 invest-gateway ──────▶│ ui-service: /internal/rest/bonds/**, /internal/rest/maintenance/** │
                       │ common: сущности, репозитории, модели, фильтр/сортировка    │
@@ -31,6 +32,7 @@ invest-gateway ──────▶│ ui-service: /internal/rest/bonds/**, /in
 | `feature/cb-rf-supplier`          | Feign-клиент ЦБ РФ: курсы, RSS пресс-релизов и событий, ключевая ставка (SOAP DailyInfo)       |
 | `feature/news-supplier`           | лента новостей: клиент ISS Мосбиржи, эмитенты выпусков, загрузка и чтение новостей, ставка и курсы для шапки ленты |
 | `feature/budget-org-supplier`     | Feign-клиент api.budjet.org                                                                    |
+| `feature/telegram-bot`            | Telegram-бот: OkHttp-клиент с прокси из настроек, long polling, команды `/start` `/stop` `/help`, привязка чата к пользователю, проверка связи |
 | `feature/ui-service`              | REST-контроллеры, маппинг в DTO, обработка ошибок                                              |
 | `invest-api-dto`                  | DTO запросов и ответов, общие с клиентами                                                      |
 | `invest-api-spring-boot-starter`  | Feign-клиент `InvestApiBondClient` + `@EnableInvestApiBondClient` для других сервисов и тестов |
@@ -130,6 +132,8 @@ PostgreSQL, схема задаётся в конфиге (`spring.liquibase.def
 | `news`         | внешние новости: источник, id у источника (уникальны вместе), заголовок, анонс, ссылка, время публикации |
 | `news_link`    | к чему относится новость: выпуск (`isin`) или эмитент (`emitter_id`); удаляется вместе с новостью |
 | `bond_issuer`  | эмитент выпуска по данным Мосбиржи: id эмитента, название, ИНН; с облигацией связан по ISIN, без внешнего ключа |
+| `telegram_link` | чат Telegram пользователя: `user_id` (sub Keycloak) - первичный ключ, `chat_id` уникален, @username, время привязки |
+| `telegram_link_token` | одноразовые токены ссылки привязки: SHA-256 токена, пользователь, срок (10 минут) |
 | `shedlock`     | блокировки шедулеров                                                                  |
 
 У всех таблиц аудит: `created_at/by`, `updated_at/by` (шедулер пишет процесс `SCHEDULER_PROCESS`,
@@ -150,6 +154,9 @@ maintenance-эндпоинты - значение заголовка `From`).
 | `GET /internal/rest/bonds/news?source=&page=&size=`           | лента новостей, новые первыми; `source` - CBR_PRESS, CBR_EVENT, MOEX (несколько через запятую), `size` 1..100, по умолчанию 20 |
 | `GET /internal/rest/bonds/{ticker}/news?page=&size=`          | новости облигации: упомянут её ISIN или новость относится к её эмитенту |
 | `GET /internal/rest/bonds/market-overview`                    | ключевая ставка (с какого дня и прошлая, изменение с начала года и на последнем заседании) и курсы USD, EUR, CNY с изменением |
+| `GET /internal/rest/alerts/telegram`                          | статус Telegram пользователя: включён ли бот, привязан ли чат, отвечает ли Telegram |
+| `POST /internal/rest/alerts/telegram/link-token`              | одноразовая ссылка `https://t.me/<bot>?start=<токен>` на 10 минут; прежние ссылки пользователя перестают действовать; бот выключен - `422` |
+| `DELETE /internal/rest/alerts/telegram`                       | отвязать чат (`204`, в том числе если чата не было)       |
 | `POST /internal/rest/maintenance/bond/sync-all`               | синхронизация облигаций                                   |
 | `POST /internal/rest/maintenance/news/sync-all`               | загрузка новостей (в фоне, 202 / 409)                     |
 | `POST /internal/rest/maintenance/bond/{coupon\|amortization\|price\|candle}/sync-all` | синхронизация купонов / амортизации / цен / свечей |
@@ -161,6 +168,10 @@ Maintenance-эндпоинты требуют заголовок `From` (кто 
 держать на ней HTTP-запрос нельзя. С ночной цепочкой ручной запуск не согласован (ShedLock его не видит) - не
 запускайте вручную шаг, который сейчас идёт по расписанию или при старте. `sync-by-ticker` - синхронно.
 `local` - облигации в рублях, `foreign` - в иностранной валюте (правило - в [business-rules.md](business-rules.md)).
+
+Эндпоинты `/alerts/**` - пользовательские: пользователя (sub Keycloak) передаёт invest-gateway в заголовке `X-User-Id`,
+без заголовка - `401`. Своей проверки подлинности у invest-api нет: доверие держится на том, что invest-api доступен
+только через gateway, а gateway затирает заголовок из браузера.
 
 Для других Java-сервисов есть стартер: `@EnableInvestApiBondClient` подключает Feign-клиент `InvestApiBondClient`
 с базовым путём `/internal/rest`. Feign не отправляет `null` в теле, поэтому для запроса без фильтров передаётся
@@ -176,6 +187,20 @@ Maintenance-эндпоинты требуют заголовок `From` (кто 
 | АКРА, НКР           | рейтинговые действия (HTML-списки)      | `ru.invest.api.news.acra-url`, `...nkr-url`         |
 | СМИ (RSS)           | Интерфакс, РБК, Коммерсантъ, Ведомости, Финам, Frank Media, Smart-Lab | `ru.invest.api.news.feeds` |
 | api.budjet.org      | курсы пар без рубля и запасной источник | `...budget-org-client.url`                          |
+| Telegram Bot API    | бот уведомлений: long polling, ответы на команды | `ru.invest.api.telegram.*`; в России заблокирован - через TUN VPN или прокси ([proxy.md](features/INVEST-001-telegram-bot/proxy.md)) |
+
+## Telegram-бот
+
+Модуль `feature/telegram-bot`, включается `ru.invest.api.telegram.enabled`. Один `OkHttpClient` (прокси из
+`ru.invest.api.telegram.proxy`, `NONE` - напрямую) на long polling и отправку: остальные клиенты приложения прокси не
+видят. `TelegramBotRunner` (`SmartLifecycle`) запускает long polling после старта контекста; пока Telegram недоступен,
+библиотека `telegrambots` сама повторяет `getUpdates`, приложение работает. Long polling - в одном экземпляре
+приложения. `TelegramAvailabilityChecker` раз в 5 минут вызывает `getMe`; результат и итог каждой отправки
+(`TelegramMessageSender`) хранятся в памяти (`TelegramAvailability`) и отдаются в статусе для UI.
+
+Привязка: UI получает одноразовую ссылку `t.me/<bot>?start=<токен>`, пользователь нажимает «Старт», бот получает
+`/start <токен>` и сохраняет `chat_id` за владельцем токена (`TelegramLinkUseCase`). Правила - в
+[business-rules.md](business-rules.md#telegram-привязка-чата). Обрабатываются только личные чаты.
 
 Сертификаты invest-public-api.tinkoff.ru и acra-ratings.ru подписаны корневым сертификатом Минцифры - его нужно добавить в truststore JVM
 (в образе это делает Dockerfile, см. [deployment.md](deployment.md)).

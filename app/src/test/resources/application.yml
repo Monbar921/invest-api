@@ -30,6 +30,12 @@ ru:
           - source: VEDOMOSTI
             url: https://vedomosti.test/rss
             only-matched: false
+      # бот включён без long polling и проверки связи: TelegramTest вызывает обработчик сам, клиент замокан
+      telegram:
+        enabled: true
+        polling: false
+        bot-token: TEST
+        bot-username: invest_test_bot
 spring:
   jpa:
     # без этого EntityManager живёт весь HTTP-запрос: ручная синхронизация свечей копила в нём сотни тысяч
