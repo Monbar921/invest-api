@@ -193,8 +193,9 @@ Maintenance-эндпоинты требуют заголовок `From` (кто 
 
 Модуль `feature/telegram-bot`, включается `ru.invest.api.telegram.enabled`. Один `OkHttpClient` (прокси из
 `ru.invest.api.telegram.proxy`, `NONE` - напрямую) на long polling и отправку: остальные клиенты приложения прокси не
-видят. `TelegramBotRunner` (`SmartLifecycle`) запускает long polling после старта контекста; пока Telegram недоступен,
-библиотека `telegrambots` сама повторяет `getUpdates`, приложение работает. Long polling - в одном экземпляре
+видят. `TelegramBotRunner` (`SmartLifecycle`) регистрирует бота в фоновом потоке: недоступный Telegram не держит
+старт приложения, неудачная регистрация повторяется через 30 с, 1, 2, 4... до 10 минут. После регистрации `getUpdates`
+при сбоях повторяет сама библиотека `telegrambots`. Long polling - в одном экземпляре
 приложения. `TelegramAvailabilityChecker` раз в 5 минут вызывает `getMe`; результат и итог каждой отправки
 (`TelegramMessageSender`) хранятся в памяти (`TelegramAvailability`) и отдаются в статусе для UI.
 

@@ -2,7 +2,7 @@ package ru.invest.api.telegram.bot.status;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.GetMe;
@@ -15,7 +15,8 @@ import org.telegram.telegrambots.meta.generics.TelegramClient;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-@ConditionalOnProperty(prefix = "ru.invest.api.telegram", name = {"enabled", "polling"}, havingValue = "true")
+// polling не задан - true: бот запускается при одном enabled
+@ConditionalOnExpression("${ru.invest.api.telegram.enabled:false} and ${ru.invest.api.telegram.polling:true}")
 public class TelegramAvailabilityChecker {
     private final TelegramClient telegramClient;
     private final TelegramAvailability availability;
