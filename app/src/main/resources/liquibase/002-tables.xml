@@ -12,4 +12,5 @@
     <include file="tables/006-price-candle.xml" relativeToChangelogFile="true"/>
     <include file="tables/007-news.xml" relativeToChangelogFile="true"/>
     <include file="tables/008-telegram.xml" relativeToChangelogFile="true"/>
+    <include file="tables/009-alert.xml" relativeToChangelogFile="true"/>
 </databaseChangeLog>

@@ -83,6 +83,23 @@ ru:
           - source: FRANK_MEDIA
             url: https://frankmedia.ru/feed
             only-matched: false
+      # уведомления по облигациям (docs/features/INVEST-001-telegram-bot)
+      alerts:
+        max-alerts-per-user: 50
+        max-days: 60
+        zone: Europe/Moscow
+        # проверка правил по датам: утром и сразу после старта
+        scheduler:
+          enabled: true
+          cron: "0 0 9 * * *"
+          zone: Europe/Moscow
+        # очередь отправки: повторы при сбоях связи, отказ через сутки
+        dispatcher:
+          enabled: true
+          interval: PT30S
+          batch-size: 50
+        give-up-after: PT24H
+        retention: P90D
       # Telegram-бот (docs/features/INVEST-001-telegram-bot); токен - только из переменной окружения
       telegram:
         enabled: ${TELEGRAM_BOT_ENABLED:false}
@@ -97,6 +114,11 @@ ru:
           port: ${TELEGRAM_PROXY_PORT:2080}
 
 spring:
+  # 4 потока на @Scheduled: разбор очереди уведомлений (раз в 30 с) не ждёт долгих синхронизаций
+  task:
+    scheduling:
+      pool:
+        size: 4
   jpa:
     # без этого EntityManager живёт весь HTTP-запрос: ручная синхронизация свечей копила в нём сотни тысяч
     # сохранённых сущностей и падала по памяти (OOMKilled на лимите 1 ГБ). Данные грузятся в @Transactional

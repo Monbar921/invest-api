@@ -19,6 +19,7 @@
         <module>currency-service</module>
         <module>bond-supplier</module>
         <module>news-supplier</module>
+        <module>alert-service</module>
         <module>telegram-bot</module>
     </modules>
 

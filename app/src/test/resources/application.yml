@@ -30,6 +30,12 @@ ru:
           - source: VEDOMOSTI
             url: https://vedomosti.test/rss
             only-matched: false
+      # проверка правил и разбор очереди вызываются из AlertTest напрямую
+      alerts:
+        scheduler:
+          enabled: false
+        dispatcher:
+          enabled: false
       # бот включён без long polling и проверки связи: TelegramTest вызывает обработчик сам, клиент замокан
       telegram:
         enabled: true

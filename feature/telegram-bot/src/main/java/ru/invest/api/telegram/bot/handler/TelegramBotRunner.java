@@ -126,7 +126,8 @@ public class TelegramBotRunner implements SmartLifecycle {
             telegramClient.execute(SetMyCommands.builder()
                     .commands(List.of(
                             new BotCommand("start", "подключение по ссылке из приложения"),
-                            new BotCommand("stop", "отключить уведомления"),
+                            new BotCommand("list", "мои уведомления"),
+                            new BotCommand("stop", "отключить Telegram"),
                             new BotCommand("help", "подсказка")))
                     .build());
         } catch (final TelegramApiException e) {

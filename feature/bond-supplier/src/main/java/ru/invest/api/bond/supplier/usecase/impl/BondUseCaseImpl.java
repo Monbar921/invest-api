@@ -93,10 +93,16 @@ public class BondUseCaseImpl implements BondUseCase {
 
     @Override
     public List<BondEventModel> getEvents(final String ticker) {
+        return bondEventUseCase.getEvents(getWithSchedule(ticker),
+                dateTimeMapper.getNow().toLocalDate().minusMonths(PAST_EVENT_MONTHS));
+    }
+
+    @Override
+    public BondModel getWithSchedule(final String ticker) {
         final BondModel bond = tinkoffBondUseCase.findDetailedByTicker(ticker);
         bond.setAmortizations(tinkoffAmortizationUseCase.findByUids(Set.of(bond.getUid()))
                 .getOrDefault(bond.getUid(), List.of()));
-        return bondEventUseCase.getEvents(bond, dateTimeMapper.getNow().toLocalDate().minusMonths(PAST_EVENT_MONTHS));
+        return bond;
     }
 
     @Override

@@ -4,6 +4,8 @@ import ru.invest.api.telegram.bot.model.LinkResult;
 import ru.invest.api.telegram.bot.model.TelegramLinkModel;
 import ru.invest.api.telegram.bot.model.TelegramStatusModel;
 
+import java.util.Optional;
+
 /**
  * Привязка чата Telegram к пользователю (sub Keycloak).
  */
@@ -36,4 +38,9 @@ public interface TelegramLinkUseCase {
     boolean unlinkByChat(Long chatId);
 
     TelegramStatusModel getStatus(String userId);
+
+    /**
+     * Чей это чат: для команд и кнопок бота.
+     */
+    Optional<String> findUserId(Long chatId);
 }

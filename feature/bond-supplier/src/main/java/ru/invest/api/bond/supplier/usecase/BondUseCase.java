@@ -56,4 +56,11 @@ public interface BondUseCase {
      * События облигации из её данных - купоны, амортизация, оферта, погашение - за последние 3 месяца и все будущие.
      */
     List<BondEventModel> getEvents(String ticker);
+
+    /**
+     * Облигация с графиком купонов и графиком погашений номинала - всё, из чего считаются её события.
+     *
+     * @throws ru.invest.api.common.exception.GeneralNotFoundEntityException облигации нет
+     */
+    BondModel getWithSchedule(String ticker);
 }

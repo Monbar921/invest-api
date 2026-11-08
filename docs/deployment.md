@@ -46,6 +46,10 @@ Telegram-бот: `ru.invest.api.telegram.enabled` (по умолчанию вы�
 работать в одном экземпляре приложения (long polling). Если Telegram недоступен, приложение стартует и работает,
 в логе раз в 5 минут `Telegram is unavailable`.
 
+Уведомления: `ru.invest.api.alerts.scheduler.enabled` / `cron` / `zone` (проверка правил, по умолчанию 09:00 МСК, и
+сразу после старта), `...dispatcher.enabled` / `interval` (разбор очереди, 30 с), `max-alerts-per-user`, `max-days`,
+`give-up-after` (24 ч), `retention` (90 дней). Без включённого Telegram-бота уведомления сразу получают `FAILED`.
+
 Swagger: http://localhost:8081/swagger-ui.html.
 
 ## Локальный стенд в k3d

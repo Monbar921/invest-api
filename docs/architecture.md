@@ -32,6 +32,7 @@ invest-gateway ──────▶│ ui-service: /internal/rest/bonds/**, /in
 | `feature/cb-rf-supplier`          | Feign-клиент ЦБ РФ: курсы, RSS пресс-релизов и событий, ключевая ставка (SOAP DailyInfo)       |
 | `feature/news-supplier`           | лента новостей: клиент ISS Мосбиржи, эмитенты выпусков, загрузка и чтение новостей, ставка и курсы для шапки ленты |
 | `feature/budget-org-supplier`     | Feign-клиент api.budjet.org                                                                    |
+| `feature/alert-service`           | уведомления по облигациям: правила пользователя, проверка по датам событий, очередь отправки, интерфейс канала `NotificationSender` |
 | `feature/telegram-bot`            | Telegram-бот: OkHttp-клиент с прокси из настроек, long polling, команды `/start` `/stop` `/help`, привязка чата к пользователю, проверка связи |
 | `feature/ui-service`              | REST-контроллеры, маппинг в DTO, обработка ошибок                                              |
 | `invest-api-dto`                  | DTO запросов и ответов, общие с клиентами                                                      |
@@ -133,6 +134,8 @@ PostgreSQL, схема задаётся в конфиге (`spring.liquibase.def
 | `news_link`    | к чему относится новость: выпуск (`isin`) или эмитент (`emitter_id`); удаляется вместе с новостью |
 | `bond_issuer`  | эмитент выпуска по данным Мосбиржи: id эмитента, название, ИНН; с облигацией связан по ISIN, без внешнего ключа |
 | `telegram_link` | чат Telegram пользователя: `user_id` (sub Keycloak) - первичный ключ, `chat_id` уникален, @username, время привязки |
+| `bond_alert`   | правило уведомления: пользователь, тикер (без внешнего ключа - облигации пересоздаются), тип, за сколько дней, включено; уникально по `(user_id, ticker, type)` |
+| `notification` | очередь и история уведомлений: текст, статус PENDING / SENT / FAILED, попытки, время следующей, ошибка; `dedup_key` уникален; `alert_id` обнуляется при удалении правила |
 | `telegram_link_token` | одноразовые токены ссылки привязки: SHA-256 токена, пользователь, срок (10 минут) |
 | `shedlock`     | блокировки шедулеров                                                                  |
 
@@ -154,6 +157,11 @@ maintenance-эндпоинты - значение заголовка `From`).
 | `GET /internal/rest/bonds/news?source=&page=&size=`           | лента новостей, новые первыми; `source` - CBR_PRESS, CBR_EVENT, MOEX (несколько через запятую), `size` 1..100, по умолчанию 20 |
 | `GET /internal/rest/bonds/{ticker}/news?page=&size=`          | новости облигации: упомянут её ISIN или новость относится к её эмитенту |
 | `GET /internal/rest/bonds/market-overview`                    | ключевая ставка (с какого дня и прошлая, изменение с начала года и на последнем заседании) и курсы USD, EUR, CNY с изменением |
+| `GET /internal/rest/alerts?ticker=`                           | правила пользователя (по облигации или все) с названием облигации |
+| `POST /internal/rest/alerts`                                  | новое правило `{ticker, type, days}`: `201`; облигации нет - `404`; такое уже есть или больше 50 - `422`; `days` вне 1..60 - `400` |
+| `PUT /internal/rest/alerts/{id}`                              | изменить `days` и/или `enabled` |
+| `DELETE /internal/rest/alerts/{id}`                           | удалить правило (`204`); история остаётся |
+| `GET /internal/rest/alerts/notifications?page=&size=`         | история уведомлений, новые первыми |
 | `GET /internal/rest/alerts/telegram`                          | статус Telegram пользователя: включён ли бот, привязан ли чат, отвечает ли Telegram |
 | `POST /internal/rest/alerts/telegram/link-token`              | одноразовая ссылка `https://t.me/<bot>?start=<токен>` на 10 минут; прежние ссылки пользователя перестают действовать; бот выключен - `422` |
 | `DELETE /internal/rest/alerts/telegram`                       | отвязать чат (`204`, в том числе если чата не было)       |
@@ -189,6 +197,24 @@ Maintenance-эндпоинты требуют заголовок `From` (кто 
 | api.budjet.org      | курсы пар без рубля и запасной источник | `...budget-org-client.url`                          |
 | Telegram Bot API    | бот уведомлений: long polling, ответы на команды | `ru.invest.api.telegram.*`; в России заблокирован - через TUN VPN или прокси ([proxy.md](features/INVEST-001-telegram-bot/proxy.md)) |
 
+## Уведомления
+
+Модуль `feature/alert-service`. Правила по датам (купон, частичное погашение, оферта, погашение за N дней)
+проверяет `AlertCheckUseCase`: события облигации считает тот же `BondEventUseCase`, что и вкладка «События по бумаге».
+Сработавшее правило не отправляет сообщение само, а пишет его в очередь `notification` (`NotificationQueue`,
+повтор с тем же `dedup_key` пропускается). `NotificationDispatchUseCase` разбирает очередь через
+`NotificationSender` - его реализует `telegram-bot`; без реализации уведомления сразу `FAILED`. Так недоступный
+Telegram не теряет уведомления: они ждут и повторяются.
+
+| Что | Когда |
+| --- | --- |
+| `AlertScheduler` - проверка всех включённых правил, чистка истории старше 90 дней | `ru.invest.api.alerts.scheduler.cron` (09:00 МСК) и сразу после старта, ShedLock `AlertCheck` |
+| проверка одного правила | сразу после создания, включения или изменения дней - событие в окне не ждёт утра |
+| `NotificationDispatchScheduler` - разбор очереди | раз в 30 секунд и сразу после срабатывания, ShedLock `NotificationDispatch` |
+
+Пул `@Scheduled` - 4 потока (`spring.task.scheduling.pool.size`): разбор очереди не ждёт долгих синхронизаций.
+Правила - в [business-rules.md](business-rules.md#уведомления-по-облигациям).
+
 ## Telegram-бот
 
 Модуль `feature/telegram-bot`, включается `ru.invest.api.telegram.enabled`. Один `OkHttpClient` (прокси из
@@ -198,6 +224,9 @@ Maintenance-эндпоинты требуют заголовок `From` (кто 
 при сбоях повторяет сама библиотека `telegrambots`. Long polling - в одном экземпляре
 приложения. `TelegramAvailabilityChecker` раз в 5 минут вызывает `getMe`; результат и итог каждой отправки
 (`TelegramMessageSender`) хранятся в памяти (`TelegramAvailability`) и отдаются в статусе для UI.
+
+Доставка: `TelegramNotificationSender` (кнопка «Отключить это уведомление» с `callback_data = alert-off:<id>`),
+команда `/list` и обработка кнопки - в `TelegramUpdateHandler`.
 
 Привязка: UI получает одноразовую ссылку `t.me/<bot>?start=<токен>`, пользователь нажимает «Старт», бот получает
 `/start <токен>` и сохраняет `chat_id` за владельцем токена (`TelegramLinkUseCase`). Правила - в

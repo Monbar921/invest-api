@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.4.xsd">
+
+    <!-- правило уведомления пользователя по облигации; облигация - по тикеру, без внешнего ключа: облигации
+         пересоздаются синхронизацией. Одно правило каждого типа на облигацию -->
+    <changeSet id="INVEST-001-create-bond-alert-table" author="d.v.kornilovich">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="bond_alert"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="bond_alert">
+            <column autoIncrement="true" name="id" type="bigserial">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="user_id" type="varchar(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="ticker" type="varchar(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="type" type="varchar(32)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="days" type="int"/>
+            <column name="enabled" type="boolean">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="last_triggered_at" type="timestamp"/>
+        </createTable>
+
+        <createIndex tableName="bond_alert" indexName="bond_alert_user_ticker_type_uq_idx" unique="true">
+            <column name="user_id"/>
+            <column name="ticker"/>
+            <column name="type"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- очередь уведомлений: проверка правил пишет сюда, отправка идёт отдельно и повторяется, пока канал недоступен.
+         dedup_key не даёт отправить одно и то же дважды (перезапуск, повторная проверка) -->
+    <changeSet id="INVEST-001-create-notification-table" author="d.v.kornilovich">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="notification"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="notification">
+            <column autoIncrement="true" name="id" type="bigserial">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="user_id" type="varchar(100)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- удалённое правило оставляет историю: alert_id обнуляется -->
+            <column name="alert_id" type="bigint"/>
+            <column name="ticker" type="varchar(50)"/>
+            <column name="dedup_key" type="varchar(200)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="notification_dedup_key_uq"/>
+            </column>
+            <column name="text" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="varchar(16)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="attempts" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="next_attempt_at" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="sent_at" type="timestamp"/>
+            <column name="last_error" type="text"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="notification" baseColumnNames="alert_id"
+                                 constraintName="fk_notification_alert_id"
+                                 referencedTableName="bond_alert" referencedColumnNames="id" onDelete="SET NULL"/>
+        <createIndex tableName="notification" indexName="notification_status_next_attempt_idx">
+            <column name="status"/>
+            <column name="next_attempt_at"/>
+        </createIndex>
+        <createIndex tableName="notification" indexName="notification_user_created_idx">
+            <column name="user_id"/>
+            <column name="created_at"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

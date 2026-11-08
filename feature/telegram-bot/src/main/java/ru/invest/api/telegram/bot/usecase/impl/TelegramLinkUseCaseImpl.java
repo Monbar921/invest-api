@@ -118,6 +118,12 @@ public class TelegramLinkUseCaseImpl implements TelegramLinkUseCase {
                 state == null ? null : state.checkedAt());
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<String> findUserId(final Long chatId) {
+        return linkRepository.findByChatId(chatId).map(TelegramLink::getUserId);
+    }
+
     private static LocalDateTime now() {
         return LocalDateTime.now(ZoneOffset.UTC);
     }

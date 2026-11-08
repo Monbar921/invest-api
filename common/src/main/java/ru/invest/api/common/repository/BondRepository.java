@@ -79,6 +79,9 @@ public interface BondRepository extends JpaRepository<Bond, Long> {
 
     Optional<Bond> findByTicker(String ticker);
 
+    /** Только поля облигации, без цены и купона: для подписей (уведомления) */
+    List<Bond> findByTickerIn(Collection<String> tickers);
+
     /**
      * Облигация с ценой, купоном и графиком выплат - для карточки облигации.
      */

@@ -16,6 +16,12 @@
     </properties>
 
     <dependencies>
+        <!-- бот - канал доставки уведомлений (NotificationSender), /list и кнопка «Отключить» работают с правилами -->
+        <dependency>
+            <groupId>ru.invest.api</groupId>
+            <artifactId>alert-service</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.telegram</groupId>
             <artifactId>telegrambots-longpolling</artifactId>
