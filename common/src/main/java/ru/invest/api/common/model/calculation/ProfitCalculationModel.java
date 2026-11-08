@@ -52,6 +52,15 @@ public class ProfitCalculationModel {
     private BigDecimal netProfit;
     private BigDecimal netProfitPercent;
 
+    /**
+     * Вклад на ту же сумму (покупка с НКД) и тот же срок: простые проценты без капитализации, НДФЛ - по той же ставке.
+     * Все поля null, если ставка вклада не задана.
+     */
+    private BigDecimal depositRatePercent;
+    private BigDecimal depositProfit;
+    private BigDecimal depositTax;
+    private BigDecimal depositNetProfit;
+
     /** Купоны за период, размер которых ещё не объявлен (флоатер) - в доход не вошли */
     private int unknownCouponCount;
     /** НКД при покупке или продаже не посчитать: размер текущего купона не объявлен - принят нулевым */

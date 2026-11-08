@@ -58,7 +58,8 @@ public class ProfitCalculationServiceImpl implements ProfitCalculationService {
         final LocalDate requestedSellDate = Optional.ofNullable(request.getSellDate()).orElse(maturityDate);
 
         validate(bond, quantity, today, buyDate, requestedSellDate, maturityDate);
-        validateTaxRate(request.getTaxRatePercent());
+        validateRate(request.getTaxRatePercent(), "taxRatePercent");
+        validateRate(request.getDepositRatePercent(), "depositRatePercent");
 
         final ExitType exitType = getExitType(requestedSellDate, maturityDate, offerDate);
         final LocalDate sellDate = exitType == ExitType.MATURITY ? maturityDate : requestedSellDate;
@@ -105,7 +106,7 @@ public class ProfitCalculationServiceImpl implements ProfitCalculationService {
         final long days = ChronoUnit.DAYS.between(buyDate, sellDate);
         final BigDecimal profitPercent = toPercent(profit, purchase);
 
-        return new ProfitCalculationModel()
+        final ProfitCalculationModel result = new ProfitCalculationModel()
                 .setTicker(bond.getTicker())
                 .setCurrency(currency)
                 .setQuantity(quantity)
@@ -133,6 +134,27 @@ public class ProfitCalculationServiceImpl implements ProfitCalculationService {
                 .setUnknownCouponCount(unknownCouponCount)
                 .setAciUnknown(!purchaseAci.known() || !exitAci.known())
                 .setAmortizationScheduleMissing(bond.isAmortizationFlag() && amortizations.isEmpty());
+        fillDeposit(result, request.getDepositRatePercent(), purchase, days, taxRatePercent, quantity);
+        return result;
+    }
+
+    /**
+     * Вклад на ту же сумму, что ушла на покупку (с НКД), на те же дни: простые проценты, без капитализации - как и доход
+     * облигации считается без реинвестирования купонов. НДФЛ - по той же ставке, без необлагаемого лимита по вкладам.
+     */
+    private void fillDeposit(final ProfitCalculationModel result, final BigDecimal depositRatePercent, final BigDecimal purchase,
+                             final long days, final BigDecimal taxRatePercent, final int quantity) {
+        if (depositRatePercent == null) {
+            return;
+        }
+        final BigDecimal profit = percentOf(purchase, depositRatePercent)
+                .multiply(BigDecimal.valueOf(days))
+                .divide(DAYS_IN_YEAR, SCALE, RoundingMode.HALF_UP);
+        final BigDecimal tax = taxRatePercent == null ? BigDecimal.ZERO : percentOf(profit, taxRatePercent);
+        result.setDepositRatePercent(depositRatePercent)
+                .setDepositProfit(money(profit, quantity))
+                .setDepositTax(money(tax, quantity))
+                .setDepositNetProfit(money(profit.subtract(tax), quantity));
     }
 
     private void validate(final BondModel bond, final int quantity, final LocalDate today, final LocalDate buyDate,
@@ -155,9 +177,9 @@ public class ProfitCalculationServiceImpl implements ProfitCalculationService {
         }
     }
 
-    private void validateTaxRate(final BigDecimal taxRatePercent) {
-        if (taxRatePercent != null && (taxRatePercent.signum() < 0 || taxRatePercent.compareTo(HUNDRED) >= 0)) {
-            throw invalid("taxRatePercent must be from 0 to 100");
+    private void validateRate(final BigDecimal ratePercent, final String name) {
+        if (ratePercent != null && (ratePercent.signum() < 0 || ratePercent.compareTo(HUNDRED) >= 0)) {
+            throw invalid("%s must be from 0 to 100".formatted(name));
         }
     }
 

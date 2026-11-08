@@ -109,6 +109,39 @@ public class ProfitCalculationTest {
     }
 
     @Test
+    public void depositTest() {
+        // 10 облигаций по 100% от 1000 на год: на вклад под 14% те же 10 000 дают 1 400, после НДФЛ 13% - 1 218
+        final BondModel bond = bond("1000", "100", "0", 365, coupon(180, "60"), coupon(365, "60"));
+
+        final ProfitCalculationModel result = profitCalculationService.calculate(bond, request()
+                .setQuantity(10)
+                .setTaxRatePercent(new BigDecimal("13"))
+                .setDepositRatePercent(new BigDecimal("14")));
+
+        assertThat(result.getProfit(), comparesEqualTo(new BigDecimal("1200.00")));
+        assertThat(result.getDepositRatePercent(), comparesEqualTo(new BigDecimal("14")));
+        assertThat(result.getDepositProfit(), comparesEqualTo(new BigDecimal("1400.00")));
+        assertThat(result.getDepositTax(), comparesEqualTo(new BigDecimal("182.00")));
+        assertThat(result.getDepositNetProfit(), comparesEqualTo(new BigDecimal("1218.00")));
+    }
+
+    @Test
+    public void depositWithoutTaxAndWithoutRateTest() {
+        final BondModel bond = bond("1000", "100", "0", 73, coupon(73, "20"));
+
+        // без НДФЛ: 1000 x 10% x 73 / 365 = 20
+        final ProfitCalculationModel deposit = profitCalculationService.calculate(bond, request()
+                .setDepositRatePercent(BigDecimal.TEN));
+        assertThat(deposit.getDepositProfit(), comparesEqualTo(new BigDecimal("20.00")));
+        assertThat(deposit.getDepositTax(), comparesEqualTo(BigDecimal.ZERO));
+        assertThat(deposit.getDepositNetProfit(), comparesEqualTo(new BigDecimal("20.00")));
+
+        // ставка вклада не задана - сравнения нет
+        final ProfitCalculationModel withoutDeposit = profitCalculationService.calculate(bond, request());
+        assertThat(withoutDeposit.getDepositProfit(), nullValue());
+    }
+
+    @Test
     public void lossIsNotTaxedTest() {
         // продажа дешевле покупки: дохода нет - и налога нет
         final BondModel bond = bond("1000", "100", "0", 400, coupon(200, "10"));
@@ -236,6 +269,8 @@ public class ProfitCalculationTest {
                 () -> profitCalculationService.calculate(bond, request().setQuantity(0)));
         assertThrows(GeneralUnprocessableEntityException.class,
                 () -> profitCalculationService.calculate(bond, request().setTaxRatePercent(new BigDecimal("100"))));
+        assertThrows(GeneralUnprocessableEntityException.class,
+                () -> profitCalculationService.calculate(bond, request().setDepositRatePercent(new BigDecimal("-1"))));
     }
 
     private static ProfitCalculationRequestModel request() {

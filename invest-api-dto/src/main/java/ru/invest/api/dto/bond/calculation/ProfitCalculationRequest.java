@@ -26,4 +26,6 @@ public class ProfitCalculationRequest {
     private BigDecimal sellPricePercent;
     /** Ставка НДФЛ в % (13 или 15); null - налог не учитывать */
     private BigDecimal taxRatePercent;
+    /** Ставка вклада, % годовых, - для сравнения с вкладом на ту же сумму; null - не сравнивать */
+    private BigDecimal depositRatePercent;
 }
