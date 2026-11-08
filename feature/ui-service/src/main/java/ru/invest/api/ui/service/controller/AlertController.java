@@ -19,6 +19,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import ru.invest.api.alert.service.model.AlertChangeModel;
+import ru.invest.api.alert.service.model.AlertRuleModel;
 import ru.invest.api.alert.service.usecase.AlertUseCase;
 import ru.invest.api.dto.alert.AlertCreateRequest;
 import ru.invest.api.dto.alert.AlertDto;
@@ -56,26 +58,28 @@ public class AlertController {
     }
 
     /**
-     * Новое правило; если событие уже в окне - уведомление уходит сразу. Облигации нет - 404; такое правило уже есть
-     * или их больше 50 - 422.
+     * Новое правило; если событие уже в окне или порог уже пересечён - уведомление уходит сразу. Облигации нет - 404;
+     * параметры не подходят типу, такое правило по дате уже есть, их больше 50 или нет цены для изменения от неё - 422.
      */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public AlertDto create(@RequestHeader(value = UserIdHeader.NAME, required = false) final String userId,
                            @RequestBody @Valid final AlertCreateRequest request) {
-        return alertDtoMapper.toDto(alertUseCase.create(UserIdHeader.require(userId), request.getTicker(),
-                alertDtoMapper.toType(request.getType()), request.getDays()));
+        return alertDtoMapper.toDto(alertUseCase.create(UserIdHeader.require(userId), new AlertRuleModel(
+                request.getTicker(), alertDtoMapper.toType(request.getType()), request.getDays(),
+                alertDtoMapper.toDirection(request.getDirection()), request.getThreshold())));
     }
 
     /**
-     * Изменить дни и/или включить, выключить правило.
+     * Изменить дни, направление, порог и/или включить, выключить правило. Новый порог или включение заново взводит его.
      */
     @PutMapping("/{id}")
     public AlertDto update(@RequestHeader(value = UserIdHeader.NAME, required = false) final String userId,
                            @PathVariable final Long id,
                            @RequestBody @Valid final AlertUpdateRequest request) {
-        return alertDtoMapper.toDto(alertUseCase.update(UserIdHeader.require(userId), id, request.getDays(),
-                request.getEnabled()));
+        return alertDtoMapper.toDto(alertUseCase.update(UserIdHeader.require(userId), id, new AlertChangeModel(
+                request.getDays(), alertDtoMapper.toDirection(request.getDirection()), request.getThreshold(),
+                request.getEnabled())));
     }
 
     @DeleteMapping("/{id}")

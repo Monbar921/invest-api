@@ -5,7 +5,9 @@ import org.springframework.data.domain.Page;
 import ru.invest.api.alert.service.model.AlertModel;
 import ru.invest.api.alert.service.model.NotificationModel;
 import ru.invest.api.common.mapper.DateTimeMapper;
+import ru.invest.api.common.model.alert.AlertDirection;
 import ru.invest.api.common.model.alert.AlertType;
+import ru.invest.api.dto.alert.AlertDirectionDto;
 import ru.invest.api.dto.alert.AlertDto;
 import ru.invest.api.dto.alert.AlertTypeDto;
 import ru.invest.api.dto.alert.NotificationDto;
@@ -33,4 +35,6 @@ public interface AlertDtoMapper {
     List<NotificationDto> toNotificationDto(List<NotificationModel> notifications);
 
     AlertType toType(AlertTypeDto type);
+
+    AlertDirection toDirection(AlertDirectionDto direction);
 }

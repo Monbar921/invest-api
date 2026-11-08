@@ -6,11 +6,22 @@ import org.springframework.data.jpa.repository.Query;
 import ru.invest.api.common.entity.PriceCandle;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
 public interface PriceCandleRepository extends JpaRepository<PriceCandle, Long> {
     List<PriceCandle> findByUidAndCandleDateBetweenOrderByCandleDateAsc(String uid, LocalDate from, LocalDate to);
+
+    /**
+     * Последняя дневная свеча каждой облигации раньше даты: закрытие прошлого торгового дня для изменения за день.
+     */
+    @Query("""
+            select c from PriceCandle c
+            where c.uid in :uids and c.candleDate = (
+                select max(c2.candleDate) from PriceCandle c2 where c2.uid = c.uid and c2.candleDate < :date)
+            """)
+    List<PriceCandle> findLastBefore(Collection<String> uids, LocalDate date);
 
     @Query("select max(c.candleDate) from PriceCandle c where c.uid = :uid")
     Optional<LocalDate> findLastCandleDate(String uid);

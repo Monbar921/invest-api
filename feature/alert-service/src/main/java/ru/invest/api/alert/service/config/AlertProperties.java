@@ -30,6 +30,12 @@ public class AlertProperties {
     /** Сколько хранить отправленные и неотправленные уведомления */
     private Duration retention = Duration.ofDays(90);
 
+    /**
+     * Проверять правила по цене и доходности после каждого обновления цен. false - только из тестов, которые
+     * проверяют на заданную дату сами и не хотят побочной проверки от синхронизации цен в других тестах.
+     */
+    private boolean priceCheckOnSync = true;
+
     private Dispatcher dispatcher = new Dispatcher();
 
     @Data

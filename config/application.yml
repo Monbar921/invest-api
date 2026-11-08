@@ -93,6 +93,8 @@ ru:
           enabled: true
           cron: "0 0 9 * * *"
           zone: Europe/Moscow
+        # правила по цене и доходности - после каждого обновления цен (scheduler.price и шаг price ночной цепочки)
+        price-check-on-sync: true
         # очередь отправки: повторы при сбоях связи, отказ через сутки
         dispatcher:
           enabled: true

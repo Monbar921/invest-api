@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.4.xsd">
+
+    <!-- правила по цене и доходности: направление, порог, цена при создании (для изменения от неё), состояние
+         порога (взведено / сработало) и счётчик срабатываний для ключа против повторов -->
+    <changeSet id="INVEST-001-bond-alert-price-columns" author="d.v.kornilovich">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="bond_alert" columnName="threshold"/>
+            </not>
+        </preConditions>
+
+        <addColumn tableName="bond_alert">
+            <column name="direction" type="varchar(8)"/>
+            <column name="threshold" type="numeric(12,4)"/>
+            <column name="base_value" type="numeric(12,4)"/>
+            <column name="state" type="varchar(16)"/>
+            <column name="trigger_count" type="int" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <!-- по датам - одно правило каждого типа на облигацию; порогов по цене и доходности может быть несколько
+         (например, «цена выше 101%» и «цена ниже 95%») -->
+    <changeSet id="INVEST-001-bond-alert-unique-only-date-rules" author="d.v.kornilovich">
+        <dropIndex tableName="bond_alert" indexName="bond_alert_user_ticker_type_uq_idx"/>
+        <sql>
+            create unique index bond_alert_user_ticker_date_type_uq_idx on bond_alert (user_id, ticker, type)
+            where type in ('COUPON_BEFORE', 'AMORTIZATION_BEFORE', 'OFFER_BEFORE', 'MATURITY_BEFORE')
+        </sql>
+        <rollback>
+            <sql>drop index bond_alert_user_ticker_date_type_uq_idx</sql>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

@@ -4,6 +4,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import ru.invest.api.common.entity.BondAlert;
 import ru.invest.api.common.model.alert.AlertType;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -15,6 +16,8 @@ public interface BondAlertRepository extends JpaRepository<BondAlert, Long> {
     Optional<BondAlert> findByIdAndUserId(Long id, String userId);
 
     boolean existsByUserIdAndTickerAndType(String userId, String ticker, AlertType type);
+
+    List<BondAlert> findByEnabledTrueAndTypeIn(Collection<AlertType> types);
 
     long countByUserId(String userId);
 

@@ -4,11 +4,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import ru.invest.api.common.annotation.Active;
 import ru.invest.api.common.model.AuditModel;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.PriceModel;
+import ru.invest.api.common.model.event.PricesSyncedEvent;
 import ru.invest.api.common.usecase.PriceSyncUseCase;
 import ru.invest.api.tinkoff.supplier.provider.TinkoffPriceProvider;
 import ru.invest.api.tinkoff.supplier.usecase.CouponInterestUseCase;
@@ -18,6 +20,7 @@ import ru.invest.api.tinkoff.supplier.usecase.TinkoffPriceUseCase;
 
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -31,6 +34,7 @@ public class TinkoffPriceSyncUseCaseImpl implements PriceSyncUseCase {
     private final TinkoffPriceUseCase tinkoffPriceUseCase;
     private final CouponInterestUseCase couponInterestUseCase;
     private final TinkoffBondCacheRepositoryUseCase tinkoffBondCacheRepositoryUseCase;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     public void syncAll(final AuditModel audit) {
@@ -67,5 +71,7 @@ public class TinkoffPriceSyncUseCaseImpl implements PriceSyncUseCase {
         } finally {
             tinkoffBondCacheRepositoryUseCase.evictAll();
         }
+        // после сброса кэша: правила уведомлений по цене и доходности читают уже свежие данные
+        eventPublisher.publishEvent(new PricesSyncedEvent(Set.copyOf(bonds.keySet())));
     }
 }

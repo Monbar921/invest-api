@@ -75,6 +75,7 @@ public class AlertCheckUseCaseImpl implements AlertCheckUseCase {
     public int check(final Long alertId, final LocalDate today) {
         return Optional.ofNullable(transaction.execute(status -> alertRepository.findById(alertId)
                 .filter(BondAlert::isEnabled)
+                .filter(alert -> alert.getType().isDateRule())
                 .map(alert -> checkTicker(alert.getTicker(), List.of(alert), today))
                 .orElse(0))).orElse(0);
     }
@@ -90,7 +91,10 @@ public class AlertCheckUseCaseImpl implements AlertCheckUseCase {
 
         int queued = 0;
         for (final BondAlert alert : alerts) {
-            queued += checkAlert(alert, bond, events, today);
+            // правила по цене и доходности проверяются после обновления цен; здесь - только пропажа облигации
+            if (alert.getType().isDateRule()) {
+                queued += checkAlert(alert, bond, events, today);
+            }
         }
         return queued;
     }

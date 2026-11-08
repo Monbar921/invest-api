@@ -8,6 +8,7 @@ import org.telegram.telegrambots.longpolling.util.LongPollingSingleThreadUpdateC
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
+import ru.invest.api.alert.service.model.AlertChangeModel;
 import ru.invest.api.alert.service.usecase.AlertUseCase;
 import ru.invest.api.common.exception.GeneralNotFoundEntityException;
 import ru.invest.api.common.exception.enums.ExceptionErrorCode;
@@ -121,7 +122,7 @@ public class TelegramUpdateHandler implements LongPollingSingleThreadUpdateConsu
             if (alertId == null) {
                 throw new GeneralNotFoundEntityException(ExceptionErrorCode.NOT_FOUND, data);
             }
-            alertUseCase.update(userId.get(), alertId, null, false);
+            alertUseCase.update(userId.get(), alertId, AlertChangeModel.enabled(false));
             sender.answerCallback(callback.getId(), ALERT_DISABLED);
         } catch (final GeneralNotFoundEntityException e) {
             // чужое или удалённое правило - одинаковый ответ, чтобы не подсказывать чужие id

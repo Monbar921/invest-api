@@ -8,6 +8,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 
+import java.math.BigDecimal;
+
 @Data
 @Accessors(chain = true)
 @NoArgsConstructor
@@ -19,8 +21,12 @@ public class AlertCreateRequest {
     private String ticker;
     @NotNull(message = "type is required")
     private AlertTypeDto type;
-    @NotNull(message = "days is required")
+    /** Для правил по датам */
     @Min(value = 1, message = "days must be from 1 to 60")
     @Max(value = MAX_DAYS, message = "days must be from 1 to 60")
     private Integer days;
+    /** Для правил по цене и доходности */
+    private AlertDirectionDto direction;
+    /** Для правил по цене и доходности; пределы зависят от типа (проверяет invest-api, иначе 422) */
+    private BigDecimal threshold;
 }

@@ -12,8 +12,11 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import ru.invest.api.common.model.alert.AlertDirection;
+import ru.invest.api.common.model.alert.AlertState;
 import ru.invest.api.common.model.alert.AlertType;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
@@ -41,9 +44,31 @@ public class BondAlert {
     @Column(name = "type")
     private AlertType type;
 
-    /** За сколько дней до события предупредить */
+    /** За сколько дней до события предупредить; только у правил по датам */
     @Column(name = "days")
     private Integer days;
+
+    /** Направление порога; только у правил по цене и доходности */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "direction")
+    private AlertDirection direction;
+
+    /** Порог: уровень цены в % от номинала, доходности в % годовых или изменение цены в % */
+    @Column(name = "threshold")
+    private BigDecimal threshold;
+
+    /** Цена (% от номинала) при создании или включении правила - от неё считается PRICE_CHANGE */
+    @Column(name = "base_value")
+    private BigDecimal baseValue;
+
+    /** Состояние порога уровня; null у остальных правил */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "state")
+    private AlertState state;
+
+    /** Сколько раз правило срабатывало: часть ключа против повторов у порогов */
+    @Column(name = "trigger_count")
+    private int triggerCount;
 
     @Column(name = "enabled")
     private boolean enabled;
