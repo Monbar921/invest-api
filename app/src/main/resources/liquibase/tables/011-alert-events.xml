@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.4.xsd">
+
+    <!-- правила по событиям: докуда уже просмотрено (id новости, дата купона), чтобы уведомлять только о новом.
+         Ключевая ставка - правило без облигации: ticker становится необязательным -->
+    <changeSet id="INVEST-001-bond-alert-event-columns" author="d.v.kornilovich">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="bond_alert" columnName="cursor_id"/>
+            </not>
+        </preConditions>
+
+        <addColumn tableName="bond_alert">
+            <column name="cursor_id" type="bigint"/>
+            <column name="cursor_date" type="date"/>
+        </addColumn>
+        <dropNotNullConstraint tableName="bond_alert" columnName="ticker" columnDataType="varchar(50)"/>
+    </changeSet>
+
+    <!-- одно правило каждого типа на облигацию - кроме порогов цены и доходности; ключевая ставка - одна на
+         пользователя -->
+    <changeSet id="INVEST-001-bond-alert-unique-event-rules" author="d.v.kornilovich">
+        <sql>
+            drop index if exists bond_alert_user_ticker_date_type_uq_idx;
+            create unique index bond_alert_user_ticker_single_type_uq_idx on bond_alert (user_id, ticker, type)
+            where type in ('COUPON_BEFORE', 'AMORTIZATION_BEFORE', 'OFFER_BEFORE', 'MATURITY_BEFORE',
+                           'FLOATER_COUPON', 'BOND_NEWS', 'ISSUER_RATING');
+            create unique index bond_alert_user_key_rate_uq_idx on bond_alert (user_id) where type = 'KEY_RATE';
+        </sql>
+        <rollback>
+            <sql>
+                drop index bond_alert_user_key_rate_uq_idx;
+                drop index bond_alert_user_ticker_single_type_uq_idx;
+            </sql>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

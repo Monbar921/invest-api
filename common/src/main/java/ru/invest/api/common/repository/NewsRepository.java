@@ -36,6 +36,10 @@ public interface NewsRepository extends JpaRepository<News, Long> {
     /**
      * Самый новый id Мосбиржи: новости идут по возрастанию id, загрузка останавливается на уже известных.
      */
+    /** Последняя загруженная новость: с неё начинают новые правила по новостям */
+    @Query("select max(n.id) from News n")
+    Optional<Long> findMaxId();
+
     @Query(value = "select max(cast(external_id as bigint)) from news where source = 'MOEX'", nativeQuery = true)
     Optional<Long> findLastMoexId();
 

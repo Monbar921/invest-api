@@ -47,7 +47,7 @@ public class PriceAlertCheckUseCaseImpl implements PriceAlertCheckUseCase {
     private static final BigDecimal HUNDRED = BigDecimal.valueOf(100);
     private static final int CHANGE_SCALE = 6;
     private static final Set<AlertType> PRICE_TYPES = Arrays.stream(AlertType.values())
-            .filter(type -> !type.isDateRule())
+            .filter(AlertType::isPriceRule)
             .collect(Collectors.toSet());
 
     private final BondAlertRepository alertRepository;
@@ -110,7 +110,7 @@ public class PriceAlertCheckUseCaseImpl implements PriceAlertCheckUseCase {
     public int check(final Long alertId, final LocalDate today) {
         return Optional.ofNullable(transaction.execute(status -> alertRepository.findById(alertId)
                 .filter(BondAlert::isEnabled)
-                .filter(alert -> !alert.getType().isDateRule())
+                .filter(alert -> alert.getType().isPriceRule())
                 .map(alert -> {
                     final Map<String, BondModel> bonds = bondsByTicker();
                     final BondModel bond = bonds.get(alert.getTicker());

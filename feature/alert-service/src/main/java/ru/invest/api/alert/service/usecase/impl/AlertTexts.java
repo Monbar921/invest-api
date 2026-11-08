@@ -6,12 +6,16 @@ import ru.invest.api.common.model.PriceModel;
 import ru.invest.api.common.model.alert.AlertDirection;
 import ru.invest.api.common.model.alert.AlertType;
 import ru.invest.api.common.model.event.BondEventModel;
+import ru.invest.api.common.model.news.NewsModel;
+import ru.invest.api.common.model.news.NewsSource;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.Locale;
@@ -22,6 +26,7 @@ import java.util.Locale;
 final class AlertTexts {
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("dd.MM.yyyy");
     private static final Locale RU = Locale.forLanguageTag("ru");
+    private static final ZoneId MOSCOW = ZoneId.of("Europe/Moscow");
     private static final int TEN = 10;
     private static final int HUNDRED = 100;
     private static final int FEW_FROM = 2;
@@ -55,6 +60,48 @@ final class AlertTexts {
         final String head = "%s %s, %s\n%s".formatted(title, when(today, event.getDate()),
                 event.getDate().format(DATE), bond(bondName, ticker));
         return details == null ? head : head + "\n" + details;
+    }
+
+    /** «Объявлен купон 02.12.2026: 35,4 ₽ на облигацию (прошлый 33,2 ₽)» */
+    static String announcedCoupon(final BondEventModel event, final String bondName, final String ticker) {
+        final String previous = event.getPreviousAmount() == null
+                ? ""
+                : " (прошлый " + money(event.getPreviousAmount()) + ")";
+        return "Объявлен купон %s: %s на облигацию%s\n%s".formatted(event.getDate().format(DATE),
+                money(event.getAmount()), previous, bond(bondName, ticker));
+    }
+
+    /**
+     * Новость: заголовок, источник и дата, ссылка. Ключевая ставка - без облигации.
+     */
+    static String news(final AlertType type, final NewsModel news, final String bondName, final String ticker) {
+        final String head = switch (type) {
+            case BOND_NEWS -> "Новость по облигации " + bond(bondName, ticker);
+            case ISSUER_RATING -> "Рейтинговое действие: " + bond(bondName, ticker);
+            case KEY_RATE -> "Ключевая ставка Банка России";
+            default -> throw new IllegalArgumentException("Not a news alert: " + type);
+        };
+        final String published = news.getPublishedAt() == null
+                ? ""
+                : ", " + news.getPublishedAt().atOffset(ZoneOffset.UTC).atZoneSameInstant(MOSCOW).format(DATE);
+        return head + "\n" + news.getTitle() + "\n" + source(news.getSource()) + published
+                + (news.getUrl() == null ? "" : "\n" + news.getUrl());
+    }
+
+    private static String source(final NewsSource source) {
+        return switch (source) {
+            case CBR_PRESS, CBR_EVENT -> "Банк России";
+            case MOEX -> "Мосбиржа";
+            case ACRA -> "АКРА";
+            case NKR -> "НКР";
+            case INTERFAX -> "Интерфакс";
+            case RBC -> "РБК";
+            case KOMMERSANT -> "Коммерсантъ";
+            case VEDOMOSTI -> "Ведомости";
+            case FINAM -> "Финам";
+            case FRANK_MEDIA -> "Frank Media";
+            case SMART_LAB -> "Smart-Lab";
+        };
     }
 
     static String bondGone(final String ticker) {

@@ -16,6 +16,7 @@ import java.time.ZonedDateTime;
 @NoArgsConstructor
 public class AlertDto {
     private Long id;
+    /** null - правило без облигации (KEY_RATE) */
     private String ticker;
     /** null - облигации уже нет в системе */
     private String bondName;

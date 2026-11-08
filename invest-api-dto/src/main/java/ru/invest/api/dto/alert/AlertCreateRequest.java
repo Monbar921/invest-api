@@ -2,7 +2,6 @@ package ru.invest.api.dto.alert;
 
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -17,7 +16,7 @@ public class AlertCreateRequest {
     /** Самое раннее предупреждение; на бэке то же ограничение - ru.invest.api.alerts.max-days */
     public static final int MAX_DAYS = 60;
 
-    @NotBlank(message = "ticker is required")
+    /** Обязателен, кроме KEY_RATE (правило без облигации) */
     private String ticker;
     @NotNull(message = "type is required")
     private AlertTypeDto type;

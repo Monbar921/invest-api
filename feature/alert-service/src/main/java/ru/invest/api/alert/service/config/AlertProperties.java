@@ -36,6 +36,9 @@ public class AlertProperties {
      */
     private boolean priceCheckOnSync = true;
 
+    /** Проверять правила по новостям, рейтингам и ключевой ставке после каждой загрузки ленты; false - в тестах */
+    private boolean newsCheckOnSync = true;
+
     private Dispatcher dispatcher = new Dispatcher();
 
     @Data

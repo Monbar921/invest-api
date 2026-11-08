@@ -8,7 +8,9 @@ import ru.invest.api.alert.service.usecase.AlertCheckUseCase;
 import ru.invest.api.bond.supplier.usecase.BondUseCase;
 import ru.invest.api.common.entity.BondAlert;
 import ru.invest.api.common.model.BondModel;
+import ru.invest.api.common.model.alert.AlertType;
 import ru.invest.api.common.model.event.BondEventModel;
+import ru.invest.api.common.model.event.BondEventType;
 import ru.invest.api.common.repository.BondAlertRepository;
 import ru.invest.api.common.repository.BondRepository;
 import ru.invest.api.common.usecase.BondEventUseCase;
@@ -52,6 +54,8 @@ public class AlertCheckUseCaseImpl implements AlertCheckUseCase {
         // (lastTriggeredAt) ушла бы в отсоединённую сущность и не сохранилась
         final Map<String, List<Long>> byTicker = alertRepository.findByEnabledTrue()
                 .stream()
+                // правило без облигации (ключевая ставка) - не здесь
+                .filter(alert -> alert.getTicker() != null)
                 .collect(Collectors.groupingBy(BondAlert::getTicker,
                         Collectors.mapping(BondAlert::getId, Collectors.toList())));
 
@@ -91,9 +95,12 @@ public class AlertCheckUseCaseImpl implements AlertCheckUseCase {
 
         int queued = 0;
         for (final BondAlert alert : alerts) {
-            // правила по цене и доходности проверяются после обновления цен; здесь - только пропажа облигации
+            // правила по цене, доходности и новостям проверяются после загрузки цен и новостей; здесь - только
+            // пропажа облигации
             if (alert.getType().isDateRule()) {
                 queued += checkAlert(alert, bond, events, today);
+            } else if (alert.getType() == AlertType.FLOATER_COUPON) {
+                queued += checkAnnouncedCoupon(alert, bond, events);
             }
         }
         return queued;
@@ -116,6 +123,31 @@ public class AlertCheckUseCaseImpl implements AlertCheckUseCase {
             if (notificationQueue.enqueue(alert.getUserId(), alert.getId(), alert.getTicker(), dedupKey, text)) {
                 queued++;
             }
+        }
+        if (queued > 0) {
+            alert.setLastTriggeredAt(LocalDateTime.now(ZoneOffset.UTC));
+        }
+        return queued;
+    }
+
+    /**
+     * Объявлен размер купона: будущие купоны с известным размером позже уже просмотренного (cursor_date). Купоны
+     * перезагружает ночная синхронизация, утренняя проверка находит новые.
+     */
+    private int checkAnnouncedCoupon(final BondAlert alert, final BondModel bond, final List<BondEventModel> events) {
+        final LocalDate seen = alert.getCursorDate();
+        int queued = 0;
+        for (final BondEventModel event : events) {
+            if (event.getType() != BondEventType.COUPON || event.getAmount() == null
+                    || seen != null && !event.getDate().isAfter(seen)) {
+                continue;
+            }
+            final String dedupKey = "%s:%d:%s".formatted(alert.getType(), alert.getId(), event.getDate());
+            if (notificationQueue.enqueue(alert.getUserId(), alert.getId(), alert.getTicker(), dedupKey,
+                    AlertTexts.announcedCoupon(event, bond.getName(), alert.getTicker()))) {
+                queued++;
+            }
+            alert.setCursorDate(event.getDate());
         }
         if (queued > 0) {
             alert.setLastTriggeredAt(LocalDateTime.now(ZoneOffset.UTC));

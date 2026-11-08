@@ -3,6 +3,7 @@ package ru.invest.api.news.supplier.usecase.impl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 import ru.invest.api.cb.rf.supplier.usecase.CbRfNewsUseCase;
@@ -13,6 +14,7 @@ import ru.invest.api.common.entity.NewsLink;
 import ru.invest.api.common.mapper.AuditMapper;
 import ru.invest.api.common.mapper.DateTimeMapper;
 import ru.invest.api.common.model.AuditModel;
+import ru.invest.api.common.model.event.NewsSyncedEvent;
 import ru.invest.api.common.model.news.IssuerModel;
 import ru.invest.api.common.model.news.NewsModel;
 import ru.invest.api.common.model.news.NewsSource;
@@ -49,6 +51,7 @@ public class NewsSyncUseCaseImpl implements NewsSyncUseCase {
     private final NewsRepository newsRepository;
     private final BondIssuerRepository bondIssuerRepository;
     private final BondRepository bondRepository;
+    private final ApplicationEventPublisher eventPublisher;
     private final AuditMapper auditMapper;
     private final DateTimeMapper dateTimeMapper;
     private final TransactionTemplate transactionTemplate;
@@ -67,6 +70,8 @@ public class NewsSyncUseCaseImpl implements NewsSyncUseCase {
                     newsRepository.deletePublishedBefore(dateTimeMapper.getNow().minus(NEWS_RETENTION)));
             log.info("News older than {} days deleted: {}", NEWS_RETENTION.toDays(), deleted);
         });
+        // после загрузки: правила уведомлений по новостям видят свежие новости
+        eventPublisher.publishEvent(new NewsSyncedEvent());
     }
 
     private void saveStep(final String step, final Supplier<List<NewsModel>> news, final IssuerMatcher matcher,

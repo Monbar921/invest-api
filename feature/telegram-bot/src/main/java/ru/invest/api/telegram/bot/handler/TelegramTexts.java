@@ -49,6 +49,10 @@ final class TelegramTexts {
             case PRICE_DAILY_CHANGE -> "цена за день %s%s%%".formatted(change, threshold);
             case YTM_LEVEL -> "доходность к погашению %s%s%%".formatted(level, threshold);
             case YTO_LEVEL -> "доходность к оферте %s%s%%".formatted(level, threshold);
+            case FLOATER_COUPON -> "объявленный купон";
+            case BOND_NEWS -> "новости";
+            case ISSUER_RATING -> "рейтинги эмитента";
+            case KEY_RATE -> "решения по ключевой ставке";
         };
     }
 
@@ -57,6 +61,9 @@ final class TelegramTexts {
     }
 
     private static String bond(final AlertModel alert) {
+        if (alert.ticker() == null) {
+            return "Банк России";
+        }
         return alert.bondName() == null ? alert.ticker() : "%s (%s)".formatted(alert.bondName(), alert.ticker());
     }
 }

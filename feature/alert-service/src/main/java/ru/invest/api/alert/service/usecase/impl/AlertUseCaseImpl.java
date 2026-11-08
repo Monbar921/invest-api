@@ -26,9 +26,13 @@ import ru.invest.api.common.model.PriceModel;
 import ru.invest.api.common.model.alert.AlertDirection;
 import ru.invest.api.common.model.alert.AlertState;
 import ru.invest.api.common.model.alert.AlertType;
+import ru.invest.api.common.model.event.BondEventModel;
+import ru.invest.api.common.model.event.BondEventType;
 import ru.invest.api.common.repository.BondAlertRepository;
 import ru.invest.api.common.repository.BondRepository;
+import ru.invest.api.common.repository.NewsRepository;
 import ru.invest.api.common.repository.NotificationRepository;
+import ru.invest.api.common.usecase.BondEventUseCase;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -60,6 +64,8 @@ public class AlertUseCaseImpl implements AlertUseCase {
     private final BondUseCase bondUseCase;
     private final AlertCheckUseCase alertCheckUseCase;
     private final PriceAlertCheckUseCase priceAlertCheckUseCase;
+    private final NewsRepository newsRepository;
+    private final BondEventUseCase bondEventUseCase;
     private final NotificationDispatchUseCase dispatchUseCase;
 
     @Override
@@ -69,6 +75,7 @@ public class AlertUseCaseImpl implements AlertUseCase {
                 ? alertRepository.findByUserIdOrderByTickerAscTypeAsc(userId)
                 : alertRepository.findByUserIdAndTickerOrderByTypeAsc(userId, ticker);
         final Map<String, Bond> bonds = bondRepository.findByTickerIn(alerts.stream().map(BondAlert::getTicker)
+                        .filter(Objects::nonNull)
                         .collect(Collectors.toSet()))
                 .stream()
                 .collect(Collectors.toMap(Bond::getTicker, Function.identity(), (first, second) -> first));
@@ -79,25 +86,34 @@ public class AlertUseCaseImpl implements AlertUseCase {
     public AlertModel create(final String userId, final AlertRuleModel rule) {
         final AlertType type = rule.type();
         validate(type, rule.days(), rule.direction(), rule.threshold());
+        if (type.hasBond() && (rule.ticker() == null || rule.ticker().isBlank())) {
+            throw unprocessable("ticker is required for %s".formatted(type));
+        }
+        final String ticker = type.hasBond() ? rule.ticker() : null;
         // 404, если такой облигации нет
-        final BondModel bond = bondUseCase.getWithSchedule(rule.ticker());
-        if (type.isDateRule() && alertRepository.existsByUserIdAndTickerAndType(userId, rule.ticker(), type)) {
-            throw unprocessable("Alert %s for %s already exists".formatted(type, rule.ticker()));
+        final BondModel bond = ticker == null ? null : bondUseCase.getWithSchedule(ticker);
+        final boolean exists = ticker == null
+                ? alertRepository.existsByUserIdAndType(userId, type)
+                : !type.isPriceRule() && alertRepository.existsByUserIdAndTickerAndType(userId, ticker, type);
+        if (exists) {
+            throw unprocessable("Alert %s%s already exists".formatted(type, ticker == null ? "" : " for " + ticker));
         }
         if (alertRepository.countByUserId(userId) >= properties.getMaxAlertsPerUser()) {
             throw unprocessable("No more than %d alerts per user".formatted(properties.getMaxAlertsPerUser()));
         }
         final BondAlert alert = new BondAlert()
                 .setUserId(userId)
-                .setTicker(rule.ticker())
+                .setTicker(ticker)
                 .setType(type)
                 .setEnabled(true)
                 .setCreatedAt(LocalDateTime.now(ZoneOffset.UTC));
         if (type.isDateRule()) {
             alert.setDays(rule.days());
-        } else {
+        } else if (type.isPriceRule()) {
             alert.setDirection(rule.direction()).setThreshold(rule.threshold());
             arm(alert, bond);
+        } else {
+            startFromNow(alert, bond);
         }
         checkNow(alertRepository.save(alert));
         return reload(userId, alert.getId());
@@ -108,12 +124,12 @@ public class AlertUseCaseImpl implements AlertUseCase {
         final BondAlert alert = find(userId, id);
         final AlertType type = alert.getType();
         final Integer days = type.isDateRule() ? Optional.ofNullable(change.days()).orElse(alert.getDays()) : null;
-        final AlertDirection direction = type.isDateRule()
-                ? null
-                : Optional.ofNullable(change.direction()).orElse(alert.getDirection());
-        final BigDecimal threshold = type.isDateRule()
-                ? null
-                : Optional.ofNullable(change.threshold()).orElse(alert.getThreshold());
+        final AlertDirection direction = type.isPriceRule()
+                ? Optional.ofNullable(change.direction()).orElse(alert.getDirection())
+                : null;
+        final BigDecimal threshold = type.isPriceRule()
+                ? Optional.ofNullable(change.threshold()).orElse(alert.getThreshold())
+                : null;
         validate(type, days, direction, threshold);
 
         final boolean enabling = Boolean.TRUE.equals(change.enabled()) && !alert.isEnabled();
@@ -126,8 +142,12 @@ public class AlertUseCaseImpl implements AlertUseCase {
             alert.setEnabled(change.enabled());
         }
         // новый порог или включение заново - порог взводится, изменение от цены считается от текущей цены
-        if (!type.isDateRule() && (enabling || changed)) {
+        if (type.isPriceRule() && (enabling || changed)) {
             arm(alert, bondUseCase.getWithSchedule(alert.getTicker()));
+        }
+        // включили заново - без пачки накопившихся новостей и купонов
+        if (!type.isDateRule() && !type.isPriceRule() && enabling) {
+            startFromNow(alert, alert.getTicker() == null ? null : bondUseCase.getWithSchedule(alert.getTicker()));
         }
         alertRepository.save(alert);
         if (changed && alert.isEnabled()) {
@@ -162,12 +182,35 @@ public class AlertUseCaseImpl implements AlertUseCase {
         }
     }
 
+    /**
+     * Правила по новостям и объявленным купонам уведомляют только о новом: отметка - на последней загруженной новости
+     * и последнем купоне с уже известным размером.
+     */
+    private void startFromNow(final BondAlert alert, final BondModel bond) {
+        if (alert.getType().isNewsRule()) {
+            alert.setCursorId(newsRepository.findMaxId().orElse(0L));
+        }
+        if (alert.getType() == AlertType.FLOATER_COUPON && bond != null) {
+            alert.setCursorDate(bondEventUseCase.getEvents(bond, LocalDate.now(properties.getZone())).stream()
+                    .filter(event -> event.getType() == BondEventType.COUPON && event.getAmount() != null)
+                    .map(BondEventModel::getDate)
+                    .max(LocalDate::compareTo)
+                    .orElse(null));
+        }
+    }
+
     /** Событие уже в окне или порог уже пересечён - уведомление сразу, без ожидания проверки */
     private void checkNow(final BondAlert alert) {
         final LocalDate today = LocalDate.now(properties.getZone());
-        final int queued = alert.getType().isDateRule()
-                ? alertCheckUseCase.check(alert.getId(), today)
-                : priceAlertCheckUseCase.check(alert.getId(), today);
+        final int queued;
+        if (alert.getType().isDateRule()) {
+            queued = alertCheckUseCase.check(alert.getId(), today);
+        } else if (alert.getType().isPriceRule()) {
+            queued = priceAlertCheckUseCase.check(alert.getId(), today);
+        } else {
+            // новости и объявленные купоны - только новые, сразу проверять нечего
+            queued = 0;
+        }
         if (queued > 0) {
             dispatchUseCase.dispatchSoon();
         }
@@ -182,6 +225,10 @@ public class AlertUseCaseImpl implements AlertUseCase {
             if (days == null || days < 1 || days > properties.getMaxDays()) {
                 throw unprocessable("days must be from 1 to %d".formatted(properties.getMaxDays()));
             }
+            return;
+        }
+        if (!type.isPriceRule()) {
+            // новости, рейтинги, ключевая ставка, объявленный купон - без параметров
             return;
         }
         if (direction == null || threshold == null) {
@@ -214,8 +261,11 @@ public class AlertUseCaseImpl implements AlertUseCase {
 
     private AlertModel reload(final String userId, final Long id) {
         final BondAlert alert = find(userId, id);
-        return toModel(alert, bondRepository.findByTickerIn(List.of(alert.getTicker())).stream().findFirst()
-                .orElse(null));
+        // правило без облигации (ключевая ставка) - без подписи
+        final Bond bond = alert.getTicker() == null
+                ? null
+                : bondRepository.findByTickerIn(List.of(alert.getTicker())).stream().findFirst().orElse(null);
+        return toModel(alert, bond);
     }
 
     private BondAlert find(final String userId, final Long id) {

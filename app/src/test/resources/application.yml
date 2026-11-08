@@ -33,6 +33,7 @@ ru:
       # проверка правил и разбор очереди вызываются из AlertTest напрямую
       alerts:
         price-check-on-sync: false
+        news-check-on-sync: false
         scheduler:
           enabled: false
         dispatcher:

@@ -17,6 +17,12 @@
             <artifactId>bond-supplier</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <!-- правила по новостям, рейтингам и ключевой ставке -->
+        <dependency>
+            <groupId>ru.invest.api</groupId>
+            <artifactId>news-supplier</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 
 </project>

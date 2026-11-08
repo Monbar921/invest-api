@@ -95,6 +95,8 @@ ru:
           zone: Europe/Moscow
         # правила по цене и доходности - после каждого обновления цен (scheduler.price и шаг price ночной цепочки)
         price-check-on-sync: true
+        # правила по новостям, рейтингам и ключевой ставке - после каждой загрузки ленты (news.scheduler)
+        news-check-on-sync: true
         # очередь отправки: повторы при сбоях связи, отказ через сутки
         dispatcher:
           enabled: true

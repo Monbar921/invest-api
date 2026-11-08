@@ -49,7 +49,8 @@ Telegram-бот: `ru.invest.api.telegram.enabled` (по умолчанию вы�
 Уведомления: `ru.invest.api.alerts.scheduler.enabled` / `cron` / `zone` (проверка правил, по умолчанию 09:00 МСК, и
 сразу после старта), `...dispatcher.enabled` / `interval` (разбор очереди, 30 с), `max-alerts-per-user`, `max-days`,
 `give-up-after` (24 ч), `retention` (90 дней), `price-check-on-sync` (правила по цене и доходности после каждого
-обновления цен; нужен включённый `ru.invest.api.stock.supplier.scheduler.price`, иначе цены обновляются только ночью). Без включённого Telegram-бота уведомления сразу получают `FAILED`.
+обновления цен; нужен включённый `ru.invest.api.stock.supplier.scheduler.price`, иначе цены обновляются только ночью),
+`news-check-on-sync` (новости, рейтинги, ключевая ставка - после каждой загрузки ленты, `ru.invest.api.news.scheduler`). Без включённого Telegram-бота уведомления сразу получают `FAILED`.
 
 Swagger: http://localhost:8081/swagger-ui.html.
 

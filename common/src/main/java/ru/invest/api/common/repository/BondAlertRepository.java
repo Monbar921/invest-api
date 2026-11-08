@@ -17,6 +17,8 @@ public interface BondAlertRepository extends JpaRepository<BondAlert, Long> {
 
     boolean existsByUserIdAndTickerAndType(String userId, String ticker, AlertType type);
 
+    boolean existsByUserIdAndType(String userId, AlertType type);
+
     List<BondAlert> findByEnabledTrueAndTypeIn(Collection<AlertType> types);
 
     long countByUserId(String userId);

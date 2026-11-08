@@ -17,6 +17,7 @@ import ru.invest.api.common.model.alert.AlertState;
 import ru.invest.api.common.model.alert.AlertType;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
@@ -37,6 +38,7 @@ public class BondAlert {
     @Column(name = "user_id")
     private String userId;
 
+    /** null - правило без облигации (ключевая ставка) */
     @Column(name = "ticker")
     private String ticker;
 
@@ -65,6 +67,14 @@ public class BondAlert {
     @Enumerated(EnumType.STRING)
     @Column(name = "state")
     private AlertState state;
+
+    /** Правила по новостям: id последней просмотренной новости - уведомляем только о более новых */
+    @Column(name = "cursor_id")
+    private Long cursorId;
+
+    /** Объявленный купон: дата последнего купона с уже известным размером */
+    @Column(name = "cursor_date")
+    private LocalDate cursorDate;
 
     /** Сколько раз правило срабатывало: часть ключа против повторов у порогов */
     @Column(name = "trigger_count")
