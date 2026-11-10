@@ -7,6 +7,7 @@
 | [testing.md](testing.md)               | устройство тестов, Testcontainers, фикстуры, как запускать                            |
 | [deployment.md](deployment.md)         | локальный запуск, конфигурация, CI, Kubernetes                                        |
 | [glossary.md](glossary.md)             | термины: НКД, оферта, амортизация, ОФЗ, флоатер...                                    |
+| [roadmap.md](roadmap.md)               | дорожная карта: будущие фичи и путь к монетизации (план, а не описание системы)        |
 
 ## Фичи
 
