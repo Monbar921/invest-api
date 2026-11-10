@@ -18,7 +18,9 @@ invest-gateway ──────▶│ ui-service: /internal/rest/bonds/**, /in
 ```
 
 Наружу сервис не публикуется: UI ходит через [invest-gateway](../../invest-gateway/docs/architecture.md),
-который проксирует только `/api/bonds/**` → `/internal/rest/bonds/**`. Своей авторизации в invest-api нет.
+который проксирует `/api/{bonds,alerts,portfolio}/**` → `/internal/rest/...`. Своей авторизации в invest-api нет.
+Чтение `/bonds/**` gateway пропускает и без входа (публичный режим, [INVEST-001-public-mode](features/INVEST-001-public-mode/)),
+поэтому эндпоинты облигаций не должны зависеть от пользователя и не должны ничего менять.
 
 ## Модули
 

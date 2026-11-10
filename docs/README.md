@@ -19,6 +19,7 @@
 | [INVEST-001-news](features/INVEST-001-news/) | в работе | лента новостей ЦБ и Мосбиржи, ставка и курсы, новости и события по облигации |
 | [INVEST-001-telegram-bot](features/INVEST-001-telegram-bot/) | в работе | уведомления в Telegram по правилам на облигации (цена, доходность, даты, новости); прокси через sing-box |
 | [INVEST-001-portfolio](features/INVEST-001-portfolio/) | в работе | портфель: покупки облигаций (CRUD), текущая стоимость и доход от цены покупки |
+| [INVEST-001-public-mode](features/INVEST-001-public-mode/) | в работе | публичный режим: облигации без входа, «гость» в UI, лимит анонимных запросов (gateway, UI) |
 
 Связанные проекты: [invest-gateway](../../invest-gateway/docs/), [invest-api-ui](../../invest-api-ui/docs/),
 [invest-deploy](../../invest-deploy/docs/) (локальный стенд в k3d).
