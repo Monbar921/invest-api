@@ -26,6 +26,8 @@ import java.util.List;
 
 @Mapper(uses = DateTimeMapper.class)
 public interface BondDtoMapper {
+    // эмитент есть только в карточке облигации - его добавляет контроллер
+    @Mapping(target = "issuer", ignore = true)
     BondDto toDto(BondModel bond);
 
     List<BondDto> toDto(List<BondModel> bonds);

@@ -23,15 +23,12 @@ import ru.invest.api.common.repository.BondRepository;
 import ru.invest.api.common.repository.NewsRepository;
 import ru.invest.api.news.supplier.usecase.NewsUseCase;
 
-import java.util.Arrays;
-import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
@@ -41,20 +38,6 @@ public class NewsUseCaseImpl implements NewsUseCase {
     private static final Sort NEWEST_FIRST = Sort.by(Sort.Order.desc("publishedAt"), Sort.Order.desc("id"));
     // в сообщениях о приостановке торгов бывают десятки выпусков - в ленте хватит нескольких
     private static final int MAX_BONDS_PER_NEWS = 5;
-    /**
-     * Полные названия форм собственности -> сокращения: «Публичное акционерное общество "Селигдар"» -> «ПАО "Селигдар"».
-     * Длинные формы раньше коротких: «акционерное общество» входит в «публичное акционерное общество».
-     */
-    private static final Map<Pattern, String> LEGAL_FORMS = Map.of(
-            legalForm("публичное акционерное общество"), "ПАО",
-            legalForm("непубличное акционерное общество"), "АО",
-            legalForm("акционерное общество"), "АО",
-            legalForm("общество с ограниченной ответственностью"), "ООО");
-    private static final List<Pattern> LEGAL_FORM_ORDER = LEGAL_FORMS.keySet()
-            .stream()
-            .sorted(Comparator.comparing((Pattern pattern) -> pattern.pattern().length()).reversed())
-            .toList();
-
     private final NewsRepository newsRepository;
     private final BondRepository bondRepository;
     private final BondIssuerRepository bondIssuerRepository;
@@ -76,6 +59,12 @@ public class NewsUseCaseImpl implements NewsUseCase {
             return new PageImpl<>(List.of(), pageable, 0);
         }
         return toModels(newsRepository.findByIsin(bond.getIsin(), newestFirst(pageable)));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<NewsModel> getByIssuer(final Long emitterId, final Pageable pageable) {
+        return toModels(newsRepository.findByEmitterId(emitterId, newestFirst(pageable)));
     }
 
     private Pageable newestFirst(final Pageable pageable) {
@@ -106,7 +95,7 @@ public class NewsUseCaseImpl implements NewsUseCase {
         final Map<Long, String> issuerTitles = emitterIds.isEmpty() ? Map.of() : bondIssuerRepository.findByEmitterIdIn(emitterIds)
                 .stream()
                 .filter(issuer -> issuer.getTitle() != null)
-                .collect(Collectors.toMap(BondIssuer::getEmitterId, issuer -> shortTitle(issuer.getTitle()),
+                .collect(Collectors.toMap(BondIssuer::getEmitterId, issuer -> IssuerTitles.shortTitle(issuer.getTitle()),
                         (first, second) -> first));
 
         return page.map(news -> {
@@ -136,18 +125,5 @@ public class NewsUseCaseImpl implements NewsUseCase {
                             .distinct()
                             .toList());
         });
-    }
-
-    private String shortTitle(final String title) {
-        String result = title;
-        for (final Pattern form : LEGAL_FORM_ORDER) {
-            result = form.matcher(result).replaceAll(LEGAL_FORMS.get(form));
-        }
-        return result.trim();
-    }
-
-    private static Pattern legalForm(final String words) {
-        final String spaces = Arrays.stream(words.split(" ")).map(Pattern::quote).collect(Collectors.joining("\\s+"));
-        return Pattern.compile(spaces, Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
     }
 }

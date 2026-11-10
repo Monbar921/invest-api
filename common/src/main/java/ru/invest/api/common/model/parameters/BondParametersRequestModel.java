@@ -15,5 +15,7 @@ public class BondParametersRequestModel {
     private List<RiskLevel> riskLevels;
     private Boolean isOfz;
     private Boolean isFixedCoupon;
+    /** Дата погашения в диапазоне; облигация без даты погашения при заданном фильтре не подходит */
+    private DateRangeModel maturityDate;
     private Integer batchLimit;
 }

@@ -29,10 +29,10 @@ invest-gateway ──────▶│ ui-service: /internal/rest/bonds/**, /in
 | `app`                             | точка входа `InvestApplication`, конфиг кэшей, Liquibase-миграции, интеграционные тесты       |
 | `common`                          | JPA-сущности, репозитории, доменные модели, интерфейсы use case, фильтр и сортировка облигаций |
 | `feature/tinkoff-supplier`        | клиент T-Invest API: rate limiter, провайдеры облигаций/купонов/цен/амортизации, расчёт доходностей, синхронизация |
-| `feature/bond-supplier`           | шедулеры синхронизации и `BondUseCase` (страницы облигаций для контроллера)                    |
+| `feature/bond-supplier`           | шедулеры синхронизации и `BondUseCase` (страницы облигаций для контроллера), подборки облигаций (`BondCollection`, `BondCollectionUseCase`) |
 | `feature/currency-service`        | курс валют: сначала ЦБ РФ, если пары нет - budget.org                                          |
 | `feature/cb-rf-supplier`          | Feign-клиент ЦБ РФ: курсы, RSS пресс-релизов и событий, ключевая ставка (SOAP DailyInfo)       |
-| `feature/news-supplier`           | лента новостей: клиент ISS Мосбиржи, эмитенты выпусков, загрузка и чтение новостей, ставка и курсы для шапки ленты |
+| `feature/news-supplier`           | лента новостей: клиент ISS Мосбиржи, эмитенты выпусков, загрузка и чтение новостей, ставка и курсы для шапки ленты; эмитент для страницы эмитента (`IssuerUseCase`) |
 | `feature/budget-org-supplier`     | Feign-клиент api.budjet.org                                                                    |
 | `feature/alert-service`           | уведомления по облигациям: правила пользователя, проверка по датам событий, очередь отправки, интерфейс канала `NotificationSender` |
 | `feature/portfolio-service`       | портфель пользователя: покупки облигаций, текущая стоимость, доход от цены покупки, итоги по валютам |
@@ -156,13 +156,18 @@ maintenance-эндпоинты - значение заголовка `From`).
 | Метод и путь                                                  | Что                                                       |
 | ------------------------------------------------------------- | --------------------------------------------------------- |
 | `POST /internal/rest/bonds/{all\|local\|foreign}/page?page=&size=` | страница облигаций; в теле `BondParametersRequest`: сортировки, фильтры по цене, риску, ОФЗ. `size` 1..500, по умолчанию 50 |
-| `GET /internal/rest/bonds/{ticker}`                           | облигация с ценой, купоном и графиком выплат              |
+| `GET /internal/rest/bonds/{ticker}`                           | облигация с ценой, купоном, графиком выплат и эмитентом (`issuer`: id Мосбиржи и короткое название; `null` - неизвестен) |
 | `GET /internal/rest/bonds/search?query=&limit=`               | нестрогий поиск по тикеру, ISIN и названию среди облигаций в кэше; `limit` 1..50, по умолчанию 20 |
 | `GET /internal/rest/bonds/{ticker}/candles?interval=&from=&to=` | свечи цены в % от номинала; `interval` DAY / WEEK / MONTH (по умолчанию DAY), даты YYYY-MM-DD, по умолчанию - вся история по сегодня |
 | `POST /internal/rest/bonds/{ticker}/calculation`              | доход за период владения; в теле `ProfitCalculationRequest` (даты, количество, цены покупки и продажи) |
 | `GET /internal/rest/bonds/{ticker}/events`                    | события облигации из её данных: купоны, амортизация, оферта, погашение - за 3 месяца назад и вперёд |
 | `GET /internal/rest/bonds/news?source=&page=&size=`           | лента новостей, новые первыми; `source` - CBR_PRESS, CBR_EVENT, MOEX (несколько через запятую), `size` 1..100, по умолчанию 20 |
 | `GET /internal/rest/bonds/{ticker}/news?page=&size=`          | новости облигации: упомянут её ISIN или новость относится к её эмитенту |
+| `GET /internal/rest/bonds/issuers/{id}`                       | эмитент по id Мосбиржи: название, короткое название, ИНН, выпуски из системы по дате погашения; неизвестен - `404` |
+| `GET /internal/rest/bonds/issuers/{id}/news?page=&size=`      | новости эмитента: относятся к нему или упомянут любой его выпуск |
+| `GET /internal/rest/bonds/collections`                        | подборки облигаций: slug, заголовок, описание             |
+| `GET /internal/rest/bonds/collections/{slug}?page=&size=`     | подборка со страницей облигаций (`size` 1..500, по умолчанию 50); неизвестная - `404` |
+| `GET /internal/rest/bonds/sitemap`                            | для sitemap.xml: тикеры всех облигаций, id эмитентов с выпусками в системе, slug подборок (адреса строит gateway) |
 | `GET /internal/rest/bonds/market-overview`                    | ключевая ставка (с какого дня и прошлая, изменение с начала года и на последнем заседании) и курсы USD, EUR, CNY с изменением |
 | `GET /internal/rest/alerts?ticker=`                           | правила пользователя (по облигации или все) с названием облигации |
 | `POST /internal/rest/alerts`                                  | новое правило `{ticker, type, days}` или `{ticker, type, direction, threshold}`: `201`; облигации нет - `404`; параметры не подходят типу, такое правило по дате уже есть, больше 50 или нет цены для изменения от неё - `422`; `days` вне 1..60 - `400` |
@@ -188,6 +193,9 @@ Maintenance-эндпоинты требуют заголовок `From` (кто 
 держать на ней HTTP-запрос нельзя. С ночной цепочкой ручной запуск не согласован (ShedLock его не видит) - не
 запускайте вручную шаг, который сейчас идёт по расписанию или при старте. `sync-by-ticker` - синхронно.
 `local` - облигации в рублях, `foreign` - в иностранной валюте (правило - в [business-rules.md](business-rules.md)).
+
+Эмитенты, подборки и sitemap нужны SEO-страницам ([INVEST-001-seo-pages](features/INVEST-001-seo-pages/)): gateway
+строит по ним готовый HTML облигации, эмитента и подборки и `sitemap.xml`; UI показывает те же страницы.
 
 Эндпоинты `/alerts/**` и `/portfolio/**` - пользовательские: пользователя (sub Keycloak) передаёт invest-gateway в заголовке `X-User-Id`,
 без заголовка - `401`. Своей проверки подлинности у invest-api нет: доверие держится на том, что invest-api доступен

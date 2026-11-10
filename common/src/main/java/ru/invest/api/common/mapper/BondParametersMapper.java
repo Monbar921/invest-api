@@ -14,6 +14,7 @@ import ru.invest.api.common.model.parameters.BondParametersRequestModel;
 import ru.invest.api.common.model.parameters.BondSortField;
 import ru.invest.api.common.model.parameters.BondSortModel;
 import ru.invest.api.common.model.parameters.BondSortOrder;
+import ru.invest.api.common.model.parameters.DateRangeModel;
 import ru.invest.api.common.model.parameters.ValueRangeModel;
 import ru.invest.api.common.usecase.BondComparatorUseCase;
 
@@ -44,9 +45,10 @@ public abstract class BondParametersMapper {
     @Mapping(target = "riskLevels", source = "riskLevels")
     @Mapping(target = "isOfz", source = "isOfz")
     @Mapping(target = "isFixedCoupon", source = "isFixedCoupon")
+    @Mapping(target = "maturityDate", source = "maturityDate")
     public abstract BondParametersModel toModel(Integer batchLimit, List<BondSortModel> bondSorts
             , ValueRangeModel currentPrice, ValueRangeModel percentagePrice, List<RiskLevel> riskLevels, Boolean isOfz,
-            Boolean isFixedCoupon);
+            Boolean isFixedCoupon, DateRangeModel maturityDate);
 
     @Mapping(target = "comparator", source = "bondSorts", qualifiedByName = "toComparator")
     @Mapping(target = "bondSorts", source = "bondSorts", qualifiedByName = "toBondSorts")
@@ -61,7 +63,8 @@ public abstract class BondParametersMapper {
                 getter(bondParametersModel, BondParametersModel::getPercentagePrice),
                 getter(bondParametersModel, BondParametersModel::getRiskLevels),
                 getter(bondParametersModel, BondParametersModel::getIsOfz),
-                getter(bondParametersModel, BondParametersModel::getIsFixedCoupon));
+                getter(bondParametersModel, BondParametersModel::getIsFixedCoupon),
+                getter(bondParametersModel, BondParametersModel::getMaturityDate));
     }
 
     public BondParametersModel toModel(final BondParametersModel bondParametersModel) {

@@ -12,10 +12,14 @@ import ru.invest.api.dto.bond.calculation.ProfitCalculationDto;
 import ru.invest.api.dto.bond.calculation.ProfitCalculationRequest;
 import ru.invest.api.dto.bond.candle.CandleDto;
 import ru.invest.api.dto.bond.candle.CandleIntervalDto;
+import ru.invest.api.dto.bond.collection.BondCollectionDto;
+import ru.invest.api.dto.bond.collection.BondCollectionPageDto;
 import ru.invest.api.dto.bond.event.BondEventDto;
+import ru.invest.api.dto.bond.issuer.IssuerDto;
 import ru.invest.api.dto.bond.news.MarketOverviewDto;
 import ru.invest.api.dto.bond.news.NewsDto;
 import ru.invest.api.dto.bond.news.NewsSourceDto;
+import ru.invest.api.dto.bond.sitemap.SitemapDto;
 import ru.invest.api.dto.page.PageDto;
 import ru.invest.api.dto.request.bond.BondParametersRequest;
 
@@ -119,4 +123,42 @@ public interface InvestApiBondClient {
      */
     @GetMapping("/bonds/market-overview")
     MarketOverviewDto getMarketOverview();
+
+    /**
+     * Эмитент с выпусками из системы.
+     *
+     * @param id id эмитента на Мосбирже
+     */
+    @GetMapping("/bonds/issuers/{id}")
+    IssuerDto getIssuer(@PathVariable("id") Long id);
+
+    /**
+     * Новости эмитента.
+     */
+    @GetMapping("/bonds/issuers/{id}/news")
+    PageDto<NewsDto> getIssuerNews(@PathVariable("id") Long id,
+                                   @RequestParam(value = "page", required = false) Integer page,
+                                   @RequestParam(value = "size", required = false) Integer size);
+
+    /**
+     * Подборки облигаций.
+     */
+    @GetMapping("/bonds/collections")
+    List<BondCollectionDto> getCollections();
+
+    /**
+     * Подборка со страницей облигаций.
+     *
+     * @param size размер страницы (1..500), null - 50
+     */
+    @GetMapping("/bonds/collections/{slug}")
+    BondCollectionPageDto getCollection(@PathVariable("slug") String slug,
+                                        @RequestParam(value = "page", required = false) Integer page,
+                                        @RequestParam(value = "size", required = false) Integer size);
+
+    /**
+     * Тикеры облигаций, эмитенты и подборки для sitemap.xml.
+     */
+    @GetMapping("/bonds/sitemap")
+    SitemapDto getSitemap();
 }

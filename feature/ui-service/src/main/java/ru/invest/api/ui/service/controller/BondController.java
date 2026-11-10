@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import ru.invest.api.bond.supplier.usecase.BondUseCase;
+import ru.invest.api.common.model.BondModel;
 import ru.invest.api.dto.bond.BondDto;
 import ru.invest.api.dto.bond.BondSearchItemDto;
 import ru.invest.api.dto.bond.calculation.ProfitCalculationDto;
@@ -25,7 +26,9 @@ import ru.invest.api.dto.bond.event.BondEventDto;
 import ru.invest.api.dto.page.PageDto;
 import ru.invest.api.dto.request.bond.BondParametersRequest;
 import ru.invest.api.ui.service.mapper.BondDtoMapper;
+import ru.invest.api.news.supplier.usecase.IssuerUseCase;
 import ru.invest.api.ui.service.mapper.BondParametersRequestMapper;
+import ru.invest.api.ui.service.mapper.IssuerDtoMapper;
 import ru.invest.api.ui.service.mapper.NewsDtoMapper;
 
 import java.time.LocalDate;
@@ -45,6 +48,8 @@ public class BondController {
     private final BondParametersRequestMapper bondParametersRequestMapper;
     private final BondDtoMapper bondDtoMapper;
     private final NewsDtoMapper newsDtoMapper;
+    private final IssuerUseCase issuerUseCase;
+    private final IssuerDtoMapper issuerDtoMapper;
 
     /**
      * Страница всех облигаций.
@@ -93,11 +98,13 @@ public class BondController {
     }
 
     /**
-     * Облигация с ценой и купоном вместе с графиком выплат.
+     * Облигация с ценой и купоном вместе с графиком выплат и эмитентом (для ссылки на его страницу).
      */
     @GetMapping("/{ticker}")
     public BondDto getByTicker(@PathVariable final String ticker) {
-        return bondDtoMapper.toDto(bondUseCase.getByTicker(ticker));
+        final BondModel bond = bondUseCase.getByTicker(ticker);
+        return bondDtoMapper.toDto(bond)
+                .setIssuer(issuerUseCase.findByIsin(bond.getIsin()).map(issuerDtoMapper::toShortDto).orElse(null));
     }
 
     /**

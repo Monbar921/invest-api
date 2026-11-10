@@ -21,5 +21,7 @@ public class BondParametersModel {
     private Boolean isOfz;
     /** true - только постоянный купон, false - только переменный, null - любой */
     private Boolean isFixedCoupon;
+    /** Дата погашения в диапазоне; облигация без даты погашения при заданном фильтре не подходит */
+    private DateRangeModel maturityDate;
     private Integer batchLimit;
 }

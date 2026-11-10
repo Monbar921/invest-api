@@ -10,10 +10,12 @@ import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.PriceModel;
 import ru.invest.api.common.model.enums.RiskLevel;
 import ru.invest.api.common.model.parameters.BondParametersModel;
+import ru.invest.api.common.model.parameters.DateRangeModel;
 import ru.invest.api.common.model.parameters.ValueRangeModel;
 import ru.invest.api.common.usecase.BondSortUseCase;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -57,6 +59,7 @@ public class BondSortUseCaseImpl implements BondSortUseCase {
                 .filter(bond -> filterByRiskLevel(bondParameters.getRiskLevels(), bond.getRiskLevel()))
                 .filter(bond -> filterByOfz(bondParameters.getIsOfz(), bond))
                 .filter(bond -> filterByFixedCoupon(bondParameters.getIsFixedCoupon(), bond))
+                .filter(bond -> filterByMaturityDate(bondParameters.getMaturityDate(), bond))
                 .sorted(priceUnknownLast(bondParameters).thenComparing(bondParameters.getComparator()));
     }
 
@@ -96,6 +99,22 @@ public class BondSortUseCaseImpl implements BondSortUseCase {
         }
 
         return bond.getCoupon() != null && isFixedCoupon.equals(bond.getCoupon().getIsFixed());
+    }
+
+    /**
+     * Облигация без даты погашения не подходит ни под какой диапазон: нельзя сказать, что она гасится в нём.
+     */
+    private boolean filterByMaturityDate(final DateRangeModel range, final BondModel bond) {
+        if (range == null || range.getFrom() == null && range.getTo() == null) {
+            return true;
+        }
+        if (bond.getMaturityDate() == null) {
+            return false;
+        }
+
+        final LocalDate maturity = bond.getMaturityDate().toLocalDate();
+        return (range.getFrom() == null || !maturity.isBefore(range.getFrom()))
+                && (range.getTo() == null || !maturity.isAfter(range.getTo()));
     }
 
     private boolean filterByRiskLevel(final List<RiskLevel> riskLevels, final RiskLevel riskLevel) {

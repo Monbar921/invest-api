@@ -6,8 +6,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import ru.invest.api.common.mapper.BondParametersMapper;
 import ru.invest.api.common.model.parameters.BondParametersModel;
 import ru.invest.api.common.model.parameters.BondParametersRequestModel;
+import ru.invest.api.common.model.parameters.DateRangeModel;
 import ru.invest.api.common.model.parameters.ValueRangeModel;
 import ru.invest.api.dto.request.bond.BondParametersRequest;
+import ru.invest.api.dto.request.bond.DateRangeRequest;
 import ru.invest.api.dto.request.bond.ValueRangeRequest;
 
 @Mapper
@@ -29,4 +31,6 @@ public abstract class BondParametersRequestMapper {
     }
 
     protected abstract ValueRangeModel toPriceRequestModel(ValueRangeRequest valueRangeRequest);
+
+    protected abstract DateRangeModel toDateRangeModel(DateRangeRequest dateRangeRequest);
 }

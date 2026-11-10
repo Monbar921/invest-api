@@ -28,6 +28,18 @@ public interface NewsRepository extends JpaRepository<News, Long> {
             """)
     Page<News> findByIsin(String isin, Pageable pageable);
 
+    /**
+     * Новости эмитента: новость относится к нему или упомянут любой его выпуск.
+     */
+    @Query("""
+            select n from News n
+            where exists (select 1 from NewsLink l
+                          where l.news = n
+                            and (l.emitterId = :emitterId
+                                 or l.isin in (select i.isin from BondIssuer i where i.emitterId = :emitterId)))
+            """)
+    Page<News> findByEmitterId(Long emitterId, Pageable pageable);
+
     List<News> findBySourceAndExternalIdIn(NewsSource source, Collection<String> externalIds);
 
     @Query("select n from News n left join fetch n.links where n.id in :ids")

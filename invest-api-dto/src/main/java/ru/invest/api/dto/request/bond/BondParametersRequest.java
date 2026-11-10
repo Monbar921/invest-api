@@ -26,4 +26,8 @@ public class BondParametersRequest {
      * Тип купона: true - только постоянный (фиксированный), false - только переменный (флоатеры), null - любой.
      */
     private Boolean isFixedCoupon;
+    /**
+     * Дата погашения в диапазоне (включительно). Облигация без даты погашения при заданном фильтре не подходит.
+     */
+    private DateRangeRequest maturityDate;
 }

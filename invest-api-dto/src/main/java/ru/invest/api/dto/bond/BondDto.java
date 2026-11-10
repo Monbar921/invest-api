@@ -5,6 +5,7 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 import org.springframework.format.annotation.DateTimeFormat;
 import ru.invest.api.dto.bond.enums.RiskLevelDto;
+import ru.invest.api.dto.bond.issuer.IssuerShortDto;
 
 import java.time.ZonedDateTime;
 
@@ -27,4 +28,6 @@ public class BondDto {
     private ZonedDateTime offerDate;
     /** Облигация с амортизацией: номинал гасится частями */
     private boolean amortizationFlag;
+    /** Эмитент по данным Мосбиржи; заполняется только в карточке облигации, null - эмитент неизвестен */
+    private IssuerShortDto issuer;
 }

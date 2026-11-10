@@ -22,4 +22,9 @@ public interface NewsUseCase {
      * Новости облигации: упомянут её ISIN или новость относится к её эмитенту.
      */
     Page<NewsModel> getByTicker(String ticker, Pageable pageable);
+
+    /**
+     * Новости эмитента: относятся к нему или упомянут любой его выпуск. Неизвестный эмитент - пустая страница.
+     */
+    Page<NewsModel> getByIssuer(Long emitterId, Pageable pageable);
 }
