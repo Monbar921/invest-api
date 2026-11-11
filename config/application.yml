@@ -109,7 +109,12 @@ ru:
       # {erid}), advertiser (наименование и ИНН для маркировки), erid (токен ЕРИР), enabled
       broker-referral:
         zone: Europe/Moscow
-        partners: []
+        partners:
+        - id: test-broker
+          name: Тест Брокер
+          url-template: https://example.com/bonds/{isin}?erid={erid}
+          advertiser: АО "Тест Брокер", ИНН 0000000000
+          erid: TEST123
       # Telegram-бот (docs/features/INVEST-001-telegram-bot); токен - только из переменной окружения
       telegram:
         enabled: ${TELEGRAM_BOT_ENABLED:false}
