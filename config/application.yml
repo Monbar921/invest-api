@@ -110,11 +110,11 @@ ru:
       broker-referral:
         zone: Europe/Moscow
         partners:
-        - id: test-broker
-          name: Тест Брокер
-          url-template: https://example.com/bonds/{isin}?erid={erid}
-          advertiser: АО "Тест Брокер", ИНН 0000000000
-          erid: TEST123
+        - id: tbank
+          name: Т-Инвестиции
+          url-template: https://tbank-online.com/baf/5e0hKcs113i
+          advertiser: АО "ТБанк", ИНН 7710140679
+          erid: <токен из кабинета партнёра>
       # Telegram-бот (docs/features/INVEST-001-telegram-bot); токен - только из переменной окружения
       telegram:
         enabled: ${TELEGRAM_BOT_ENABLED:false}
