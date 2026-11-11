@@ -38,6 +38,23 @@ ru:
           enabled: false
         dispatcher:
           enabled: false
+      # партнёры для BrokerLinkTest: включённый с erid, включённый без erid и выключенный
+      broker-referral:
+        partners:
+          - id: alpha
+            name: Альфа Брокер
+            url-template: https://alpha.test/bonds/{isin}?ref=invest&erid={erid}
+            advertiser: АО "Альфа Брокер", ИНН 7700000001
+            erid: 2SDnjAlpha
+          - id: beta
+            name: Бета Инвест
+            url-template: https://beta.test/buy?ticker={ticker}
+            advertiser: ООО "Бета Инвест", ИНН 7700000002
+          - id: gamma
+            name: Гамма
+            url-template: https://gamma.test/{ticker}
+            advertiser: ООО "Гамма", ИНН 7700000003
+            enabled: false
       # бот включён без long polling и проверки связи: TelegramTest вызывает обработчик сам, клиент замокан
       telegram:
         enabled: true

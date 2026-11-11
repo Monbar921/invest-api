@@ -36,6 +36,7 @@ invest-gateway ──────▶│ ui-service: /internal/rest/bonds/**, /in
 | `feature/budget-org-supplier`     | Feign-клиент api.budjet.org                                                                    |
 | `feature/alert-service`           | уведомления по облигациям: правила пользователя, проверка по датам событий, очередь отправки, интерфейс канала `NotificationSender` |
 | `feature/portfolio-service`       | портфель пользователя: покупки облигаций, текущая стоимость, доход от цены покупки, итоги по валютам |
+| `feature/broker-service`          | брокеры-партнёры из конфигурации: реферальные ссылки для облигации, учёт переходов по дням |
 | `feature/telegram-bot`            | Telegram-бот: OkHttp-клиент с прокси из настроек, long polling, команды `/start` `/stop` `/help`, привязка чата к пользователю, проверка связи |
 | `feature/ui-service`              | REST-контроллеры, маппинг в DTO, обработка ошибок                                              |
 | `invest-api-dto`                  | DTO запросов и ответов, общие с клиентами                                                      |
@@ -143,6 +144,7 @@ PostgreSQL, схема задаётся в конфиге (`spring.liquibase.def
 | `portfolio_position` | покупка облигации в портфеле: пользователь, тикер (без внешнего ключа), количество, цена покупки в % от номинала, дата покупки, брокер (`broker_id`, необязателен), сколько заплачено в рублях за валютную облигацию (`buy_amount_rub`, необязательно); покупок одной облигации может быть несколько |
 | `portfolio_broker` | брокеры пользователя для меток покупок: имя уникально у пользователя без учёта регистра; удаление брокера обнуляет `broker_id` у покупок |
 | `currency_rate` | курсы ЦБ к рублю на дату: дата, код валюты, рублей за единицу, источник; уникальны по `(rate_date, currency)`. Заполняется по запросу: дата, которой нет, - один запрос к ЦБ, сохраняются все валюты этой даты; будущие даты не сохраняются |
+| `broker_click` | переходы к брокерам-партнёрам: день (по Москве), id партнёра из конфигурации, тикер, число переходов; уникальны по `(click_date, partner_id, ticker)`, пользователь не хранится |
 | `telegram_link_token` | одноразовые токены ссылки привязки: SHA-256 токена, пользователь, срок (10 минут) |
 | `shedlock`     | блокировки шедулеров                                                                  |
 
@@ -168,6 +170,8 @@ maintenance-эндпоинты - значение заголовка `From`).
 | `GET /internal/rest/bonds/collections`                        | подборки облигаций: slug, заголовок, описание             |
 | `GET /internal/rest/bonds/collections/{slug}?page=&size=`     | подборка со страницей облигаций (`size` 1..500, по умолчанию 50); неизвестная - `404` |
 | `GET /internal/rest/bonds/sitemap`                            | для sitemap.xml: тикеры всех облигаций, id эмитентов с выпусками в системе, slug подборок (адреса строит gateway) |
+| `GET /internal/rest/bonds/{ticker}/broker-links`              | ссылки включённых брокеров-партнёров для облигации: id, название, ссылка по шаблону, рекламодатель, erid; партнёров нет - пустой список; облигации нет - `404` |
+| `POST /internal/rest/bonds/{ticker}/broker-links/{partnerId}/click` | учёт перехода к партнёру (`204`); партнёр выключен или неизвестен, облигации нет - `404` |
 | `GET /internal/rest/bonds/market-overview`                    | ключевая ставка (с какого дня и прошлая, изменение с начала года и на последнем заседании) и курсы USD, EUR, CNY с изменением |
 | `GET /internal/rest/alerts?ticker=`                           | правила пользователя (по облигации или все) с названием облигации |
 | `POST /internal/rest/alerts`                                  | новое правило `{ticker, type, days}` или `{ticker, type, direction, threshold}`: `201`; облигации нет - `404`; параметры не подходят типу, такое правило по дате уже есть, больше 50 или нет цены для изменения от неё - `422`; `days` вне 1..60 - `400` |
@@ -182,6 +186,7 @@ maintenance-эндпоинты - значение заголовка `From`).
 | `POST /internal/rest/portfolio/positions`                     | новая покупка `{ticker, quantity, buyPrice, buyDate?, broker?, buyAmountRub?}` (брокер - по имени, новый создаётся; `buyAmountRub` - только у валютной облигации): `201`; облигации нет - `404`; `quantity` / `buyPrice` вне пределов, `buyAmountRub` не больше 0 - `400`; нет тикера, дата в будущем, больше 200 покупок, `buyAmountRub` у рублёвой облигации - `422` |
 | `PUT /internal/rest/portfolio/positions/{id}`                 | изменить количество, цену, дату и брокера (тикер не меняется; пустой `broker` - без брокера) |
 | `DELETE /internal/rest/portfolio/positions/{id}`              | удалить покупку (`204`) |
+| `GET /internal/rest/maintenance/broker-clicks?from=&to=`      | переходы к партнёрам по дням, партнёрам и облигациям (даты YYYY-MM-DD включительно); заголовок `From` не нужен |
 | `POST /internal/rest/maintenance/bond/sync-all`               | синхронизация облигаций                                   |
 | `POST /internal/rest/maintenance/news/sync-all`               | загрузка новостей (в фоне, 202 / 409)                     |
 | `POST /internal/rest/maintenance/bond/{coupon\|amortization\|price\|candle}/sync-all` | синхронизация купонов / амортизации / цен / свечей |
@@ -193,6 +198,9 @@ Maintenance-эндпоинты требуют заголовок `From` (кто 
 держать на ней HTTP-запрос нельзя. С ночной цепочкой ручной запуск не согласован (ShedLock его не видит) - не
 запускайте вручную шаг, который сейчас идёт по расписанию или при старте. `sync-by-ticker` - синхронно.
 `local` - облигации в рублях, `foreign` - в иностранной валюте (правило - в [business-rules.md](business-rules.md)).
+
+Ссылки брокеров - блок «Купить у брокера» в карточке и калькуляторе UI
+([INVEST-001-broker-referral](features/INVEST-001-broker-referral/)); клик gateway пропускает и без входа.
 
 Эмитенты, подборки и sitemap нужны SEO-страницам ([INVEST-001-seo-pages](features/INVEST-001-seo-pages/)): gateway
 строит по ним готовый HTML облигации, эмитента и подборки и `sitemap.xml`; UI показывает те же страницы.

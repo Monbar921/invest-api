@@ -6,6 +6,7 @@ public enum ExceptionErrorCode {
     COUPON_NOT_FOUND,
     ISSUER_NOT_FOUND,
     COLLECTION_NOT_FOUND,
+    BROKER_PARTNER_NOT_FOUND,
 
     UNPROCESSABLE,
     EMPTY_UID,

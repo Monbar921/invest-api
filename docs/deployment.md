@@ -52,6 +52,20 @@ Telegram-бот: `ru.invest.api.telegram.enabled` (по умолчанию вы�
 обновления цен; нужен включённый `ru.invest.api.stock.supplier.scheduler.price`, иначе цены обновляются только ночью),
 `news-check-on-sync` (новости, рейтинги, ключевая ставка - после каждой загрузки ленты, `ru.invest.api.news.scheduler`). Без включённого Telegram-бота уведомления сразу получают `FAILED`.
 
+Брокеры-партнёры (блок «Купить у брокера»): `ru.invest.api.broker-referral.partners` - список `id`, `name`,
+`url-template` (https, подстановки `{ticker}` `{isin}` `{erid}`), `advertiser` (наименование и ИНН для маркировки
+рекламы), `erid`, `enabled`. По умолчанию пусто - блок не показывается. `id` не менять: по нему считаются переходы.
+Ошибка в настройке партнёра не даёт приложению стартовать. Пример:
+
+```yaml
+ru.invest.api.broker-referral.partners:
+  - id: example-broker
+    name: Пример Брокер
+    url-template: https://broker.example/bonds/{isin}?utm_source=invest&erid={erid}
+    advertiser: АО "Пример Брокер", ИНН 0000000000
+    erid: <токен из ЕРИР>
+```
+
 Swagger: http://localhost:8081/swagger-ui.html.
 
 ## Локальный стенд в k3d

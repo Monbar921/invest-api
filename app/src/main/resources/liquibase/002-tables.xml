@@ -17,4 +17,5 @@
     <include file="tables/011-alert-events.xml" relativeToChangelogFile="true"/>
     <include file="tables/012-portfolio.xml" relativeToChangelogFile="true"/>
     <include file="tables/013-currency-rate.xml" relativeToChangelogFile="true"/>
+    <include file="tables/014-broker-click.xml" relativeToChangelogFile="true"/>
 </databaseChangeLog>

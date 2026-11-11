@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.4.xsd">
+
+    <!-- переходы к брокерам-партнёрам: счётчик за день по партнёру и облигации. Кто кликнул, не хранится -->
+    <changeSet id="INVEST-001-create-broker-click-table" author="d.v.kornilovich">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="broker_click"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="broker_click">
+            <column autoIncrement="true" name="id" type="bigserial">
+                <constraints primaryKey="true"/>
+            </column>
+            <!-- день перехода по Москве -->
+            <column name="click_date" type="date">
+                <constraints nullable="false"/>
+            </column>
+            <!-- id партнёра из конфигурации ru.invest.api.broker-referral.partners -->
+            <column name="partner_id" type="varchar(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="ticker" type="varchar(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="clicks" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addUniqueConstraint tableName="broker_click" columnNames="click_date, partner_id, ticker"
+                             constraintName="broker_click_date_partner_ticker_uq"/>
+    </changeSet>
+</databaseChangeLog>

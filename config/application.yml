@@ -104,6 +104,12 @@ ru:
           batch-size: 50
         give-up-after: PT24H
         retention: P90D
+      # блок «Купить у брокера» (docs/features/INVEST-001-broker-referral); пустой список - блок не показывается.
+      # Партнёр: id (постоянный, по нему считаются клики), name, url-template (https, подстановки {ticker} {isin}
+      # {erid}), advertiser (наименование и ИНН для маркировки), erid (токен ЕРИР), enabled
+      broker-referral:
+        zone: Europe/Moscow
+        partners: []
       # Telegram-бот (docs/features/INVEST-001-telegram-bot); токен - только из переменной окружения
       telegram:
         enabled: ${TELEGRAM_BOT_ENABLED:false}

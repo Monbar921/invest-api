@@ -12,6 +12,7 @@ import ru.invest.api.dto.bond.calculation.ProfitCalculationDto;
 import ru.invest.api.dto.bond.calculation.ProfitCalculationRequest;
 import ru.invest.api.dto.bond.candle.CandleDto;
 import ru.invest.api.dto.bond.candle.CandleIntervalDto;
+import ru.invest.api.dto.bond.broker.BrokerLinkDto;
 import ru.invest.api.dto.bond.collection.BondCollectionDto;
 import ru.invest.api.dto.bond.collection.BondCollectionPageDto;
 import ru.invest.api.dto.bond.event.BondEventDto;
@@ -161,4 +162,16 @@ public interface InvestApiBondClient {
      */
     @GetMapping("/bonds/sitemap")
     SitemapDto getSitemap();
+
+    /**
+     * Ссылки брокеров-партнёров для облигации; партнёров нет - пустой список.
+     */
+    @GetMapping("/bonds/{ticker}/broker-links")
+    List<BrokerLinkDto> getBrokerLinks(@PathVariable("ticker") String ticker);
+
+    /**
+     * Учёт перехода к брокеру-партнёру по облигации.
+     */
+    @PostMapping("/bonds/{ticker}/broker-links/{partnerId}/click")
+    void registerBrokerClick(@PathVariable("ticker") String ticker, @PathVariable("partnerId") String partnerId);
 }
