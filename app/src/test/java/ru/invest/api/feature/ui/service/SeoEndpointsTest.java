@@ -21,6 +21,10 @@ import ru.invest.api.dto.request.bond.BondParametersRequest;
 import ru.invest.api.dto.request.bond.DateRangeRequest;
 import ru.invest.api.starter.client.InvestApiBondClient;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -29,6 +33,7 @@ import java.util.Optional;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.everyItem;
@@ -55,6 +60,7 @@ class SeoEndpointsTest extends AbstractInvestApplicationTest {
     private static final long ISSUER_ID = 1001L;
     private static final long OTHER_ISSUER_ID = 1002L;
     private static final int NOT_FOUND = 404;
+    private static final int BAD_REQUEST = 400;
 
     @Autowired
     private InvestApiBondClient investApiBondClient;
@@ -196,6 +202,99 @@ class SeoEndpointsTest extends AbstractInvestApplicationTest {
         // эмитент без выпусков в системе в sitemap не попадает
         assertThat(sitemap.getIssuerIds(), contains(ISSUER_ID));
         assertThat(sitemap.getCollections(), contains("ofz-top-yield", "floaters", "maturity-this-year"));
+    }
+
+    @Test
+    void issuerWithoutTitleAndInnHasNulls() {
+        jdbcTemplate.update("truncate table bond_issuer restart identity");
+        insertIssuer(RUB_LOW, ISSUER_ID, null, null);
+
+        final IssuerDto issuer = investApiBondClient.getIssuer(ISSUER_ID);
+
+        assertThat(issuer.getTitle(), nullValue());
+        assertThat(issuer.getShortTitle(), nullValue());
+        assertThat(issuer.getInn(), nullValue());
+        assertThat(tickers(issuer.getBonds()), contains(RUB_LOW));
+    }
+
+    @Test
+    void issuerNewsPagedNewestFirstWithoutDuplicates() {
+        // новость и про эмитента, и про его выпуск - одна запись, а не две
+        final Long both = insertNews("И эмитент, и выпуск", LocalDateTime.of(2026, 11, 1, 10, 0));
+        jdbcTemplate.update("insert into news_link (news_id, emitter_id) values (?, ?)", both, ISSUER_ID);
+        jdbcTemplate.update("insert into news_link (news_id, isin) values (?, ?)", both, RUB_LOW);
+        jdbcTemplate.update("insert into news_link (news_id, isin) values (?, ?)", both, RUB_MODERATE);
+        final Long newest = insertNews("Самая новая", LocalDateTime.of(2026, 11, 5, 10, 0));
+        jdbcTemplate.update("insert into news_link (news_id, isin) values (?, ?)", newest, RUB_LOW);
+        final Long oldest = insertNews("Самая старая", LocalDateTime.of(2026, 10, 1, 10, 0));
+        jdbcTemplate.update("insert into news_link (news_id, emitter_id) values (?, ?)", oldest, ISSUER_ID);
+
+        final PageDto<NewsDto> all = investApiBondClient.getIssuerNews(ISSUER_ID, null, null);
+        final PageDto<NewsDto> second = investApiBondClient.getIssuerNews(ISSUER_ID, 1, 1);
+
+        assertThat(all.getContent().stream().map(NewsDto::getTitle).toList(),
+                contains("Самая новая", "И эмитент, и выпуск", "Самая старая"));
+        assertThat(all.getTotalElements(), equalTo(3L));
+        assertThat(second.getContent().stream().map(NewsDto::getTitle).toList(), contains("И эмитент, и выпуск"));
+        assertThat(second.getTotalElements(), equalTo(3L));
+    }
+
+    @Test
+    void issuerNewsAndCollectionRejectInvalidPaging() {
+        final FeignException tooBigNews = assertThrows(FeignException.class,
+                () -> investApiBondClient.getIssuerNews(ISSUER_ID, 0, 101));
+        final FeignException negativeNewsPage = assertThrows(FeignException.class,
+                () -> investApiBondClient.getIssuerNews(ISSUER_ID, -1, 10));
+        final FeignException tooBigCollection = assertThrows(FeignException.class,
+                () -> investApiBondClient.getCollection("floaters", 0, 501));
+
+        assertThat(tooBigNews.status(), equalTo(BAD_REQUEST));
+        assertThat(negativeNewsPage.status(), equalTo(BAD_REQUEST));
+        assertThat(tooBigCollection.status(), equalTo(BAD_REQUEST));
+        assertThat(tooBigCollection.contentUTF8(), containsString("size must not exceed 500"));
+    }
+
+    @Test
+    void nonNumericIssuerIdIsClientError() throws Exception {
+        final HttpResponse<String> response = HttpClient.newHttpClient().send(
+                HttpRequest.newBuilder(URI.create("http://localhost:8099/internal/rest/bonds/issuers/abc")).GET().build(),
+                HttpResponse.BodyHandlers.ofString());
+
+        assertThat(response.statusCode(), equalTo(BAD_REQUEST));
+    }
+
+    @Test
+    void maturityDateFilterWithOnlyUpperBound() {
+        final BondParametersRequest request = new BondParametersRequest();
+        request.setMaturityDate(new DateRangeRequest().setTo(LocalDate.of(2029, 3, 8)));
+
+        // граница включительно: RU000A1080Y2 гасится 2029-03-08, RU000A10EQ34 - 2029-03-14
+        final List<String> tickers = tickers(investApiBondClient.getAllPage(null, null, request).getContent());
+        assertThat(tickers.contains(RUB_MODERATE), equalTo(true));
+        assertThat(tickers.contains(RUB_LOW), equalTo(false));
+        assertThat(tickers.contains(OFZ), equalTo(false));
+
+        // пустой диапазон - фильтра нет
+        request.setMaturityDate(new DateRangeRequest());
+        assertThat(investApiBondClient.getAllPage(null, null, request).getContent(), hasSize(7));
+    }
+
+    @Test
+    void collectionIsPaged() {
+        final LocalDate today = dateTimeMapper.getNow().toLocalDate();
+        jdbcTemplate.update("update bond set maturity_date = ? where ticker = ?", today.atStartOfDay(), RUB_MODERATE);
+        jdbcTemplate.update("update bond set maturity_date = ? where ticker = ?", today.atStartOfDay().plusHours(1), RUB_LOW);
+        // CNY-выпуск в наборе гасится в декабре 2026 - уводим его за пределы года
+        jdbcTemplate.update("update bond set maturity_date = ? where ticker = ?", today.plusYears(1).atStartOfDay(), CNY_MODERATE);
+        clearCaches();
+
+        final BondCollectionPageDto second = investApiBondClient.getCollection("maturity-this-year", 1, 1);
+        final BondCollectionPageDto beyond = investApiBondClient.getCollection("maturity-this-year", 5, 1);
+
+        assertThat(tickers(second.getBonds().getContent()), contains(RUB_LOW));
+        assertThat(second.getBonds().getTotalElements(), equalTo(2L));
+        assertThat(beyond.getBonds().getContent(), empty());
+        assertThat(beyond.getBonds().getTotalElements(), equalTo(2L));
     }
 
     private void insertIssuer(final String isin, final long emitterId, final String title, final String inn) {

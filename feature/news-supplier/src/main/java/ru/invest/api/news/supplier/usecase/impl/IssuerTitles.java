@@ -40,7 +40,7 @@ public final class IssuerTitles {
     }
 
     private static Pattern legalForm(final String words) {
-        final String spaces = Arrays.stream(words.split(" ")).map(Pattern::quote).collect(Collectors.joining("\s+"));
+        final String spaces = Arrays.stream(words.split(" ")).map(Pattern::quote).collect(Collectors.joining("\\s+"));
         return Pattern.compile(spaces, Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
     }
 }
