@@ -18,6 +18,7 @@ public enum ExceptionErrorCode {
     TELEGRAM_DISABLED,
     ALERT_INVALID,
     PORTFOLIO_INVALID,
+    PLAN_INVALID,
 
     UNAUTHORIZED
 }

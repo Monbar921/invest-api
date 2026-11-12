@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.4.xsd">
+
+    <!-- подписки на тарифы: история выдач. Действует подписка, у которой срок не истёк и она не отозвана; нет такой -
+         у пользователя тариф по умолчанию (в таблицу он не пишется). Тариф - id из конфигурации ru.invest.api.plans,
+         без внешнего ключа -->
+    <changeSet id="INVEST-001-create-account-subscription-table" author="d.v.kornilovich">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="account_subscription"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="account_subscription">
+            <column autoIncrement="true" name="id" type="bigserial">
+                <constraints primaryKey="true"/>
+            </column>
+            <!-- sub Keycloak -->
+            <column name="user_id" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="plan" type="varchar(64)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- откуда подписка: MANUAL - maintenance-эндпоинт; оплата (этап 7) добавит свой источник -->
+            <column name="source" type="varchar(32)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- UTC; действует с этого момента -->
+            <column name="valid_from" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <!-- UTC, не включительно; null - бессрочно -->
+            <column name="valid_until" type="timestamp"/>
+            <!-- UTC; заполнено - отозвана вручную или заменена новой выдачей -->
+            <column name="revoked_at" type="timestamp"/>
+            <column name="comment" type="varchar(500)"/>
+            <column name="created_at" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <!-- кто выдал: заголовок From maintenance-эндпоинта -->
+            <column name="created_by" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="timestamp"/>
+            <column name="updated_by" type="varchar(255)"/>
+        </createTable>
+
+        <createIndex tableName="account_subscription" indexName="account_subscription_user_idx">
+            <column name="user_id"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

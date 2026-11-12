@@ -15,9 +15,6 @@ import java.time.ZoneId;
 @SuppressWarnings("checkstyle:MagicNumber")
 @ConfigurationProperties(prefix = "ru.invest.api.alerts")
 public class AlertProperties {
-    /** Сколько правил может быть у пользователя */
-    private int maxAlertsPerUser = 50;
-
     /** Самое раннее предупреждение о событии, дней */
     private int maxDays = 60;
 

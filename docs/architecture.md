@@ -18,7 +18,7 @@ invest-gateway ──────▶│ ui-service: /internal/rest/bonds/**, /in
 ```
 
 Наружу сервис не публикуется: UI ходит через [invest-gateway](../../invest-gateway/docs/architecture.md),
-который проксирует `/api/{bonds,alerts,portfolio,calendar}/**` → `/internal/rest/...`. Своей авторизации в invest-api нет.
+который проксирует `/api/{bonds,alerts,portfolio,account,calendar}/**` → `/internal/rest/...`. Своей авторизации в invest-api нет.
 Чтение `/bonds/**` gateway пропускает и без входа (публичный режим, [INVEST-001-public-mode](features/INVEST-001-public-mode/)),
 поэтому эндпоинты облигаций не должны зависеть от пользователя и не должны ничего менять.
 
@@ -37,6 +37,7 @@ invest-gateway ──────▶│ ui-service: /internal/rest/bonds/**, /in
 | `feature/alert-service`           | уведомления по облигациям: правила пользователя, проверка по датам событий, очередь отправки, интерфейс канала `NotificationSender` |
 | `feature/portfolio-service`       | портфель пользователя: покупки облигаций, текущая стоимость, доход от цены покупки, итоги по валютам; календарь выплат (`PortfolioCalendarUseCase`) и его выгрузка в iCalendar (`CalendarIcsWriter`) |
 | `feature/broker-service`          | брокеры-партнёры из конфигурации: реферальные ссылки для облигации, учёт переходов по дням |
+| `feature/account-service`         | тарифы и права: тарифы из конфигурации (`PlanProperties`), подписки пользователей, проверка лимитов и фич (`EntitlementUseCase`), тариф пользователя и его выдача вручную (`AccountPlanUseCase`) |
 | `feature/telegram-bot`            | Telegram-бот: OkHttp-клиент с прокси из настроек, long polling, команды `/start` `/stop` `/help`, привязка чата к пользователю, проверка связи |
 | `feature/ui-service`              | REST-контроллеры, маппинг в DTO, обработка ошибок                                              |
 | `invest-api-dto`                  | DTO запросов и ответов, общие с клиентами                                                      |
@@ -146,6 +147,7 @@ PostgreSQL, схема задаётся в конфиге (`spring.liquibase.def
 | `portfolio_calendar_token` | личная ссылка на календарь выплат (.ics): `user_id` - первичный ключ (одна ссылка на пользователя), SHA-256 токена (уникален), время создания |
 | `currency_rate` | курсы ЦБ к рублю на дату: дата, код валюты, рублей за единицу, источник; уникальны по `(rate_date, currency)`. Заполняется по запросу: дата, которой нет, - один запрос к ЦБ, сохраняются все валюты этой даты; будущие даты не сохраняются |
 | `broker_click` | переходы к брокерам-партнёрам: день (по Москве), id партнёра из конфигурации, тикер, число переходов; уникальны по `(click_date, partner_id, ticker)`, пользователь не хранится |
+| `account_subscription` | подписки на тарифы: пользователь, id тарифа из конфигурации (без внешнего ключа), источник (`MANUAL`), с какого момента и до какого (UTC, не включительно; `null` - бессрочно), когда отозвана, комментарий, кто выдал и отозвал. Записи не удаляются: новая выдача и отзыв ставят `revoked_at` |
 | `telegram_link_token` | одноразовые токены ссылки привязки: SHA-256 токена, пользователь, срок (10 минут) |
 | `shedlock`     | блокировки шедулеров                                                                  |
 
@@ -175,7 +177,7 @@ maintenance-эндпоинты - значение заголовка `From`).
 | `POST /internal/rest/bonds/{ticker}/broker-links/{partnerId}/click` | учёт перехода к партнёру (`204`); партнёр выключен или неизвестен, облигации нет - `404` |
 | `GET /internal/rest/bonds/market-overview`                    | ключевая ставка (с какого дня и прошлая, изменение с начала года и на последнем заседании) и курсы USD, EUR, CNY с изменением |
 | `GET /internal/rest/alerts?ticker=`                           | правила пользователя (по облигации или все) с названием облигации |
-| `POST /internal/rest/alerts`                                  | новое правило `{ticker, type, days}` или `{ticker, type, direction, threshold}`: `201`; облигации нет - `404`; параметры не подходят типу, такое правило по дате уже есть, больше 50 или нет цены для изменения от неё - `422`; `days` вне 1..60 - `400` |
+| `POST /internal/rest/alerts`                                  | новое правило `{ticker, type, days}` или `{ticker, type, direction, threshold}`: `201`; облигации нет - `404`; параметры не подходят типу, такое правило по дате уже есть, или нет цены для изменения от неё - `422`; правил столько, сколько разрешает тариф, - `402`; `days` вне 1..60 - `400` |
 | `PUT /internal/rest/alerts/{id}`                              | изменить `days`, `direction`, `threshold`, `enabled`; новый порог или включение заново взводит его |
 | `DELETE /internal/rest/alerts/{id}`                           | удалить правило (`204`); история остаётся |
 | `GET /internal/rest/alerts/notifications?page=&size=`         | история уведомлений, новые первыми |
@@ -184,13 +186,17 @@ maintenance-эндпоинты - значение заголовка `From`).
 | `DELETE /internal/rest/alerts/telegram`                       | отвязать чат (`204`, в том числе если чата не было)       |
 | `GET /internal/rest/portfolio`                                | портфель пользователя: строка на облигацию (`groups` - свод покупок: количество, средняя цена, суммы, брокеры, даты, купон, доходность к погашению по цене покупки и по текущей; внутри - покупки), итоги по валютам (`totals`) и весь портфель в рублях (`summary`) |
 | `GET /internal/rest/portfolio/brokers`                        | брокеры пользователя по имени |
-| `POST /internal/rest/portfolio/positions`                     | новая покупка `{ticker, quantity, buyPrice, buyDate?, broker?, buyAmountRub?}` (брокер - по имени, новый создаётся; `buyAmountRub` - только у валютной облигации): `201`; облигации нет - `404`; `quantity` / `buyPrice` вне пределов, `buyAmountRub` не больше 0 - `400`; нет тикера, дата в будущем, больше 200 покупок, `buyAmountRub` у рублёвой облигации - `422` |
+| `POST /internal/rest/portfolio/positions`                     | новая покупка `{ticker, quantity, buyPrice, buyDate?, broker?, buyAmountRub?}` (брокер - по имени, новый создаётся; `buyAmountRub` - только у валютной облигации): `201`; облигации нет - `404`; `quantity` / `buyPrice` вне пределов, `buyAmountRub` не больше 0 - `400`; нет тикера, дата в будущем, `buyAmountRub` у рублёвой облигации - `422`; покупок столько, сколько разрешает тариф, - `402` |
 | `PUT /internal/rest/portfolio/positions/{id}`                 | изменить количество, цену, дату и брокера (тикер не меняется; пустой `broker` - без брокера) |
 | `DELETE /internal/rest/portfolio/positions/{id}`              | удалить покупку (`204`) |
 | `GET /internal/rest/portfolio/calendar?from=&to=`             | календарь выплат: будущие купоны, амортизация, оферты и погашения по облигациям портфеля × количество, итоги по месяцам и валютам, в рублях по курсу на сегодня; `from` не задан или в прошлом - сегодня, `to` не задан - год; `to` раньше `from` - `422` |
-| `GET` / `POST` / `DELETE /internal/rest/portfolio/calendar/link` | личная ссылка на `.ics`: есть ли (`{enabled, createdAt}`), новая (токен - только в этом ответе, прежняя перестаёт работать), отключить (`204`) |
-| `GET /internal/rest/calendar/{token}.ics`                     | календарь выплат владельца ссылки в формате iCalendar, все будущие выплаты; без `X-User-Id`; неизвестный токен - `404` |
+| `GET` / `POST` / `DELETE /internal/rest/portfolio/calendar/link` | личная ссылка на `.ics`: есть ли (`{enabled, createdAt}`), новая (токен - только в этом ответе, прежняя перестаёт работать; подписки на календарь нет в тарифе - `402`), отключить (`204`) |
+| `GET /internal/rest/calendar/{token}.ics`                     | календарь выплат владельца ссылки в формате iCalendar, все будущие выплаты; без `X-User-Id`; неизвестный токен - `404`; подписки на календарь больше нет в тарифе владельца - `402` |
+| `GET /internal/rest/account/plan`                             | тариф пользователя: действующий тариф (id, название, платный ли, лимиты, фичи), тариф ли по умолчанию, источник и последний день подписки, лимиты с использованием (`used` может быть больше `max`), все тарифы для сравнения |
 | `GET /internal/rest/maintenance/broker-clicks?from=&to=`      | переходы к партнёрам по дням, партнёрам и облигациям (даты YYYY-MM-DD включительно); заголовок `From` не нужен |
+| `GET /internal/rest/maintenance/account/{userId}/plan`        | тариф пользователя - как `/account/plan`; заголовок `From` не нужен |
+| `PUT /internal/rest/maintenance/account/{userId}/plan`        | выдать тариф `{plan, validUntil?, comment?}` с текущего момента (`validUntil` - последний день включительно по Москве, нет - бессрочно), действующая подписка заменяется; неизвестный тариф, тариф по умолчанию, срок в прошлом - `422` |
+| `DELETE /internal/rest/maintenance/account/{userId}/plan`     | отозвать подписку - сразу тариф по умолчанию (`204`, и если подписки не было) |
 | `POST /internal/rest/maintenance/bond/sync-all`               | синхронизация облигаций                                   |
 | `POST /internal/rest/maintenance/news/sync-all`               | загрузка новостей (в фоне, 202 / 409)                     |
 | `POST /internal/rest/maintenance/bond/{coupon\|amortization\|price\|candle}/sync-all` | синхронизация купонов / амортизации / цен / свечей |
@@ -213,7 +219,7 @@ Maintenance-эндпоинты требуют заголовок `From` (кто 
 Apple, Outlook со своих серверов без сессии: gateway пропускает `/api/calendar/**` без входа, пользователя определяет
 токен (в БД - его SHA-256).
 
-Эндпоинты `/alerts/**` и `/portfolio/**` - пользовательские: пользователя (sub Keycloak) передаёт invest-gateway в заголовке `X-User-Id`,
+Эндпоинты `/alerts/**`, `/portfolio/**` и `/account/**` - пользовательские: пользователя (sub Keycloak) передаёт invest-gateway в заголовке `X-User-Id`,
 без заголовка - `401`. Своей проверки подлинности у invest-api нет: доверие держится на том, что invest-api доступен
 только через gateway, а gateway затирает заголовок из браузера.
 

@@ -55,6 +55,30 @@ ru:
             url-template: https://gamma.test/{ticker}
             advertiser: ООО "Гамма", ИНН 7700000003
             enabled: false
+      # тарифы для PlanTest: бесплатный - как в config/application.yml (другие тесты создают правила и покупки),
+      # basic - без подписки на календарь
+      plans:
+        default-plan: free
+        plans:
+          free:
+            title: Бесплатный
+            limits:
+              ALERTS: 50
+              PORTFOLIO_POSITIONS: 200
+            features: [CALENDAR_ICS]
+          basic:
+            title: Базовый
+            paid: true
+            limits:
+              ALERTS: 40
+              PORTFOLIO_POSITIONS: 200
+          premium:
+            title: Премиум
+            paid: true
+            limits:
+              ALERTS: 52
+              PORTFOLIO_POSITIONS: 300
+            features: [CALENDAR_ICS]
       # бот включён без long polling и проверки связи: TelegramTest вызывает обработчик сам, клиент замокан
       telegram:
         enabled: true

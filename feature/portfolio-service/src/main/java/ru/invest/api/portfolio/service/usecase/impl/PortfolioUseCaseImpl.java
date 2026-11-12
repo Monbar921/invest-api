@@ -14,8 +14,10 @@ import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.CouponModel;
 import ru.invest.api.common.model.MoneyModel;
 import ru.invest.api.common.model.PriceModel;
+import ru.invest.api.common.model.account.PlanLimit;
 import ru.invest.api.common.repository.PortfolioBrokerRepository;
 import ru.invest.api.common.repository.PortfolioPositionRepository;
+import ru.invest.api.common.usecase.EntitlementUseCase;
 import ru.invest.api.portfolio.service.model.BrokerModel;
 import ru.invest.api.portfolio.service.model.PortfolioModel;
 import ru.invest.api.portfolio.service.model.PortfolioTotalModel;
@@ -40,7 +42,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class PortfolioUseCaseImpl implements PortfolioUseCase {
     private static final String NOT_FOUND = "Portfolio position %d not found";
-    private static final int MAX_POSITIONS = 200;
     private static final int MAX_BROKERS = 50;
     private static final int MAX_QUANTITY = 1_000_000;
     // цена покупки в % от номинала; верхний предел - как у порога цены в уведомлениях
@@ -56,6 +57,7 @@ public class PortfolioUseCaseImpl implements PortfolioUseCase {
     private final BondUseCase bondUseCase;
     private final DateTimeMapper dateTimeMapper;
     private final PriceConversionService priceConversionService;
+    private final EntitlementUseCase entitlementUseCase;
 
     @Override
     @Transactional(readOnly = true)
@@ -86,9 +88,8 @@ public class PortfolioUseCaseImpl implements PortfolioUseCase {
         final LocalDate buyDate = validate(request);
         // 404, если такой облигации нет
         final BondModel bond = bondUseCase.getWithSchedule(request.ticker());
-        if (repository.countByUserId(userId) >= MAX_POSITIONS) {
-            throw unprocessable("No more than %d positions per user".formatted(MAX_POSITIONS));
-        }
+        // 402, если покупок уже столько, сколько разрешает тариф
+        entitlementUseCase.requireBelowLimit(userId, PlanLimit.PORTFOLIO_POSITIONS, repository.countByUserId(userId));
         validateBuyAmountRub(request.buyAmountRub(), currency(bond));
         final PortfolioBroker broker = resolveBroker(userId, request.broker());
         final PortfolioPosition position = repository.save(new PortfolioPosition()

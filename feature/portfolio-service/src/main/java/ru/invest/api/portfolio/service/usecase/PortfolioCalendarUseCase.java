@@ -24,6 +24,8 @@ public interface PortfolioCalendarUseCase {
 
     /**
      * Новая ссылка; прежняя перестаёт работать.
+     *
+     * @throws ru.invest.api.common.exception.GeneralPaymentRequiredException подписка на календарь не входит в тариф
      */
     CalendarLinkModel createLink(String userId);
 
@@ -35,7 +37,9 @@ public interface PortfolioCalendarUseCase {
     /**
      * Календарь в формате iCalendar по токену ссылки: все будущие выплаты.
      *
-     * @throws ru.invest.api.common.exception.GeneralNotFoundEntityException токен неизвестен или ссылку отключили
+     * @throws ru.invest.api.common.exception.GeneralNotFoundEntityException  токен неизвестен или ссылку отключили
+     * @throws ru.invest.api.common.exception.GeneralPaymentRequiredException подписка на календарь больше не входит в
+     *                                                                        тариф владельца ссылки
      */
     String getIcs(String token);
 }

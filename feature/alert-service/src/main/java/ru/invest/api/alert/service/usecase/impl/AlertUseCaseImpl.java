@@ -23,6 +23,7 @@ import ru.invest.api.common.exception.GeneralUnprocessableEntityException;
 import ru.invest.api.common.exception.enums.ExceptionErrorCode;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.PriceModel;
+import ru.invest.api.common.model.account.PlanLimit;
 import ru.invest.api.common.model.alert.AlertDirection;
 import ru.invest.api.common.model.alert.AlertState;
 import ru.invest.api.common.model.alert.AlertType;
@@ -33,6 +34,7 @@ import ru.invest.api.common.repository.BondRepository;
 import ru.invest.api.common.repository.NewsRepository;
 import ru.invest.api.common.repository.NotificationRepository;
 import ru.invest.api.common.usecase.BondEventUseCase;
+import ru.invest.api.common.usecase.EntitlementUseCase;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -67,6 +69,7 @@ public class AlertUseCaseImpl implements AlertUseCase {
     private final NewsRepository newsRepository;
     private final BondEventUseCase bondEventUseCase;
     private final NotificationDispatchUseCase dispatchUseCase;
+    private final EntitlementUseCase entitlementUseCase;
 
     @Override
     @Transactional(readOnly = true)
@@ -98,9 +101,8 @@ public class AlertUseCaseImpl implements AlertUseCase {
         if (exists) {
             throw unprocessable("Alert %s%s already exists".formatted(type, ticker == null ? "" : " for " + ticker));
         }
-        if (alertRepository.countByUserId(userId) >= properties.getMaxAlertsPerUser()) {
-            throw unprocessable("No more than %d alerts per user".formatted(properties.getMaxAlertsPerUser()));
-        }
+        // 402, если правил уже столько, сколько разрешает тариф
+        entitlementUseCase.requireBelowLimit(userId, PlanLimit.ALERTS, alertRepository.countByUserId(userId));
         final BondAlert alert = new BondAlert()
                 .setUserId(userId)
                 .setTicker(ticker)

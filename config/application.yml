@@ -85,7 +85,6 @@ ru:
             only-matched: false
       # уведомления по облигациям (docs/features/INVEST-001-telegram-bot)
       alerts:
-        max-alerts-per-user: 50
         max-days: 60
         zone: Europe/Moscow
         # проверка правил по датам: утром и сразу после старта
@@ -115,6 +114,29 @@ ru:
           url-template: https://tbank-online.com/baf/5e0hKcs113i
           advertiser: АО "ТБанк", ИНН 7710140679
           erid: 123
+      # тарифы (docs/features/INVEST-001-plans): лимиты и фичи. Значения - заготовка до решения владельца о составе и
+      # ценах тарифов (roadmap, 0.4): бесплатный повторяет прежние лимиты (50 правил, 200 покупок). id тарифа хранится
+      # в подписках - не менять у выданных. limits - все из PlanLimit, features - включённые из PlanFeature
+      plans:
+        default-plan: free
+        zone: Europe/Moscow
+        plans:
+          free:
+            title: Бесплатный
+            description: Облигации, калькулятор, портфель и уведомления в Telegram
+            paid: false
+            limits:
+              ALERTS: 50
+              PORTFOLIO_POSITIONS: 200
+            features: [CALENDAR_ICS]
+          premium:
+            title: Премиум
+            description: Больше правил уведомлений и покупок в портфеле
+            paid: true
+            limits:
+              ALERTS: 500
+              PORTFOLIO_POSITIONS: 2000
+            features: [CALENDAR_ICS]
       # Telegram-бот (docs/features/INVEST-001-telegram-bot); токен - только из переменной окружения
       telegram:
         enabled: ${TELEGRAM_BOT_ENABLED:false}

@@ -13,11 +13,13 @@ import ru.invest.api.common.mapper.DateTimeMapper;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.MoneyModel;
 import ru.invest.api.common.model.PriceModel;
+import ru.invest.api.common.model.account.PlanFeature;
 import ru.invest.api.common.model.event.BondEventModel;
 import ru.invest.api.common.model.event.BondEventType;
 import ru.invest.api.common.repository.PortfolioCalendarTokenRepository;
 import ru.invest.api.common.repository.PortfolioPositionRepository;
 import ru.invest.api.common.usecase.BondEventUseCase;
+import ru.invest.api.common.usecase.EntitlementUseCase;
 import ru.invest.api.portfolio.service.model.CalendarEventModel;
 import ru.invest.api.portfolio.service.model.CalendarLinkModel;
 import ru.invest.api.portfolio.service.model.CalendarMonthModel;
@@ -68,6 +70,7 @@ public class PortfolioCalendarUseCaseImpl implements PortfolioCalendarUseCase {
     private final PriceConversionService priceConversionService;
     private final DateTimeMapper dateTimeMapper;
     private final CalendarIcsWriter icsWriter;
+    private final EntitlementUseCase entitlementUseCase;
     private final SecureRandom secureRandom = new SecureRandom();
 
     @Override
@@ -93,6 +96,7 @@ public class PortfolioCalendarUseCaseImpl implements PortfolioCalendarUseCase {
     @Override
     @Transactional
     public CalendarLinkModel createLink(final String userId) {
+        entitlementUseCase.requireFeature(userId, PlanFeature.CALENDAR_ICS);
         final byte[] bytes = new byte[TOKEN_BYTES];
         secureRandom.nextBytes(bytes);
         final String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
@@ -117,6 +121,8 @@ public class PortfolioCalendarUseCaseImpl implements PortfolioCalendarUseCase {
                 .filter(value -> !value.isBlank())
                 .flatMap(value -> tokenRepository.findByTokenHash(hash(value)))
                 .orElseThrow(() -> new GeneralNotFoundEntityException(ExceptionErrorCode.NOT_FOUND, LINK_NOT_FOUND));
+        // тариф владельца больше не включает подписку (например, закончился платный) - ссылка не отдаёт календарь
+        entitlementUseCase.requireFeature(link.getUserId(), PlanFeature.CALENDAR_ICS);
         final LocalDate today = today();
         return icsWriter.write(calendar(link.getUserId(), today, today.plusYears(ICS_HORIZON_YEARS)).events(),
                 dateTimeMapper.getNow());

@@ -23,6 +23,7 @@
         <module>telegram-bot</module>
         <module>portfolio-service</module>
         <module>broker-service</module>
+        <module>account-service</module>
     </modules>
 
     <dependencies>

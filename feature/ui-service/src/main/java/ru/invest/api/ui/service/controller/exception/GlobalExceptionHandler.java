@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import ru.invest.api.common.exception.GeneralNotFoundEntityException;
+import ru.invest.api.common.exception.GeneralPaymentRequiredException;
 import ru.invest.api.common.exception.GeneralUnauthorizedException;
 import ru.invest.api.common.exception.GeneralUnprocessableEntityException;
 import ru.ttech.piapi.core.connector.exception.ServiceRuntimeException;
@@ -124,6 +125,25 @@ public class GlobalExceptionHandler {
                 .map(ConstraintViolation::getMessage)
                 .sorted()
                 .collect(Collectors.joining("; ")));
+        return problem;
+    }
+
+    // лимит тарифа исчерпан или фича не входит в тариф: detail - для человека, остальное - чтобы UI показал подсказку
+    @ExceptionHandler(GeneralPaymentRequiredException.class)
+    @ResponseStatus(HttpStatus.PAYMENT_REQUIRED)
+    public ProblemDetail handlePaymentRequired(final GeneralPaymentRequiredException ex) {
+        log.info("Plan restriction: {}", ex.getMessage());
+        final ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.PAYMENT_REQUIRED);
+        problem.setTitle("Payment Required");
+        problem.setDetail(ex.getMessage());
+        problem.setProperty("plan", ex.getPlan());
+        if (ex.getLimit() != null) {
+            problem.setProperty("limit", ex.getLimit().name());
+            problem.setProperty("max", ex.getMax());
+        }
+        if (ex.getFeature() != null) {
+            problem.setProperty("feature", ex.getFeature().name());
+        }
         return problem;
     }
 

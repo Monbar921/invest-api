@@ -47,10 +47,16 @@ Telegram-бот: `ru.invest.api.telegram.enabled` (по умолчанию вы�
 в логе раз в 5 минут `Telegram is unavailable`.
 
 Уведомления: `ru.invest.api.alerts.scheduler.enabled` / `cron` / `zone` (проверка правил, по умолчанию 09:00 МСК, и
-сразу после старта), `...dispatcher.enabled` / `interval` (разбор очереди, 30 с), `max-alerts-per-user`, `max-days`,
+сразу после старта), `...dispatcher.enabled` / `interval` (разбор очереди, 30 с), `max-days`,
 `give-up-after` (24 ч), `retention` (90 дней), `price-check-on-sync` (правила по цене и доходности после каждого
 обновления цен; нужен включённый `ru.invest.api.stock.supplier.scheduler.price`, иначе цены обновляются только ночью),
 `news-check-on-sync` (новости, рейтинги, ключевая ставка - после каждой загрузки ленты, `ru.invest.api.news.scheduler`). Без включённого Telegram-бота уведомления сразу получают `FAILED`.
+
+Тарифы: `ru.invest.api.plans.default-plan` (тариф без подписки), `zone` (пояс последнего дня подписки, Москва),
+`plans.<id>` - `title`, `description`, `paid`, `limits` (все из `ALERTS`, `PORTFOLIO_POSITIONS`, не меньше 0),
+`features` (`CALENDAR_ICS`). id тарифа хранится в подписках - у выданного не менять. Ошибка в настройке не даёт
+приложению стартовать. Выдать тариф: `PUT /internal/rest/maintenance/account/<sub Keycloak>/plan` с заголовком
+`From` и телом `{"plan": "premium", "validUntil": "2027-01-31"}`; отозвать - `DELETE` того же адреса.
 
 Брокеры-партнёры (блок «Купить у брокера»): `ru.invest.api.broker-referral.partners` - список `id`, `name`,
 `url-template` (https, подстановки `{ticker}` `{isin}` `{erid}`), `advertiser` (наименование и ИНН для маркировки

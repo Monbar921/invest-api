@@ -22,9 +22,11 @@ public interface AlertUseCase {
      * Новое включённое правило; если условие уже выполнено - уведомление сразу в очередь.
      *
      * @throws ru.invest.api.common.exception.GeneralUnprocessableEntityException параметры не подходят типу, такое
-     *                                                                            правило по дате уже есть, правил
-     *                                                                            больше 50 или у облигации нет цены
-     *                                                                            (для изменения от текущей цены)
+     *                                                                            правило по дате уже есть или у
+     *                                                                            облигации нет цены (для изменения от
+     *                                                                            текущей цены)
+     * @throws ru.invest.api.common.exception.GeneralPaymentRequiredException     правил столько, сколько разрешает
+     *                                                                            тариф
      */
     AlertModel create(String userId, AlertRuleModel rule);
 
