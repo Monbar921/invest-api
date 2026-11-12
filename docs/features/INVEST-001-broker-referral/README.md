@@ -33,7 +33,12 @@
 - [x] с партнёром ссылка ведёт по шаблону, пометка видна - `linksOfEnabledPartnersByTemplateInConfigOrder`, UI-тест
   «ссылки партнёров с пометкой «Реклама», рекламодателем и erid»;
 - [x] клик учитывается - `clicksAreCountedPerDayPartnerAndBond` (счётчик и maintenance-эндпоинт), UI-тест «клик по
-  ссылке учитывается», gateway `brokerClickWithoutSessionIsRoutedToInvestApi`.
+  ссылке учитывается», gateway `brokerClickWithoutSessionIsRoutedToInvestApi`;
+- [x] крайние случаи покрыты тестами: кодирование подстановок и ссылка без подстановок (`BrokerLinkUseCaseTest`),
+  неверная настройка партнёра не стартует (`BrokerReferralPropertiesTest`), день клика по `zone`, параллельные клики
+  не теряются, границы и `400` maintenance-эндпоинта (`BrokerLinkTest`); gateway - клик без CSRF `403`, соседние
+  POST под `broker-links` и клик при выключенном публичном режиме - `401`; UI - блок в карточке и калькуляторе,
+  порядок партнёров, сбой учёта не виден, кодирование тикера, клик гостя.
 
 Не проверено на стенде k3d и в браузере с настоящим партнёром - только тестами.
 

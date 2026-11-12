@@ -114,7 +114,7 @@ ru:
           name: Т-Инвестиции
           url-template: https://tbank-online.com/baf/5e0hKcs113i
           advertiser: АО "ТБанк", ИНН 7710140679
-          erid: <токен из кабинета партнёра>
+          erid: 123
       # Telegram-бот (docs/features/INVEST-001-telegram-bot); токен - только из переменной окружения
       telegram:
         enabled: ${TELEGRAM_BOT_ENABLED:false}

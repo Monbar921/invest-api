@@ -20,6 +20,10 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
@@ -39,7 +43,10 @@ class BrokerLinkTest extends AbstractInvestApplicationTest {
     private static final String OFZ_ISIN = "RU000A1038V6";
     private static final String OTHER = "RU000A10EQ34";
     private static final int NOT_FOUND = 404;
-    private static final String CLICKS_URL = "http://localhost:8099/internal/rest/maintenance/broker-clicks?from=%s&to=%s";
+    private static final int BAD_REQUEST = 400;
+    private static final int PARALLEL_CLICKS = 20;
+    private static final String CLICKS_BASE_URL = "http://localhost:8099/internal/rest/maintenance/broker-clicks";
+    private static final String CLICKS_URL = CLICKS_BASE_URL + "?from=%s&to=%s";
 
     @Autowired
     private InvestApiBondClient investApiBondClient;
@@ -119,6 +126,66 @@ class BrokerLinkTest extends AbstractInvestApplicationTest {
         assertThat(assertThrows(FeignException.class, () -> investApiBondClient.registerBrokerClick("UNKNOWN", "alpha"))
                 .status(), equalTo(NOT_FOUND));
         assertThat(jdbcTemplate.queryForObject("select count(*) from broker_click", Long.class), equalTo(0L));
+    }
+
+    @Test
+    void parallelClicksAreNotLost() throws Exception {
+        final CountDownLatch start = new CountDownLatch(1);
+        final List<Future<?>> results = new ArrayList<>();
+        try (ExecutorService executor = Executors.newFixedThreadPool(PARALLEL_CLICKS)) {
+            for (int i = 0; i < PARALLEL_CLICKS; i++) {
+                results.add(executor.submit(() -> {
+                    start.await();
+                    investApiBondClient.registerBrokerClick(OFZ, "alpha");
+                    return null;
+                }));
+            }
+            start.countDown();
+            for (final Future<?> result : results) {
+                // клик упал - тест падает с его ошибкой
+                result.get();
+            }
+        }
+
+        assertThat(clicks("alpha", OFZ), equalTo((long) PARALLEL_CLICKS));
+        assertThat(jdbcTemplate.queryForObject("select count(*) from broker_click", Long.class), equalTo(1L));
+    }
+
+    @Test
+    void maintenanceClicksIncludeBothBoundariesInOrder() throws Exception {
+        jdbcTemplate.update("insert into broker_click (click_date, partner_id, ticker, clicks) values "
+                + "('2026-11-09', 'alpha', ?, 1), ('2026-11-10', 'beta', ?, 2), ('2026-11-10', 'alpha', ?, 3), "
+                + "('2026-11-10', 'alpha', ?, 4), ('2026-11-11', 'alpha', ?, 5), ('2026-11-12', 'alpha', ?, 6)",
+                OFZ, OFZ, OTHER, OFZ, OFZ, OFZ);
+
+        final HttpResponse<String> range = getClicks("from=2026-11-10&to=2026-11-11");
+        assertThat(range.statusCode(), equalTo(200));
+        // день, затем партнёр, затем тикер; 09.11 и 12.11 вне диапазона
+        assertThat(range.body(), equalTo("["
+                + "{\"clicks\":3,\"date\":\"2026-11-10\",\"partnerId\":\"alpha\",\"ticker\":\"" + OTHER + "\"},"
+                + "{\"clicks\":4,\"date\":\"2026-11-10\",\"partnerId\":\"alpha\",\"ticker\":\"" + OFZ + "\"},"
+                + "{\"clicks\":2,\"date\":\"2026-11-10\",\"partnerId\":\"beta\",\"ticker\":\"" + OFZ + "\"},"
+                + "{\"clicks\":5,\"date\":\"2026-11-11\",\"partnerId\":\"alpha\",\"ticker\":\"" + OFZ + "\"}]"));
+
+        final HttpResponse<String> oneDay = getClicks("from=2026-11-12&to=2026-11-12");
+        assertThat(oneDay.body(), containsString("\"clicks\":6"));
+        assertThat(getClicks("from=2026-11-12&to=2026-11-09").body(), equalTo("[]"));
+        assertThat(getClicks("from=2026-11-13&to=2026-11-30").body(), equalTo("[]"));
+    }
+
+    @Test
+    void maintenanceClicksWithoutOrWithInvalidDatesIsBadRequest() throws Exception {
+        assertThat(getClicks("from=2026-11-10").statusCode(), equalTo(BAD_REQUEST));
+        assertThat(getClicks("to=2026-11-10").statusCode(), equalTo(BAD_REQUEST));
+        assertThat(getClicks("from=2026-13-01&to=2026-12-31").statusCode(), equalTo(BAD_REQUEST));
+        assertThat(getClicks("from=10.11.2026&to=2026-11-11").statusCode(), equalTo(BAD_REQUEST));
+        assertThat(getClicks("from=&to=2026-11-11").statusCode(), equalTo(BAD_REQUEST));
+    }
+
+    private static HttpResponse<String> getClicks(final String query) throws Exception {
+        return HttpClient.newHttpClient().send(
+                HttpRequest.newBuilder(URI.create(CLICKS_BASE_URL + "?" + query)).GET().build(),
+                HttpResponse.BodyHandlers.ofString());
     }
 
     private Long clicks(final String partnerId, final String ticker) {
