@@ -18,7 +18,7 @@ invest-gateway ──────▶│ ui-service: /internal/rest/bonds/**, /in
 ```
 
 Наружу сервис не публикуется: UI ходит через [invest-gateway](../../invest-gateway/docs/architecture.md),
-который проксирует `/api/{bonds,alerts,portfolio}/**` → `/internal/rest/...`. Своей авторизации в invest-api нет.
+который проксирует `/api/{bonds,alerts,portfolio,calendar}/**` → `/internal/rest/...`. Своей авторизации в invest-api нет.
 Чтение `/bonds/**` gateway пропускает и без входа (публичный режим, [INVEST-001-public-mode](features/INVEST-001-public-mode/)),
 поэтому эндпоинты облигаций не должны зависеть от пользователя и не должны ничего менять.
 
@@ -35,7 +35,7 @@ invest-gateway ──────▶│ ui-service: /internal/rest/bonds/**, /in
 | `feature/news-supplier`           | лента новостей: клиент ISS Мосбиржи, эмитенты выпусков, загрузка и чтение новостей, ставка и курсы для шапки ленты; эмитент для страницы эмитента (`IssuerUseCase`) |
 | `feature/budget-org-supplier`     | Feign-клиент api.budjet.org                                                                    |
 | `feature/alert-service`           | уведомления по облигациям: правила пользователя, проверка по датам событий, очередь отправки, интерфейс канала `NotificationSender` |
-| `feature/portfolio-service`       | портфель пользователя: покупки облигаций, текущая стоимость, доход от цены покупки, итоги по валютам |
+| `feature/portfolio-service`       | портфель пользователя: покупки облигаций, текущая стоимость, доход от цены покупки, итоги по валютам; календарь выплат (`PortfolioCalendarUseCase`) и его выгрузка в iCalendar (`CalendarIcsWriter`) |
 | `feature/broker-service`          | брокеры-партнёры из конфигурации: реферальные ссылки для облигации, учёт переходов по дням |
 | `feature/telegram-bot`            | Telegram-бот: OkHttp-клиент с прокси из настроек, long polling, команды `/start` `/stop` `/help`, привязка чата к пользователю, проверка связи |
 | `feature/ui-service`              | REST-контроллеры, маппинг в DTO, обработка ошибок                                              |
@@ -143,6 +143,7 @@ PostgreSQL, схема задаётся в конфиге (`spring.liquibase.def
 | `notification` | очередь и история уведомлений: текст, статус PENDING / SENT / FAILED, попытки, время следующей, ошибка; `dedup_key` уникален; `alert_id` обнуляется при удалении правила |
 | `portfolio_position` | покупка облигации в портфеле: пользователь, тикер (без внешнего ключа), количество, цена покупки в % от номинала, дата покупки, брокер (`broker_id`, необязателен), сколько заплачено в рублях за валютную облигацию (`buy_amount_rub`, необязательно); покупок одной облигации может быть несколько |
 | `portfolio_broker` | брокеры пользователя для меток покупок: имя уникально у пользователя без учёта регистра; удаление брокера обнуляет `broker_id` у покупок |
+| `portfolio_calendar_token` | личная ссылка на календарь выплат (.ics): `user_id` - первичный ключ (одна ссылка на пользователя), SHA-256 токена (уникален), время создания |
 | `currency_rate` | курсы ЦБ к рублю на дату: дата, код валюты, рублей за единицу, источник; уникальны по `(rate_date, currency)`. Заполняется по запросу: дата, которой нет, - один запрос к ЦБ, сохраняются все валюты этой даты; будущие даты не сохраняются |
 | `broker_click` | переходы к брокерам-партнёрам: день (по Москве), id партнёра из конфигурации, тикер, число переходов; уникальны по `(click_date, partner_id, ticker)`, пользователь не хранится |
 | `telegram_link_token` | одноразовые токены ссылки привязки: SHA-256 токена, пользователь, срок (10 минут) |
@@ -186,6 +187,9 @@ maintenance-эндпоинты - значение заголовка `From`).
 | `POST /internal/rest/portfolio/positions`                     | новая покупка `{ticker, quantity, buyPrice, buyDate?, broker?, buyAmountRub?}` (брокер - по имени, новый создаётся; `buyAmountRub` - только у валютной облигации): `201`; облигации нет - `404`; `quantity` / `buyPrice` вне пределов, `buyAmountRub` не больше 0 - `400`; нет тикера, дата в будущем, больше 200 покупок, `buyAmountRub` у рублёвой облигации - `422` |
 | `PUT /internal/rest/portfolio/positions/{id}`                 | изменить количество, цену, дату и брокера (тикер не меняется; пустой `broker` - без брокера) |
 | `DELETE /internal/rest/portfolio/positions/{id}`              | удалить покупку (`204`) |
+| `GET /internal/rest/portfolio/calendar?from=&to=`             | календарь выплат: будущие купоны, амортизация, оферты и погашения по облигациям портфеля × количество, итоги по месяцам и валютам, в рублях по курсу на сегодня; `from` не задан или в прошлом - сегодня, `to` не задан - год; `to` раньше `from` - `422` |
+| `GET` / `POST` / `DELETE /internal/rest/portfolio/calendar/link` | личная ссылка на `.ics`: есть ли (`{enabled, createdAt}`), новая (токен - только в этом ответе, прежняя перестаёт работать), отключить (`204`) |
+| `GET /internal/rest/calendar/{token}.ics`                     | календарь выплат владельца ссылки в формате iCalendar, все будущие выплаты; без `X-User-Id`; неизвестный токен - `404` |
 | `GET /internal/rest/maintenance/broker-clicks?from=&to=`      | переходы к партнёрам по дням, партнёрам и облигациям (даты YYYY-MM-DD включительно); заголовок `From` не нужен |
 | `POST /internal/rest/maintenance/bond/sync-all`               | синхронизация облигаций                                   |
 | `POST /internal/rest/maintenance/news/sync-all`               | загрузка новостей (в фоне, 202 / 409)                     |
@@ -204,6 +208,10 @@ Maintenance-эндпоинты требуют заголовок `From` (кто 
 
 Эмитенты, подборки и sitemap нужны SEO-страницам ([INVEST-001-seo-pages](features/INVEST-001-seo-pages/)): gateway
 строит по ним готовый HTML облигации, эмитента и подборки и `sitemap.xml`; UI показывает те же страницы.
+
+Календарь `.ics` по ссылке ([INVEST-001-payment-calendar](features/INVEST-001-payment-calendar/)) забирают Google,
+Apple, Outlook со своих серверов без сессии: gateway пропускает `/api/calendar/**` без входа, пользователя определяет
+токен (в БД - его SHA-256).
 
 Эндпоинты `/alerts/**` и `/portfolio/**` - пользовательские: пользователя (sub Keycloak) передаёт invest-gateway в заголовке `X-User-Id`,
 без заголовка - `401`. Своей проверки подлинности у invest-api нет: доверие держится на том, что invest-api доступен

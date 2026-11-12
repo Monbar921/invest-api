@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.4.xsd">
+
+    <!-- личная ссылка на календарь выплат (.ics): одна на пользователя, хранится SHA-256 токена, а не сам токен -->
+    <changeSet id="INVEST-001-create-portfolio-calendar-token-table" author="d.v.kornilovich">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="portfolio_calendar_token"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="portfolio_calendar_token">
+            <!-- sub Keycloak -->
+            <column name="user_id" type="varchar(255)">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="token_hash" type="varchar(64)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="portfolio_calendar_token_hash_uq"/>
+            </column>
+            <!-- UTC -->
+            <column name="created_at" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+</databaseChangeLog>

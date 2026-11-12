@@ -2,6 +2,7 @@ package ru.invest.api.ui.service.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -12,15 +13,20 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import ru.invest.api.dto.portfolio.BrokerDto;
+import ru.invest.api.dto.portfolio.CalendarLinkDto;
+import ru.invest.api.dto.portfolio.PortfolioCalendarDto;
 import ru.invest.api.dto.portfolio.PortfolioDto;
 import ru.invest.api.dto.portfolio.PortfolioPositionDto;
 import ru.invest.api.dto.portfolio.PortfolioPositionRequest;
+import ru.invest.api.portfolio.service.usecase.PortfolioCalendarUseCase;
 import ru.invest.api.portfolio.service.usecase.PortfolioUseCase;
 import ru.invest.api.ui.service.mapper.PortfolioDtoMapper;
 
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -33,6 +39,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PortfolioController {
     private final PortfolioUseCase portfolioUseCase;
+    private final PortfolioCalendarUseCase portfolioCalendarUseCase;
     private final PortfolioDtoMapper portfolioDtoMapper;
 
     /**
@@ -79,5 +86,46 @@ public class PortfolioController {
     public void delete(@RequestHeader(value = UserIdHeader.NAME, required = false) final String userId,
                        @PathVariable final Long id) {
         portfolioUseCase.delete(UserIdHeader.require(userId), id);
+    }
+
+    /**
+     * Календарь выплат: будущие купоны, амортизация, оферты и погашения по облигациям портфеля, суммы на количество,
+     * итоги по месяцам и валютам. from не задан или в прошлом - с сегодня, to не задан - год от from; to раньше
+     * from - 422.
+     */
+    @GetMapping("/calendar")
+    public PortfolioCalendarDto getCalendar(
+            @RequestHeader(value = UserIdHeader.NAME, required = false) final String userId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) final LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) final LocalDate to) {
+        return portfolioDtoMapper.toCalendarDto(portfolioCalendarUseCase.getCalendar(UserIdHeader.require(userId), from, to));
+    }
+
+    /**
+     * Есть ли личная ссылка на календарь (.ics); токен не отдаётся - хранится только его хеш.
+     */
+    @GetMapping("/calendar/link")
+    public CalendarLinkDto getCalendarLink(
+            @RequestHeader(value = UserIdHeader.NAME, required = false) final String userId) {
+        return portfolioDtoMapper.toLinkDto(portfolioCalendarUseCase.getLink(UserIdHeader.require(userId)));
+    }
+
+    /**
+     * Новая личная ссылка на календарь: токен в ответе, адрес /api/calendar/&lt;токен&gt;.ics строит UI. Прежняя
+     * ссылка перестаёт работать.
+     */
+    @PostMapping("/calendar/link")
+    public CalendarLinkDto createCalendarLink(
+            @RequestHeader(value = UserIdHeader.NAME, required = false) final String userId) {
+        return portfolioDtoMapper.toLinkDto(portfolioCalendarUseCase.createLink(UserIdHeader.require(userId)));
+    }
+
+    /**
+     * Отключить ссылку на календарь; если её не было - тоже 204.
+     */
+    @DeleteMapping("/calendar/link")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteCalendarLink(@RequestHeader(value = UserIdHeader.NAME, required = false) final String userId) {
+        portfolioCalendarUseCase.deleteLink(UserIdHeader.require(userId));
     }
 }
