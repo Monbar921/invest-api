@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.4.xsd">
+
+    <!-- платежи за тариф (docs/features/INVEST-001-payments): история, статус, ссылка на выданную подписку.
+         Записи не удаляются -->
+    <changeSet id="INVEST-001-create-payment-table" author="d.v.kornilovich">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="payment"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="payment">
+            <column autoIncrement="true" name="id" type="bigserial">
+                <constraints primaryKey="true"/>
+            </column>
+            <!-- sub Keycloak -->
+            <column name="user_id" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- id тарифа из конфигурации ru.invest.api.plans -->
+            <column name="plan" type="varchar(64)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- покупаемый срок, ISO-8601: P1M -->
+            <column name="period" type="varchar(32)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- рубли -->
+            <column name="amount" type="numeric(12, 2)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- PURCHASE - покупка пользователем, RENEWAL - автопродление -->
+            <column name="kind" type="varchar(16)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- NEW, PENDING, SUCCEEDED, FAILED, REFUNDED -->
+            <column name="status" type="varchar(16)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="provider" type="varchar(32)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- номер заказа у провайдера: наш, уникальный -->
+            <column name="order_id" type="varchar(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="provider_payment_id" type="varchar(64)"/>
+            <column name="provider_status" type="varchar(32)"/>
+            <column name="confirmation_url" type="varchar(2048)"/>
+            <column name="card_pan" type="varchar(32)"/>
+            <column name="error_message" type="varchar(1000)"/>
+            <column name="auto_renewal_id" type="bigint"/>
+            <!-- выданная платежом подписка: заполнена - платёж применён, повторный webhook ничего не меняет -->
+            <column name="subscription_id" type="bigint">
+                <constraints foreignKeyName="payment_subscription_fk" referencedTableName="account_subscription"
+                             referencedColumnNames="id"/>
+            </column>
+            <!-- UTC -->
+            <column name="created_at" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="paid_at" type="timestamp"/>
+            <column name="updated_at" type="timestamp"/>
+        </createTable>
+
+        <addUniqueConstraint tableName="payment" columnNames="provider, order_id"
+                             constraintName="payment_provider_order_uk"/>
+        <createIndex tableName="payment" indexName="payment_user_idx">
+            <column name="user_id"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- автопродление по сохранённой карте: у пользователя не больше одного действующего -->
+    <changeSet id="INVEST-001-create-account-auto-renewal-table" author="d.v.kornilovich">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="account_auto_renewal"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="account_auto_renewal">
+            <column autoIncrement="true" name="id" type="bigserial">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="user_id" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="plan" type="varchar(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="provider" type="varchar(32)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- токен сохранённой карты у провайдера (RebillId), не номер карты -->
+            <column name="rebill_id" type="varchar(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="card_pan" type="varchar(32)"/>
+            <!-- UTC: когда списать в следующий раз -->
+            <column name="next_charge_at" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="failed_attempts" type="int" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="payment_id" type="bigint">
+                <constraints foreignKeyName="auto_renewal_payment_fk" referencedTableName="payment"
+                             referencedColumnNames="id"/>
+            </column>
+            <column name="created_at" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <!-- UTC; заполнено - отключено -->
+            <column name="cancelled_at" type="timestamp"/>
+            <column name="cancel_reason" type="varchar(32)"/>
+        </createTable>
+
+        <sql>create unique index account_auto_renewal_active_uk on account_auto_renewal (user_id)
+            where cancelled_at is null</sql>
+    </changeSet>
+
+    <!-- подписка, оплаченная платежом -->
+    <changeSet id="INVEST-001-add-account-subscription-payment" author="d.v.kornilovich">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="account_subscription" columnName="payment_id"/>
+            </not>
+        </preConditions>
+
+        <addColumn tableName="account_subscription">
+            <column name="payment_id" type="bigint"/>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>

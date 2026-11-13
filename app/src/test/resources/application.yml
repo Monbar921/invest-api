@@ -75,10 +75,26 @@ ru:
           premium:
             title: Премиум
             paid: true
+            price: 299
+            period: P1M
             limits:
               ALERTS: 52
               PORTFOLIO_POSITIONS: 300
             features: [CALENDAR_ICS]
+      # оплата для PaymentTest: клиент Т-Кассы замокан, автопродление вызывается из теста (шедулер выключен);
+      # premium продаётся (299 ₽ за месяц), basic - платный без цены, только ручная выдача
+      payments:
+        enabled: true
+        notification-url: https://invest.test/api/payments/notifications/tbank
+        success-url: https://invest.test/plan?payment={paymentId}
+        fail-url: https://invest.test/plan?payment={paymentId}&failed=true
+        offer-url: https://invest.test/offer
+        privacy-url: https://invest.test/privacy
+        renewal:
+          scheduler: false
+        tbank:
+          terminal-key: InvestTestDEMO
+          password: test-password
       # бот включён без long polling и проверки связи: TelegramTest вызывает обработчик сам, клиент замокан
       telegram:
         enabled: true

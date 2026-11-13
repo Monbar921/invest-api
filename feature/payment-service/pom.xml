@@ -1,0 +1,35 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>ru.invest.api</groupId>
+        <artifactId>feature</artifactId>
+        <version>${revision}</version>
+    </parent>
+
+    <!-- оплата тарифов: платёжный провайдер за интерфейсом, webhook, история платежей, автопродление -->
+    <artifactId>payment-service</artifactId>
+
+    <dependencies>
+        <!-- выдача оплаченного тарифа -->
+        <dependency>
+            <groupId>ru.invest.api</groupId>
+            <artifactId>account-service</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- RestClient к API провайдера, разбор JSON webhook -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- проверка настройки оплаты при старте -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+    </dependencies>
+
+</project>

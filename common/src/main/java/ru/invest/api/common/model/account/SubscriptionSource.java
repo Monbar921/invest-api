@@ -5,5 +5,7 @@ package ru.invest.api.common.model.account;
  */
 public enum SubscriptionSource {
     /** Выдана вручную через maintenance-эндпоинт */
-    MANUAL
+    MANUAL,
+    /** Оплачена: покупка или автопродление (payment_id - платёж) */
+    PAYMENT
 }

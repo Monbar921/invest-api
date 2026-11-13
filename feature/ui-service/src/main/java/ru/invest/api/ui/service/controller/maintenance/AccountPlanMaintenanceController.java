@@ -15,12 +15,13 @@ import org.springframework.web.bind.annotation.RestController;
 import ru.invest.api.account.service.usecase.AccountPlanUseCase;
 import ru.invest.api.dto.account.AccountPlanDto;
 import ru.invest.api.dto.account.GrantPlanRequest;
+import ru.invest.api.payment.service.usecase.PaymentUseCase;
 import ru.invest.api.ui.service.mapper.AccountDtoMapper;
 
 import static org.springframework.http.HttpHeaders.FROM;
 
 /**
- * Выдача и отзыв тарифа вручную - для тестов и первых пользователей, пока нет оплаты. userId - sub Keycloak.
+ * Выдача и отзыв тарифа вручную - для тестов, первых пользователей и поддержки. userId - sub Keycloak.
  * Через gateway недоступно, как и остальные maintenance-эндпоинты.
  */
 @RestController
@@ -28,25 +29,29 @@ import static org.springframework.http.HttpHeaders.FROM;
 @RequiredArgsConstructor
 public class AccountPlanMaintenanceController {
     private final AccountPlanUseCase accountPlanUseCase;
+    private final PaymentUseCase paymentUseCase;
     private final AccountDtoMapper accountDtoMapper;
 
+    /** То же, что видит пользователь на странице «Тариф» */
     @GetMapping
     public AccountPlanDto getPlan(@PathVariable final String userId) {
-        return accountDtoMapper.toDto(accountPlanUseCase.getPlan(userId));
+        return accountDtoMapper.toDto(accountPlanUseCase.getPlan(userId), paymentUseCase.info(userId));
     }
 
     /**
-     * Выдать тариф с текущего момента; действующая подписка заменяется. Неизвестный тариф, тариф по умолчанию или
-     * срок в прошлом - 422.
+     * Выдать тариф с текущего момента; действующая подписка заменяется, автопродление отключается. Неизвестный
+     * тариф, тариф по умолчанию или срок в прошлом - 422.
      */
     @PutMapping
     public AccountPlanDto grant(@RequestHeader(FROM) final String user, @PathVariable final String userId,
                                 @RequestBody @Valid final GrantPlanRequest request) {
-        return accountDtoMapper.toDto(accountPlanUseCase.grant(userId, accountDtoMapper.toModel(request), user));
+        return accountDtoMapper.toDto(accountPlanUseCase.grant(userId, accountDtoMapper.toModel(request), user),
+                paymentUseCase.info(userId));
     }
 
     /**
-     * Отозвать подписку: пользователь сразу на тарифе по умолчанию. Подписки не было - тоже 204.
+     * Отозвать подписку: пользователь сразу на тарифе по умолчанию, автопродление отключается. Подписки не было -
+     * тоже 204.
      */
     @DeleteMapping
     @ResponseStatus(HttpStatus.NO_CONTENT)

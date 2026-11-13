@@ -133,10 +133,33 @@ ru:
             title: Премиум
             description: Больше правил уведомлений и покупок в портфеле
             paid: true
+            # цена за period (рубли) - заготовка до решения 0.4; без price и period тариф не продаётся
+            price: 299
+            period: P1M
             limits:
               ALERTS: 500
               PORTFOLIO_POSITIONS: 2000
             features: [CALENDAR_ICS]
+      # оплата тарифов (docs/features/INVEST-001-payments): Т-Касса, выключена до решений владельца 0.1, 0.2, 0.5.
+      # Ключи терминала - только из переменных окружения. notification-url - публичный адрес gateway: Т-Касса шлёт
+      # туда webhook; локально без публичного адреса статус узнаётся опросом (GET /account/payments/{id})
+      payments:
+        enabled: ${PAYMENTS_ENABLED:false}
+        provider: tbank
+        notification-url: ${PAYMENTS_NOTIFICATION_URL:http://localhost:8082/api/payments/notifications/tbank}
+        success-url: ${PAYMENTS_RETURN_URL:http://localhost:5173/plan}?payment={paymentId}
+        fail-url: ${PAYMENTS_RETURN_URL:http://localhost:5173/plan}?payment={paymentId}
+        offer-url: ${PAYMENTS_OFFER_URL:}
+        privacy-url: ${PAYMENTS_PRIVACY_URL:}
+        renewal:
+          interval: PT1H
+          charge-before: P1D
+          retry-interval: P1D
+          max-attempts: 3
+        tbank:
+          api-url: ${TBANK_API_URL:https://securepay.tinkoff.ru/v2}
+          terminal-key: ${TBANK_TERMINAL_KEY:}
+          password: ${TBANK_TERMINAL_PASSWORD:}
       # Telegram-бот (docs/features/INVEST-001-telegram-bot); токен - только из переменной окружения
       telegram:
         enabled: ${TELEGRAM_BOT_ENABLED:false}

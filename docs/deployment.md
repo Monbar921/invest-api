@@ -54,9 +54,24 @@ Telegram-бот: `ru.invest.api.telegram.enabled` (по умолчанию вы�
 
 Тарифы: `ru.invest.api.plans.default-plan` (тариф без подписки), `zone` (пояс последнего дня подписки, Москва),
 `plans.<id>` - `title`, `description`, `paid`, `limits` (все из `ALERTS`, `PORTFOLIO_POSITIONS`, не меньше 0),
-`features` (`CALENDAR_ICS`). id тарифа хранится в подписках - у выданного не менять. Ошибка в настройке не даёт
+`features` (`CALENDAR_ICS`), `price` и `period` - цена и срок для оплаты (только у платного, вместе). id тарифа
+хранится в подписках - у выданного не менять. Ошибка в настройке не даёт
 приложению стартовать. Выдать тариф: `PUT /internal/rest/maintenance/account/<sub Keycloak>/plan` с заголовком
 `From` и телом `{"plan": "premium", "validUntil": "2027-01-31"}`; отозвать - `DELETE` того же адреса.
+
+Оплата ([INVEST-001-payments](features/INVEST-001-payments/)): `ru.invest.api.payments` - `enabled`
+(`PAYMENTS_ENABLED`, по умолчанию `false`), `provider` (`tbank`), `notification-url` (`PAYMENTS_NOTIFICATION_URL` -
+публичный адрес gateway `https://<хост>/api/payments/notifications/tbank`, его же указать в кабинете Т-Кассы),
+`success-url` / `fail-url` (`PAYMENTS_RETURN_URL` - страница «Тариф» UI, к ней добавляется `?payment={paymentId}`),
+`offer-url` / `privacy-url` (`PAYMENTS_OFFER_URL`, `PAYMENTS_PRIVACY_URL` - оферта и политика персональных данных),
+`renewal` - `interval` (шедулер, 1 ч), `charge-before` (за сколько до конца срока списывать, сутки), `retry-interval`
+(сутки), `max-attempts` (3), `scheduler`. Терминал Т-Кассы - только из переменных окружения: `TBANK_TERMINAL_KEY`,
+`TBANK_TERMINAL_PASSWORD` (пароль терминала - секрет: им подписываются запросы и проверяется webhook), адрес API -
+`TBANK_API_URL` (по умолчанию `https://securepay.tinkoff.ru/v2`, тестовый терминал `...DEMO` - тот же адрес).
+Включённая оплата без адресов или ключей не даёт приложению стартовать. Цена и срок - у тарифа: `plans.<id>.price`
+(рубли) и `period` (`P1M`, `P1Y`); без них тариф не продаётся. Локально Т-Касса не достучится до webhook - статус
+платежа узнаётся опросом со страницы «Тариф», автопродление при этом не включается (карту приносит только webhook).
+Запустить автопродление сейчас: `POST /internal/rest/maintenance/payments/renewals`.
 
 Брокеры-партнёры (блок «Купить у брокера»): `ru.invest.api.broker-referral.partners` - список `id`, `name`,
 `url-template` (https, подстановки `{ticker}` `{isin}` `{erid}`), `advertiser` (наименование и ИНН для маркировки

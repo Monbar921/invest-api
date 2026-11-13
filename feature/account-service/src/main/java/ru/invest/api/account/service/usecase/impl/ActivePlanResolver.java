@@ -60,7 +60,8 @@ class ActivePlanResolver {
         limits.putAll(plan.getLimits());
         final Set<PlanFeature> features = EnumSet.noneOf(PlanFeature.class);
         features.addAll(plan.getFeatures());
-        return new PlanModel(id, plan.getTitle(), plan.getDescription(), plan.isPaid(), limits, features);
+        return new PlanModel(id, plan.getTitle(), plan.getDescription(), plan.isPaid(), limits, features,
+                plan.getPrice(), plan.getPeriod());
     }
 
     /**

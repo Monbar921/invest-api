@@ -19,7 +19,7 @@ public class AccountPlanDto {
     private PlanDto plan;
     /** Тариф по умолчанию: подписки нет или она закончилась */
     private boolean defaultPlan;
-    /** Откуда подписка: MANUAL - выдана вручную; null - тариф по умолчанию */
+    /** Откуда подписка: MANUAL - выдана вручную, PAYMENT - оплачена; null - тариф по умолчанию */
     private String source;
     /** Последний день подписки включительно; null - бессрочно или тариф по умолчанию */
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
@@ -28,4 +28,6 @@ public class AccountPlanDto {
     private List<PlanLimitUsageDto> limits;
     /** Все тарифы - для сравнения */
     private List<PlanDto> plans;
+    /** Оплата: включена ли, оферта и политика, автопродление */
+    private PaymentsInfoDto payments;
 }

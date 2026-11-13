@@ -22,6 +22,7 @@ import ru.invest.api.common.exception.GeneralNotFoundEntityException;
 import ru.invest.api.common.exception.GeneralPaymentRequiredException;
 import ru.invest.api.common.exception.GeneralUnauthorizedException;
 import ru.invest.api.common.exception.GeneralUnprocessableEntityException;
+import ru.invest.api.payment.service.provider.PaymentProviderException;
 import ru.ttech.piapi.core.connector.exception.ServiceRuntimeException;
 
 import java.util.stream.Collectors;
@@ -154,6 +155,17 @@ public class GlobalExceptionHandler {
         final ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.UNPROCESSABLE_CONTENT);
         problem.setTitle("Unprocessable Entity");
         problem.setDetail(ex.getMessage());
+        return problem;
+    }
+
+    // платёжный провайдер отказал или не ответил: подробности - в лог, пользователю - что повторить позже
+    @ExceptionHandler(PaymentProviderException.class)
+    @ResponseStatus(HttpStatus.BAD_GATEWAY)
+    public ProblemDetail handlePaymentProvider(final PaymentProviderException ex) {
+        log.error("Payment provider error: {}", ex.getMessage());
+        final ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.BAD_GATEWAY);
+        problem.setTitle("Bad Gateway");
+        problem.setDetail("Платёжный сервис не ответил, попробуйте позже");
         return problem;
     }
 

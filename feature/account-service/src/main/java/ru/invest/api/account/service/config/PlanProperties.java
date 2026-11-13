@@ -12,6 +12,8 @@ import org.springframework.validation.annotation.Validated;
 import ru.invest.api.common.model.account.PlanFeature;
 import ru.invest.api.common.model.account.PlanLimit;
 
+import java.math.BigDecimal;
+import java.time.Period;
 import java.time.ZoneId;
 import java.util.EnumMap;
 import java.util.EnumSet;
@@ -60,6 +62,13 @@ public class PlanProperties {
                 && plan.getLimits().values().stream().allMatch(max -> max != null && max >= 0));
     }
 
+    @AssertTrue(message = "цена задаётся только платному тарифу: больше 0, вместе со сроком period (P1M, P1Y)")
+    public boolean isPricesValid() {
+        return plans.values().stream().allMatch(plan -> plan.getPrice() == null && plan.getPeriod() == null
+                || plan.isPaid() && plan.getPrice() != null && plan.getPrice().signum() > 0
+                && plan.getPeriod() != null && !plan.getPeriod().isNegative() && !plan.getPeriod().isZero());
+    }
+
     @Data
     public static class Plan {
         /** Название для пользователя */
@@ -69,8 +78,14 @@ public class PlanProperties {
         /** Короткое описание на странице «Тариф» */
         private String description;
 
-        /** Платный тариф; пока оплаты нет (этап 7), выдаётся только вручную */
+        /** Платный тариф. Без цены выдаётся только вручную */
         private boolean paid;
+
+        /** Цена за срок period, рубли; null - тариф не продаётся (только ручная выдача) */
+        private BigDecimal price;
+
+        /** Сколько даёт одна оплата: P1M - месяц, P1Y - год */
+        private Period period;
 
         /** Лимит - сколько можно создать */
         private Map<PlanLimit, Integer> limits = new EnumMap<>(PlanLimit.class);

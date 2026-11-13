@@ -6,35 +6,44 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.invest.api.account.service.config.PlanProperties;
 import ru.invest.api.account.service.model.AccountPlanModel;
+import ru.invest.api.account.service.model.CurrentSubscriptionModel;
 import ru.invest.api.account.service.model.GrantPlanModel;
 import ru.invest.api.account.service.model.LimitUsageModel;
+import ru.invest.api.account.service.model.PaidSubscriptionModel;
 import ru.invest.api.account.service.model.PlanModel;
 import ru.invest.api.account.service.usecase.AccountPlanUseCase;
+import ru.invest.api.common.entity.AccountAutoRenewal;
 import ru.invest.api.common.entity.AccountSubscription;
 import ru.invest.api.common.exception.GeneralUnprocessableEntityException;
 import ru.invest.api.common.exception.enums.ExceptionErrorCode;
 import ru.invest.api.common.mapper.DateTimeMapper;
 import ru.invest.api.common.model.account.PlanLimit;
 import ru.invest.api.common.model.account.SubscriptionSource;
+import ru.invest.api.common.repository.AccountAutoRenewalRepository;
 import ru.invest.api.common.repository.AccountSubscriptionRepository;
 import ru.invest.api.common.repository.BondAlertRepository;
 import ru.invest.api.common.repository.PortfolioPositionRepository;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Period;
 import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class AccountPlanUseCaseImpl implements AccountPlanUseCase {
     private static final int MAX_COMMENT_LENGTH = 500;
+    /** created_by / updated_by подписок, выданных и отозванных оплатой */
+    private static final String PAYMENT_ACTOR = "payment";
 
     private final PlanProperties properties;
     private final ActivePlanResolver resolver;
     private final AccountSubscriptionRepository repository;
+    private final AccountAutoRenewalRepository autoRenewalRepository;
     private final BondAlertRepository alertRepository;
     private final PortfolioPositionRepository positionRepository;
     private final DateTimeMapper dateTimeMapper;
@@ -74,6 +83,7 @@ public class AccountPlanUseCaseImpl implements AccountPlanUseCase {
         final LocalDateTime now = dateTimeMapper.getNow();
         // подписка у пользователя одна: новая выдача заменяет действующую
         revokeActive(userId, grantedBy, now);
+        cancelAutoRenewal(userId, now);
         repository.save(new AccountSubscription()
                 .setUserId(userId)
                 .setPlan(request.plan())
@@ -91,9 +101,76 @@ public class AccountPlanUseCaseImpl implements AccountPlanUseCase {
     @Override
     @Transactional
     public void revoke(final String userId, final String revokedBy) {
-        if (revokeActive(userId, revokedBy, dateTimeMapper.getNow()) > 0) {
+        final LocalDateTime now = dateTimeMapper.getNow();
+        if (revokeActive(userId, revokedBy, now) > 0) {
             log.info("Plan of user {} revoked by {}", userId, revokedBy);
         }
+        cancelAutoRenewal(userId, now);
+    }
+
+    @Override
+    public Optional<PlanModel> findPlan(final String planId) {
+        return planId != null && properties.getPlans().containsKey(planId)
+                ? Optional.of(resolver.plan(planId))
+                : Optional.empty();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public CurrentSubscriptionModel current(final String userId) {
+        final ActivePlanResolver.ActivePlan active = resolver.resolve(userId);
+        final AccountSubscription subscription = active.subscription();
+        return new CurrentSubscriptionModel(active.plan().id(), subscription == null,
+                subscription == null ? null : subscription.getValidUntil());
+    }
+
+    @Override
+    @Transactional
+    public PaidSubscriptionModel grantPaid(final String userId, final String planId, final Period period,
+                                           final long paymentId) {
+        final LocalDateTime now = dateTimeMapper.getNow();
+        final ActivePlanResolver.ActivePlan active = resolver.resolve(userId);
+        final AccountSubscription current = active.subscription();
+        // тот же тариф со сроком - продлеваем от его последнего дня; иначе новый срок от сегодняшнего
+        final LocalDate base = current != null && planId.equals(active.plan().id()) && current.getValidUntil() != null
+                ? lastDay(current.getValidUntil())
+                : todayInZone();
+        final LocalDate lastDay = base.plus(period);
+        revokeActive(userId, PAYMENT_ACTOR, now);
+        final AccountSubscription subscription = repository.save(new AccountSubscription()
+                .setUserId(userId)
+                .setPlan(planId)
+                .setSource(SubscriptionSource.PAYMENT)
+                .setValidFrom(now)
+                .setValidUntil(endOfDay(lastDay))
+                .setPaymentId(paymentId)
+                .setCreatedAt(now)
+                .setCreatedBy(PAYMENT_ACTOR));
+        log.info("Plan {} paid by payment {} for user {} until {} inclusive", planId, paymentId, userId, lastDay);
+        return new PaidSubscriptionModel(subscription.getId(), subscription.getValidUntil(), lastDay);
+    }
+
+    @Override
+    @Transactional
+    public void revokePaid(final long subscriptionId) {
+        final LocalDateTime now = dateTimeMapper.getNow();
+        repository.findById(subscriptionId)
+                .filter(subscription -> subscription.getRevokedAt() == null)
+                .filter(subscription -> subscription.getValidUntil() == null
+                        || subscription.getValidUntil().isAfter(now))
+                .ifPresent(subscription -> {
+                    repository.save(subscription.setRevokedAt(now).setUpdatedAt(now).setUpdatedBy(PAYMENT_ACTOR));
+                    log.info("Paid subscription {} of user {} revoked: payment refunded", subscriptionId,
+                            subscription.getUserId());
+                });
+    }
+
+    /** Ручная смена тарифа отключает автопродление: иначе оно продлило бы заменённый тариф */
+    private void cancelAutoRenewal(final String userId, final LocalDateTime now) {
+        autoRenewalRepository.findByUserIdAndCancelledAtIsNull(userId).ifPresent(renewal -> {
+            autoRenewalRepository.save(renewal.setCancelledAt(now).setCancelReason(AccountAutoRenewal.CANCEL_MANUAL));
+            log.info("Auto renewal {} of user {} cancelled: plan changed manually", renewal.getId(), userId);
+        });
     }
 
     private int revokeActive(final String userId, final String by, final LocalDateTime now) {

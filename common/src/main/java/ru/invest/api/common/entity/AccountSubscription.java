@@ -57,6 +57,10 @@ public class AccountSubscription {
     @Column(name = "comment")
     private String comment;
 
+    /** Платёж, которым оплачена (source = PAYMENT) */
+    @Column(name = "payment_id")
+    private Long paymentId;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 

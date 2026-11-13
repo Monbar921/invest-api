@@ -73,7 +73,36 @@ class PlanPropertiesTest {
         assertFails(FREE + "features=AI_SUMMARY");
     }
 
-    private void assertFails(final String override) {
+    @Test
+    void priceOfPaidPlanStarts() {
+        runner.withPropertyValues(valid())
+                .withPropertyValues(PREFIX + "plans.pro.title=Про", PREFIX + "plans.pro.paid=true",
+                        PREFIX + "plans.pro.limits.ALERTS=1", PREFIX + "plans.pro.limits.PORTFOLIO_POSITIONS=1",
+                        PREFIX + "plans.pro.price=299.50", PREFIX + "plans.pro.period=P1M")
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    final PlanProperties.Plan pro = context.getBean(PlanProperties.class).getPlans().get("pro");
+                    assertThat(pro.getPrice()).isEqualByComparingTo("299.50");
+                    assertThat(pro.getPeriod()).isEqualTo(java.time.Period.ofMonths(1));
+                });
+    }
+
+    @Test
+    void badPriceFailsStartup() {
+        // цена у бесплатного, без срока, срок без цены, ноль
+        assertFails(FREE + "price=100", FREE + "period=P1M");
+        runner.withPropertyValues(valid())
+                .withPropertyValues(FREE + "paid=true", FREE + "price=100")
+                .run(context -> assertThat(context).hasFailed());
+        runner.withPropertyValues(valid())
+                .withPropertyValues(FREE + "paid=true", FREE + "period=P1M")
+                .run(context -> assertThat(context).hasFailed());
+        runner.withPropertyValues(valid())
+                .withPropertyValues(FREE + "paid=true", FREE + "price=0", FREE + "period=P1M")
+                .run(context -> assertThat(context).hasFailed());
+    }
+
+    private void assertFails(final String... override) {
         runner.withPropertyValues(valid())
                 .withPropertyValues(override)
                 .run(context -> assertThat(context).hasFailed());

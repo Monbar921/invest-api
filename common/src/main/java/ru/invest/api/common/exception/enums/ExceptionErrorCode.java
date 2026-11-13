@@ -19,6 +19,8 @@ public enum ExceptionErrorCode {
     ALERT_INVALID,
     PORTFOLIO_INVALID,
     PLAN_INVALID,
+    PAYMENT_INVALID,
+    PAYMENT_NOT_FOUND,
 
     UNAUTHORIZED
 }

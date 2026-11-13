@@ -20,6 +20,7 @@ import ru.invest.api.cb.rf.supplier.client.feign.CbRfClient;
 import ru.invest.api.config.InvestApiTestConfiguration;
 import ru.invest.api.news.supplier.client.feign.MoexIssClient;
 import ru.invest.api.news.supplier.client.http.NewsHttpClient;
+import ru.invest.api.payment.service.provider.tbank.TbankClient;
 import ru.invest.api.tinkoff.supplier.wrapper.InstrumentsGrpcRateLimitedWrapper;
 import ru.invest.api.tinkoff.supplier.wrapper.MarketDataGrpcRateLimitedWrapper;
 import ru.tinkoff.piapi.contract.v1.BondsResponse;
@@ -50,6 +51,9 @@ public abstract class AbstractInvestApplicationTest {
     // клиент Telegram API: тесты получают мок через @Autowired TelegramClient
     @MockitoBean
     private TelegramClient telegramClient;
+    // HTTP к Т-Кассе: PaymentTest получает мок через @Autowired TbankClient
+    @MockitoBean
+    private TbankClient tbankClient;
 
     public static final PostgreSQLContainer postgreSQLContainer = new PostgreSQLContainer("postgres:17.6")
             .withDatabaseName("invest")
