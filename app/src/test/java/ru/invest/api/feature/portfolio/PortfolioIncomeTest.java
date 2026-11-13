@@ -35,6 +35,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.comparesEqualTo;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -228,6 +229,33 @@ public class PortfolioIncomeTest {
         // 13% со 100 по прибыльной облигации
         assertThat(total.tax(), comparesEqualTo(new BigDecimal("13")));
         assertThat(total.fullIncome(), comparesEqualTo(new BigDecimal("-13")));
+    }
+
+    /** XIRR позиции моложе 30 дней не считается: годовая ставка за неделю раздувается до тысяч процентов */
+    @Test
+    void xirrNeedsThirtyDays() {
+        final BondModel bond = bond("1000", "101", "0", DAY_0.plusYears(5), List.of(), List.of());
+        final IncomeModel week = IncomeAggregator.of("rub", List.of(income(DAY_0.plusDays(7), bond,
+                List.of(lot(1L, DAY_0, 1, "100", BigDecimal.ZERO, null)), List.of())), false, null);
+        final IncomeModel month = IncomeAggregator.of("rub", List.of(income(DAY_0.plusDays(30), bond,
+                List.of(lot(1L, DAY_0, 1, "100", BigDecimal.ZERO, null)), List.of())), false, null);
+
+        assertThat(week.fullIncome(), comparesEqualTo(BigDecimal.TEN));
+        assertThat(week.xirr(), nullValue());
+        assertThat(month.xirr(), notNullValue());
+    }
+
+    /** Части дохода в копейках складываются ровно в полный доход, хотя каждая округлена отдельно */
+    @Test
+    void breakdownAddsUpToTotal() {
+        final BondModel bond = bond("1000", "100.333", "1.111", DAY_0.plusYears(2),
+                List.of(couponOn(DAY_0.plusDays(20), "10.005"), couponOn(DAY_0.plusDays(200), "10.005")), List.of());
+        final BondIncome income = income(DAY_0.plusDays(60), bond,
+                List.of(lot(1L, DAY_0, 3, "99.777", new BigDecimal("0.333"), "0.335")), List.of());
+        final IncomeModel model = IncomeAggregator.of("rub", List.of(income), false, TAX_13);
+
+        assertThat(model.priceIncome().add(model.couponIncome()).add(model.aciIncome()).subtract(model.commission())
+                .subtract(model.tax()), comparesEqualTo(model.fullIncome()));
     }
 
     @Test

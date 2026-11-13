@@ -6,6 +6,9 @@ import ru.invest.api.portfolio.service.usecase.impl.BondIncome.FlowKind;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
@@ -20,6 +23,11 @@ public final class IncomeAggregator {
     private static final int PERCENT_SCALE = 2;
     private static final int SCALE = 10;
     private static final String RUB = "rub";
+    /**
+     * XIRR - только если от первого потока до последнего не меньше 30 дней: на коротком сроке годовая ставка
+     * раздувается до тысяч процентов (+1 % за неделю - это ~68 % годовых) и пугает больше, чем сообщает
+     */
+    private static final int MIN_XIRR_DAYS = 30;
 
     private IncomeAggregator() {
     }
@@ -67,8 +75,8 @@ public final class IncomeAggregator {
         BigDecimal fullIncomePercent = null;
         BigDecimal xirr = null;
         if (hasValue) {
-            priceIncome = soldAmount.add(currentAmount).add(amortization).subtract(buyAmount);
-            profit = priceIncome.add(coupons).add(aciIncome).subtract(commission);
+            profit = soldAmount.add(currentAmount).add(amortization).subtract(buyAmount)
+                    .add(coupons).add(aciIncome).subtract(commission);
             // налог - с каждой облигации отдельно: убыток по одной не уменьшает налог по другой
             tax = taxRate == null
                     ? BigDecimal.ZERO
@@ -76,22 +84,32 @@ public final class IncomeAggregator {
                             .map(income -> signedSum(income.flows(), amount).max(BigDecimal.ZERO))
                             .map(income -> income.multiply(taxRate).divide(HUNDRED, SCALE, RoundingMode.HALF_UP))
                             .reduce(BigDecimal.ZERO, BigDecimal::add);
-            fullIncome = profit.subtract(tax);
+            fullIncome = money(profit.subtract(tax));
+            profit = money(profit);
+            tax = money(tax);
+            // части в копейках складываются ровно в полный доход: копейка округления остаётся в доходе от цены
+            priceIncome = fullIncome.add(tax).add(money(commission)).subtract(money(coupons)).subtract(money(aciIncome));
             final BigDecimal invested = buyAmount.add(buyAci);
             fullIncomePercent = invested.signum() == 0
                     ? null
                     : fullIncome.multiply(HUNDRED).divide(invested, PERCENT_SCALE, RoundingMode.HALF_UP);
-            xirr = incomplete
-                    ? null
-                    : Xirr.percent(base.stream()
-                            .flatMap(income -> income.flows().stream())
-                            .map(flow -> new Xirr.CashFlow(flow.date(), flow.kind().signed(amount.apply(flow))))
-                            .toList());
+            final List<Xirr.CashFlow> flows = base.stream()
+                    .flatMap(income -> income.flows().stream())
+                    .map(flow -> new Xirr.CashFlow(flow.date(), flow.kind().signed(amount.apply(flow))))
+                    .toList();
+            xirr = incomplete || spanDays(flows) < MIN_XIRR_DAYS ? null : Xirr.percent(flows);
         }
         return new IncomeModel(inRub ? RUB : currency, money(buyAmount), money(buyAci), money(coupons),
                 money(amortization), money(soldAmount), money(saleAci), hasValue ? money(currentAmount) : null,
                 money(currentAci), money(commission), money(priceIncome), money(aciIncome), money(profit), taxRate,
                 money(tax), money(fullIncome), fullIncomePercent, xirr, unknownCoupons, incomplete);
+    }
+
+    /** Дней от первого потока до последнего */
+    private static long spanDays(final List<Xirr.CashFlow> flows) {
+        final LocalDate first = flows.stream().map(Xirr.CashFlow::date).min(Comparator.naturalOrder()).orElse(null);
+        final LocalDate last = flows.stream().map(Xirr.CashFlow::date).max(Comparator.naturalOrder()).orElse(null);
+        return first == null ? 0 : ChronoUnit.DAYS.between(first, last);
     }
 
     private static BigDecimal sum(final List<BondIncome> incomes, final Function<Flow, BigDecimal> amount,

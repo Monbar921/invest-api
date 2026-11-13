@@ -24,6 +24,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +40,7 @@ public class PortfolioTradeUseCaseImpl implements PortfolioTradeUseCase {
     private static final int MAX_SALES = 1000;
     private static final BigDecimal MIN_PRICE = new BigDecimal("0.01");
     private static final BigDecimal MAX_PRICE = BigDecimal.valueOf(300);
+    private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("dd.MM.yyyy");
 
     private final PortfolioSaleRepository saleRepository;
     private final PortfolioPositionRepository positionRepository;
@@ -73,14 +75,14 @@ public class PortfolioTradeUseCaseImpl implements PortfolioTradeUseCase {
     @Transactional
     public TradeModel createSale(final String userId, final SaleRequestModel request) {
         if (request.ticker() == null || request.ticker().isBlank()) {
-            throw unprocessable("ticker is required");
+            throw unprocessable("Выберите облигацию");
         }
         final LocalDate sellDate = validate(request);
         // 404, если такой облигации нет
         final BondModel bond = bondUseCase.getWithSchedule(request.ticker());
         validateBeforeMaturity(sellDate, bond);
         if (saleRepository.countByUserId(userId) >= MAX_SALES) {
-            throw unprocessable("No more than %d sales per user".formatted(MAX_SALES));
+            throw unprocessable("Продаж не может быть больше %d".formatted(MAX_SALES));
         }
         final PortfolioBroker broker = brokerResolver.resolve(userId, request.broker());
         final PortfolioSale sale = saleRepository.save(fill(new PortfolioSale()
@@ -130,8 +132,8 @@ public class PortfolioTradeUseCaseImpl implements PortfolioTradeUseCase {
         final List<PortfolioSale> sales = saleRepository.findByUserIdAndTicker(userId, sale.getTicker());
         final LotAllocation allocation = LotAllocation.of(lots, sales);
         if (allocation.unsold() != null) {
-            throw unprocessable("Not enough %s bonds bought by %s for the sales: bought %d, sold %d by that date"
-                    .formatted(sale.getTicker(), allocation.unsold().getSellDate(),
+            throw unprocessable("Не хватает облигаций %s: к %s куплено %d шт., а продано %d шт."
+                    .formatted(sale.getTicker(), DATE.format(allocation.unsold().getSellDate()),
                             boughtBy(lots, allocation.unsold().getSellDate()),
                             soldBy(sales, allocation.unsold().getSellDate())));
         }
@@ -158,21 +160,21 @@ public class PortfolioTradeUseCaseImpl implements PortfolioTradeUseCase {
      */
     private LocalDate validate(final SaleRequestModel request) {
         if (request.quantity() == null || request.quantity() < 1 || request.quantity() > MAX_QUANTITY) {
-            throw unprocessable("quantity must be from 1 to %d".formatted(MAX_QUANTITY));
+            throw unprocessable("Количество - от 1 до %d".formatted(MAX_QUANTITY));
         }
         if (request.sellPrice() == null
                 || request.sellPrice().compareTo(MIN_PRICE) < 0
                 || request.sellPrice().compareTo(MAX_PRICE) > 0) {
-            throw unprocessable("sellPrice must be from %s to %s %% of nominal".formatted(MIN_PRICE.toPlainString(),
+            throw unprocessable("Цена продажи - от %s до %s %% номинала".formatted(MIN_PRICE.toPlainString(),
                     MAX_PRICE.toPlainString()));
         }
         if (isNegative(request.aci()) || isNegative(request.commission())) {
-            throw unprocessable("aci and commission must not be negative");
+            throw unprocessable("НКД и комиссия не могут быть отрицательными");
         }
         final LocalDate today = dateTimeMapper.getNow().toLocalDate();
         final LocalDate sellDate = Optional.ofNullable(request.sellDate()).orElse(today);
         if (sellDate.isAfter(today)) {
-            throw unprocessable("sellDate must not be in the future");
+            throw unprocessable("Дата продажи не может быть в будущем");
         }
         return sellDate;
     }
@@ -181,8 +183,8 @@ public class PortfolioTradeUseCaseImpl implements PortfolioTradeUseCase {
     private static void validateBeforeMaturity(final LocalDate sellDate, final BondModel bond) {
         final LocalDateTime maturity = bond == null ? null : bond.getMaturityDate();
         if (maturity != null && !sellDate.isBefore(maturity.toLocalDate())) {
-            throw unprocessable("sellDate must be before the maturity date %s: the bond is redeemed automatically"
-                    .formatted(maturity.toLocalDate()));
+            throw unprocessable("Продать можно только до даты погашения %s: в эту дату облигация погашается сама"
+                    .formatted(DATE.format(maturity.toLocalDate())));
         }
     }
 

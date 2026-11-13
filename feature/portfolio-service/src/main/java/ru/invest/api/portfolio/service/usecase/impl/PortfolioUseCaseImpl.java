@@ -35,6 +35,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -61,6 +62,7 @@ public class PortfolioUseCaseImpl implements PortfolioUseCase {
     private static final int MONEY_SCALE = 2;
     private static final int PERCENT_SCALE = 2;
     private static final Set<String> RUB_CODES = Set.of("RUB", "RUR");
+    private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("dd.MM.yyyy");
 
     private final PortfolioPositionRepository repository;
     private final PortfolioSaleRepository saleRepository;
@@ -215,8 +217,8 @@ public class PortfolioUseCaseImpl implements PortfolioUseCase {
                 .toList();
         final LotAllocation allocation = LotAllocation.of(lots, sales);
         if (allocation.unsold() != null) {
-            throw unprocessable("Sales of %s on %s would exceed the bonds bought by that date: change or delete the sale first"
-                    .formatted(position.getTicker(), allocation.unsold().getSellDate()));
+            throw unprocessable(("Продаже %s от %s не хватит купленных облигаций: сначала измените или удалите "
+                    + "продажу").formatted(position.getTicker(), DATE.format(allocation.unsold().getSellDate())));
         }
         return deletedId == null ? allocation.remaining(position) : 0;
     }
@@ -247,7 +249,7 @@ public class PortfolioUseCaseImpl implements PortfolioUseCase {
     /** НДФЛ - как в калькуляторе дохода: от 0 до 100 %, не задан - налог не считается */
     private static void validateTaxRate(final BigDecimal taxRatePercent) {
         if (taxRatePercent != null && (taxRatePercent.signum() < 0 || taxRatePercent.compareTo(HUNDRED) >= 0)) {
-            throw unprocessable("taxRatePercent must be from 0 to 100");
+            throw unprocessable("Ставка НДФЛ - от 0 до 100 %");
         }
     }
 
@@ -265,7 +267,7 @@ public class PortfolioUseCaseImpl implements PortfolioUseCase {
                     MAX_PRICE.toPlainString()));
         }
         if (isNegative(request.aci()) || isNegative(request.commission())) {
-            throw unprocessable("aci and commission must not be negative");
+            throw unprocessable("НКД и комиссия не могут быть отрицательными");
         }
         final LocalDate today = dateTimeMapper.getNow().toLocalDate();
         final LocalDate buyDate = Optional.ofNullable(request.buyDate()).orElse(today);
@@ -279,7 +281,8 @@ public class PortfolioUseCaseImpl implements PortfolioUseCase {
     private static void validateNotAfterMaturity(final LocalDate buyDate, final BondModel bond) {
         final LocalDateTime maturity = bond == null ? null : bond.getMaturityDate();
         if (maturity != null && buyDate.isAfter(maturity.toLocalDate())) {
-            throw unprocessable("buyDate must not be after the maturity date %s".formatted(maturity.toLocalDate()));
+            throw unprocessable("Дата покупки не может быть позже даты погашения %s"
+                    .formatted(DATE.format(maturity.toLocalDate())));
         }
     }
 
