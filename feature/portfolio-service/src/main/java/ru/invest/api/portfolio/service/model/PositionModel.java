@@ -5,10 +5,13 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
- * Позиция портфеля с текущей оценкой. Суммы - в валюте номинала, на всё количество.
+ * Позиция портфеля (покупка) с текущей оценкой. Суммы - в валюте номинала, на непроданный остаток покупки
+ * ({@code remainingQuantity}): проданные по FIFO части покупки в них не входят.
  *
  * @param bondName       null - облигации уже нет в системе
  * @param currency       валюта номинала; null - облигации нет
+ * @param quantity       сколько куплено
+ * @param remainingQuantity сколько из покупки не продано и не погашено
  * @param broker         имя брокера; null - не указан
  * @param nominal        текущий номинал одной облигации; null - облигации или цены нет
  * @param buyPrice       цена покупки, % от номинала
@@ -25,6 +28,8 @@ import java.time.LocalDateTime;
  *                       null - цены или одного из курсов нет
  * @param yieldToMaturity доходность к погашению, если купить сегодня по цене этой покупки (с сегодняшним НКД),
  *                        % годовых; null - посчитать нельзя
+ * @param aci            уплаченный НКД на всю покупку, как ввёл пользователь; null - не вводил
+ * @param commission     комиссия брокера за покупку, как ввёл пользователь; null - не вводил
  * @param createdAt      UTC
  */
 public record PositionModel(Long id,
@@ -33,6 +38,7 @@ public record PositionModel(Long id,
                             String isin,
                             String currency,
                             int quantity,
+                            int remainingQuantity,
                             LocalDate buyDate,
                             String broker,
                             BigDecimal nominal,
@@ -47,5 +53,7 @@ public record PositionModel(Long id,
                             BigDecimal currentAmountInRub,
                             BigDecimal revenueInRub,
                             BigDecimal yieldToMaturity,
+                            BigDecimal aci,
+                            BigDecimal commission,
                             LocalDateTime createdAt) {
 }

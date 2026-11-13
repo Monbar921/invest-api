@@ -22,15 +22,19 @@ import ru.invest.api.dto.portfolio.PortfolioCalendarDto;
 import ru.invest.api.dto.portfolio.PortfolioDto;
 import ru.invest.api.dto.portfolio.PortfolioPositionDto;
 import ru.invest.api.dto.portfolio.PortfolioPositionRequest;
+import ru.invest.api.dto.portfolio.PortfolioSaleRequest;
+import ru.invest.api.dto.portfolio.PortfolioTradeDto;
 import ru.invest.api.portfolio.service.usecase.PortfolioCalendarUseCase;
+import ru.invest.api.portfolio.service.usecase.PortfolioTradeUseCase;
 import ru.invest.api.portfolio.service.usecase.PortfolioUseCase;
 import ru.invest.api.ui.service.mapper.PortfolioDtoMapper;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
 /**
- * Портфель облигаций пользователя: покупки и доход от цены покупки до текущей. Пользователь - X-User-Id от gateway,
+ * Портфель облигаций пользователя: покупки, продажи, доход от цены и полный доход. Пользователь - X-User-Id от gateway,
  * без него 401; чужая позиция - 404. Наружу через gateway: /api/portfolio/** → /internal/rest/portfolio/**.
  */
 @Validated
@@ -39,15 +43,58 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PortfolioController {
     private final PortfolioUseCase portfolioUseCase;
+    private final PortfolioTradeUseCase portfolioTradeUseCase;
     private final PortfolioCalendarUseCase portfolioCalendarUseCase;
     private final PortfolioDtoMapper portfolioDtoMapper;
 
     /**
-     * Позиции с текущей ценой, стоимостью и доходом и итоги по валютам.
+     * Открытые позиции с текущей ценой, стоимостью, доходом от цены и полным доходом, закрытые позиции, итоги по
+     * валютам и весь портфель в рублях. taxRatePercent - ставка НДФЛ для полного дохода (как в калькуляторе), не задана -
+     * без налога; вне 0..100 - 422.
      */
     @GetMapping
-    public PortfolioDto getPortfolio(@RequestHeader(value = UserIdHeader.NAME, required = false) final String userId) {
-        return portfolioDtoMapper.toDto(portfolioUseCase.getPortfolio(UserIdHeader.require(userId)));
+    public PortfolioDto getPortfolio(@RequestHeader(value = UserIdHeader.NAME, required = false) final String userId,
+                                     @RequestParam(required = false) final BigDecimal taxRatePercent) {
+        return portfolioDtoMapper.toDto(portfolioUseCase.getPortfolio(UserIdHeader.require(userId), taxRatePercent));
+    }
+
+    /**
+     * Сделки: покупки, продажи и погашения, новые первыми.
+     */
+    @GetMapping("/trades")
+    public List<PortfolioTradeDto> getTrades(
+            @RequestHeader(value = UserIdHeader.NAME, required = false) final String userId) {
+        return portfolioDtoMapper.toTradeDto(portfolioTradeUseCase.getTrades(UserIdHeader.require(userId)));
+    }
+
+    /**
+     * Продажа, в том числе частичная. Облигации нет - 404; нет тикера, дата в будущем или не раньше погашения, в
+     * покупках на эту дату не хватает облигаций - 422.
+     */
+    @PostMapping("/sales")
+    @ResponseStatus(HttpStatus.CREATED)
+    public PortfolioTradeDto createSale(@RequestHeader(value = UserIdHeader.NAME, required = false) final String userId,
+                                        @RequestBody @Valid final PortfolioSaleRequest request) {
+        return portfolioDtoMapper.toDto(portfolioTradeUseCase.createSale(UserIdHeader.require(userId),
+                portfolioDtoMapper.toModel(request)));
+    }
+
+    /**
+     * Изменить продажу; тикер не меняется.
+     */
+    @PutMapping("/sales/{id}")
+    public PortfolioTradeDto updateSale(@RequestHeader(value = UserIdHeader.NAME, required = false) final String userId,
+                                        @PathVariable final Long id,
+                                        @RequestBody @Valid final PortfolioSaleRequest request) {
+        return portfolioDtoMapper.toDto(portfolioTradeUseCase.updateSale(UserIdHeader.require(userId), id,
+                portfolioDtoMapper.toModel(request)));
+    }
+
+    @DeleteMapping("/sales/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteSale(@RequestHeader(value = UserIdHeader.NAME, required = false) final String userId,
+                           @PathVariable final Long id) {
+        portfolioTradeUseCase.deleteSale(UserIdHeader.require(userId), id);
     }
 
     /**

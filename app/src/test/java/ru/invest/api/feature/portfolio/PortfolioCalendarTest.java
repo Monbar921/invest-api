@@ -51,7 +51,7 @@ import static org.mockito.Mockito.when;
  * Календарь выплат портфеля и личная ссылка на него (.ics). Даты событий - от сегодняшнего дня (UTC, как
  * DateTimeMapper.getNow): календарь показывает только будущие выплаты.
  */
-@Sql(scripts = "/sql/bonds-for-controller.sql", statements = "truncate table portfolio_position, portfolio_broker, "
+@Sql(scripts = "/sql/bonds-for-controller.sql", statements = "truncate table portfolio_sale, portfolio_position, portfolio_broker, "
         + "portfolio_calendar_token, amortization, currency_rate restart identity")
 public class PortfolioCalendarTest extends AbstractInvestApplicationTest {
     private static final String PORTFOLIO_URL = "http://localhost:8099/internal/rest/portfolio";

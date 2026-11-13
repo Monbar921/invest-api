@@ -18,6 +18,7 @@ import ru.invest.api.common.model.event.BondEventModel;
 import ru.invest.api.common.model.event.BondEventType;
 import ru.invest.api.common.repository.PortfolioCalendarTokenRepository;
 import ru.invest.api.common.repository.PortfolioPositionRepository;
+import ru.invest.api.common.repository.PortfolioSaleRepository;
 import ru.invest.api.common.usecase.BondEventUseCase;
 import ru.invest.api.common.usecase.EntitlementUseCase;
 import ru.invest.api.portfolio.service.model.CalendarEventModel;
@@ -64,6 +65,7 @@ public class PortfolioCalendarUseCaseImpl implements PortfolioCalendarUseCase {
     private static final String LINK_NOT_FOUND = "Calendar link not found";
 
     private final PortfolioPositionRepository positionRepository;
+    private final PortfolioSaleRepository saleRepository;
     private final PortfolioCalendarTokenRepository tokenRepository;
     private final BondUseCase bondUseCase;
     private final BondEventUseCase bondEventUseCase;
@@ -129,10 +131,15 @@ public class PortfolioCalendarUseCaseImpl implements PortfolioCalendarUseCase {
     }
 
     private PortfolioCalendarModel calendar(final String userId, final LocalDate from, final LocalDate to) {
-        // покупки - не позже сегодня, события - с сегодня: на дату любой выплаты в портфеле все покупки облигации
+        // покупки и продажи - не позже сегодня, события - с сегодня: на дату любой выплаты в портфеле все покупки
+        // облигации без проданного
         final Map<String, Long> quantities = new LinkedHashMap<>();
         positionRepository.findByUserIdOrderByTickerAscBuyDateAscIdAsc(userId)
                 .forEach(position -> quantities.merge(position.getTicker(), quantity(position), Long::sum));
+        saleRepository.findByUserIdOrderByTickerAscSellDateAscIdAsc(userId)
+                .forEach(sale -> quantities.computeIfPresent(sale.getTicker(),
+                        (ticker, quantity) -> quantity - sale.getQuantity()));
+        quantities.values().removeIf(quantity -> quantity <= 0);
 
         final List<CalendarEventModel> events = new ArrayList<>();
         final List<String> unknownTickers = new ArrayList<>();

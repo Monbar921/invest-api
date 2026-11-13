@@ -138,6 +138,18 @@ public class ProfitCalculationServiceImpl implements ProfitCalculationService {
         return result;
     }
 
+    @Override
+    public Optional<BigDecimal> accruedInterestAt(final BondModel bond, final LocalDate date) {
+        final PriceModel price = bond.getPrice();
+        if (price == null || price.getNominal() == null || StringUtils.isBlank(price.getNominal().getCurrency())) {
+            return Optional.empty();
+        }
+        final String currency = price.getNominal().getCurrency();
+        final AccruedInterest aci = aciAt(date, dateTimeMapper.getNow().toLocalDate(), price,
+                getCoupons(bond.getCoupon(), currency), bond.getCoupon(), currency);
+        return aci.known() ? Optional.of(aci.amount()) : Optional.empty();
+    }
+
     /**
      * Вклад на ту же сумму, что ушла на покупку (с НКД), на те же дни: простые проценты, без капитализации - как и доход
      * облигации считается без реинвестирования купонов. НДФЛ - по той же ставке, без необлагаемого лимита по вкладам.

@@ -38,7 +38,7 @@ import static org.hamcrest.Matchers.nullValue;
  * календаря), premium (52 правила, 300 покупок, календарь). Правила и покупки сверх лимита вставляются SQL.
  */
 @Sql(scripts = "/sql/bonds-for-controller.sql", statements = "truncate table account_auto_renewal, payment,"
-        + " account_subscription, notification, bond_alert, portfolio_position, portfolio_broker,"
+        + " account_subscription, notification, bond_alert, portfolio_sale, portfolio_position, portfolio_broker,"
         + " portfolio_calendar_token restart identity")
 public class PlanTest extends AbstractInvestApplicationTest {
     private static final String BASE_URL = "http://localhost:8099/internal/rest";

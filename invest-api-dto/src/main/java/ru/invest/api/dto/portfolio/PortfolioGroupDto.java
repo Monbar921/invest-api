@@ -53,5 +53,7 @@ public class PortfolioGroupDto {
     /** Доходность к погашению по текущей цене */
     private BigDecimal currentYieldToMaturity;
     /** Покупки по дате */
+    /** Полный доход по облигации за всё время - с проданными частями; null - облигации нет в системе */
+    private PortfolioIncomeDto income;
     private List<PortfolioPositionDto> positions;
 }

@@ -23,6 +23,7 @@ import java.util.Objects;
 import static ru.invest.api.common.exception.enums.ExceptionErrorCode.EMPTY_TICKER;
 import static ru.invest.api.common.exception.enums.ExceptionErrorCode.EMPTY_UID;
 import static ru.invest.api.tinkoff.supplier.constants.Constants.BOND_SCHEDULE_HORIZON_YEARS;
+import static ru.invest.api.tinkoff.supplier.constants.Constants.PAST_COUPONS_YEARS;
 
 @Service
 @RequiredArgsConstructor
@@ -44,7 +45,9 @@ public class TinkoffAmortizationProviderImpl implements TinkoffAmortizationProvi
         final GetBondEventsRequest request = GetBondEventsRequest.newBuilder()
                 .setInstrumentId(uid)
                 .setType(EventType.EVENT_TYPE_MTY)
-                .setFrom(toTimestamp(now))
+                // прошлые погашения - на ту же глубину, что и купоны: по ним портфель считает полученную амортизацию
+                // и номинал на дату покупки; расчёты доходности берут только будущие
+                .setFrom(toTimestamp(now.minusYears(PAST_COUPONS_YEARS)))
                 .setTo(toTimestamp(now.plusYears(BOND_SCHEDULE_HORIZON_YEARS)))
                 .build();
 

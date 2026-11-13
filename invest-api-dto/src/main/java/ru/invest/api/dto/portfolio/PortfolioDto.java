@@ -16,4 +16,10 @@ public class PortfolioDto {
     private List<PortfolioTotalDto> totals;
     /** Весь портфель в рублях; null - портфель пуст или у какой-то валюты нет курса */
     private PortfolioSummaryDto summary;
+    /** Закрытые позиции: всё продано или погашено; последние закрытые первыми */
+    private List<PortfolioClosedPositionDto> closed;
+    /** Полный доход по валютам номинала - открытые и закрытые позиции */
+    private List<PortfolioIncomeDto> incomeTotals;
+    /** Полный доход всего портфеля в рублях (по курсам ЦБ на даты потоков) и XIRR портфеля; null - нечего считать */
+    private PortfolioIncomeDto income;
 }

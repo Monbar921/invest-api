@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.4.xsd">
+
+    <!-- полный доход портфеля: у покупки - уплаченный НКД и комиссия брокера, обе на всю покупку в валюте номинала.
+         Необязательны: у старых покупок их нет - НКД считается по графику купонов, комиссия - 0 -->
+    <changeSet id="INVEST-001-add-portfolio-position-aci-commission" author="d.v.kornilovich">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="portfolio_position" columnName="aci"/>
+            </not>
+        </preConditions>
+
+        <addColumn tableName="portfolio_position">
+            <column name="aci" type="numeric(18, 2)"/>
+            <column name="commission" type="numeric(18, 2)"/>
+        </addColumn>
+    </changeSet>
+
+    <!-- продажа облигаций из портфеля, в том числе частичная: какие покупки закрывает - считается по FIFO при чтении,
+         поэтому продажа не ссылается на покупки. Облигация - по тикеру, без внешнего ключа, как у покупки -->
+    <changeSet id="INVEST-001-create-portfolio-sale-table" author="d.v.kornilovich">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="portfolio_sale"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="portfolio_sale">
+            <column autoIncrement="true" name="id" type="bigserial">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="user_id" type="varchar(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="ticker" type="varchar(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="quantity" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <!-- цена продажи, % от номинала -->
+            <column name="sell_price" type="numeric(10, 4)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="sell_date" type="date">
+                <constraints nullable="false"/>
+            </column>
+            <!-- полученный НКД на всю продажу; null - по графику купонов -->
+            <column name="aci" type="numeric(18, 2)"/>
+            <!-- комиссия брокера; null - 0 -->
+            <column name="commission" type="numeric(18, 2)"/>
+            <column name="broker_id" type="bigint"/>
+            <column name="created_at" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="timestamp"/>
+        </createTable>
+
+        <createIndex tableName="portfolio_sale" indexName="portfolio_sale_user_idx">
+            <column name="user_id"/>
+        </createIndex>
+        <addForeignKeyConstraint baseTableName="portfolio_sale" baseColumnNames="broker_id"
+                                 constraintName="fk_portfolio_sale_broker_id"
+                                 referencedTableName="portfolio_broker" referencedColumnNames="id"
+                                 onDelete="SET NULL"/>
+    </changeSet>
+</databaseChangeLog>

@@ -12,7 +12,10 @@ import java.time.LocalDate;
  *                 null или пусто - без брокера
  * @param buyAmountRub сколько рублей заплачено за покупку валютной облигации (без НКД и комиссии); null - по курсу ЦБ
  *                     на дату покупки. У рублёвой облигации не задаётся
+ * @param aci          уплаченный НКД на всю покупку, в валюте номинала; null - по графику купонов
+ * @param commission   комиссия брокера, в валюте номинала; null - 0
  */
 public record PositionRequestModel(String ticker, Integer quantity, BigDecimal buyPrice, LocalDate buyDate,
-                                   String broker, BigDecimal buyAmountRub) {
+                                   String broker, BigDecimal buyAmountRub, BigDecimal aci,
+                                   BigDecimal commission) {
 }

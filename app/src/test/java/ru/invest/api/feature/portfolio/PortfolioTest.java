@@ -46,7 +46,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
-@Sql(scripts = "/sql/bonds-for-controller.sql", statements = "truncate table portfolio_position, portfolio_broker, currency_rate restart identity")
+@Sql(scripts = "/sql/bonds-for-controller.sql", statements = "truncate table portfolio_sale, portfolio_position, portfolio_broker, currency_rate restart identity")
 public class PortfolioTest extends AbstractInvestApplicationTest {
     private static final String BASE_URL = "http://localhost:8099/internal/rest/portfolio";
     private static final String USER_ID_HEADER = "X-User-Id";

@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -53,4 +54,12 @@ public class PortfolioPositionRequest {
     @Positive(message = "buyAmountRub must be positive")
     @DecimalMax(value = "1000000000000", message = "buyAmountRub is too large")
     private BigDecimal buyAmountRub;
+    /** Уплаченный НКД на всю покупку, в валюте номинала (из отчёта брокера); не задан - по графику купонов */
+    @PositiveOrZero(message = "aci must not be negative")
+    @DecimalMax(value = "1000000000000", message = "aci is too large")
+    private BigDecimal aci;
+    /** Комиссия брокера за покупку, в валюте номинала; не задана - 0 */
+    @PositiveOrZero(message = "commission must not be negative")
+    @DecimalMax(value = "1000000000000", message = "commission is too large")
+    private BigDecimal commission;
 }

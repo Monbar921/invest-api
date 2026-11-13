@@ -9,6 +9,8 @@ import java.util.Optional;
 public interface PortfolioPositionRepository extends JpaRepository<PortfolioPosition, Long> {
     List<PortfolioPosition> findByUserIdOrderByTickerAscBuyDateAscIdAsc(String userId);
 
+    List<PortfolioPosition> findByUserIdAndTicker(String userId, String ticker);
+
     Optional<PortfolioPosition> findByIdAndUserId(Long id, String userId);
 
     long countByUserId(String userId);

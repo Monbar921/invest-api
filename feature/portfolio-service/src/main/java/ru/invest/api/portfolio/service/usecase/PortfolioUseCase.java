@@ -5,13 +5,20 @@ import ru.invest.api.portfolio.service.model.PortfolioModel;
 import ru.invest.api.portfolio.service.model.PositionModel;
 import ru.invest.api.portfolio.service.model.PositionRequestModel;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
  * Портфель пользователя. Чужая или несуществующая позиция - GeneralNotFoundEntityException (404).
  */
 public interface PortfolioUseCase {
-    PortfolioModel getPortfolio(String userId);
+    /**
+     * Открытые позиции с доходом от цены и полным доходом, закрытые позиции, итоги по валютам и весь портфель в рублях.
+     *
+     * @param taxRatePercent ставка НДФЛ для полного дохода, %; null - налог не считается
+     * @throws ru.invest.api.common.exception.GeneralUnprocessableEntityException ставка вне 0..100
+     */
+    PortfolioModel getPortfolio(String userId, BigDecimal taxRatePercent);
 
     /**
      * @throws ru.invest.api.common.exception.GeneralNotFoundEntityException     облигации нет
@@ -26,9 +33,16 @@ public interface PortfolioUseCase {
 
     /**
      * Меняет количество, цену и дату покупки; тикер из запроса не используется.
+     *
+     * @throws ru.invest.api.common.exception.GeneralUnprocessableEntityException продажам облигации не хватило бы
+     *                                                                            покупок
      */
     PositionModel update(String userId, Long id, PositionRequestModel request);
 
+    /**
+     * @throws ru.invest.api.common.exception.GeneralUnprocessableEntityException продажам облигации не хватило бы
+     *                                                                            покупок
+     */
     void delete(String userId, Long id);
 
     /**

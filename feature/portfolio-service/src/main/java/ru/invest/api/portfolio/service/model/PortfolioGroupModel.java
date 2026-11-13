@@ -5,9 +5,9 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * Все покупки одной облигации одной строкой. Суммы - сложение сумм покупок, в валюте номинала.
+ * Все покупки одной облигации одной строкой. Суммы - сложение сумм покупок по непроданному остатку, в валюте номинала.
  *
- * @param quantity           сколько облигаций во всех покупках
+ * @param quantity           сколько облигаций не продано во всех покупках
  * @param brokers            разные брокеры покупок по имени; покупки без брокера не добавляют имени
  * @param firstBuyDate       самая ранняя дата покупки
  * @param lastBuyDate        самая поздняя дата покупки
@@ -22,6 +22,7 @@ import java.util.List;
  * @param yieldToMaturity    доходность к погашению по средней цене покупки (как если бы купить сегодня по ней,
  *                           с сегодняшним НКД), % годовых
  * @param currentYieldToMaturity доходность к погашению по текущей цене, % годовых
+ * @param income             полный доход по облигации за всё время - с проданными частями; null - облигации нет
  * @param positions          покупки по дате
  */
 public record PortfolioGroupModel(String ticker,
@@ -45,5 +46,6 @@ public record PortfolioGroupModel(String ticker,
                                   BigDecimal couponRate,
                                   BigDecimal yieldToMaturity,
                                   BigDecimal currentYieldToMaturity,
+                                  IncomeModel income,
                                   List<PositionModel> positions) {
 }

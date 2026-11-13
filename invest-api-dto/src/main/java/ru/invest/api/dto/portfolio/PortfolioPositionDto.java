@@ -23,7 +23,10 @@ public class PortfolioPositionDto {
     private String isin;
     /** Валюта номинала */
     private String currency;
+    /** Сколько куплено */
     private int quantity;
+    /** Сколько из покупки не продано (FIFO) и не погашено; суммы покупки - на это количество */
+    private int remainingQuantity;
     private LocalDate buyDate;
     /** Имя брокера; null - не указан */
     private String broker;
@@ -55,5 +58,9 @@ public class PortfolioPositionDto {
     /** Доходность к погашению, если купить сегодня по цене этой покупки (с сегодняшним НКД), % годовых */
     private BigDecimal yieldToMaturity;
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+    /** Уплаченный НКД на всю покупку, как ввёл пользователь; null - не вводил (считается по графику купонов) */
+    private BigDecimal aci;
+    /** Комиссия брокера за покупку, как ввёл пользователь; null - не вводил */
+    private BigDecimal commission;
     private ZonedDateTime createdAt;
 }

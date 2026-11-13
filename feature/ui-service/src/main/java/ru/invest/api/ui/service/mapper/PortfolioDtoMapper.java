@@ -10,6 +10,8 @@ import ru.invest.api.dto.portfolio.PortfolioDto;
 import ru.invest.api.dto.portfolio.PortfolioGroupDto;
 import ru.invest.api.dto.portfolio.PortfolioPositionDto;
 import ru.invest.api.dto.portfolio.PortfolioPositionRequest;
+import ru.invest.api.dto.portfolio.PortfolioSaleRequest;
+import ru.invest.api.dto.portfolio.PortfolioTradeDto;
 import ru.invest.api.portfolio.service.model.BrokerModel;
 import ru.invest.api.portfolio.service.model.CalendarLinkModel;
 import ru.invest.api.portfolio.service.model.PortfolioCalendarModel;
@@ -17,6 +19,8 @@ import ru.invest.api.portfolio.service.model.PortfolioGroupModel;
 import ru.invest.api.portfolio.service.model.PortfolioModel;
 import ru.invest.api.portfolio.service.model.PositionModel;
 import ru.invest.api.portfolio.service.model.PositionRequestModel;
+import ru.invest.api.portfolio.service.model.SaleRequestModel;
+import ru.invest.api.portfolio.service.model.TradeModel;
 
 import java.util.List;
 
@@ -28,9 +32,15 @@ public interface PortfolioDtoMapper {
 
     PortfolioGroupDto toDto(PortfolioGroupModel group);
 
+    PortfolioTradeDto toDto(TradeModel trade);
+
     List<BrokerDto> toBrokerDto(List<BrokerModel> brokers);
 
     PositionRequestModel toModel(PortfolioPositionRequest request);
+
+    SaleRequestModel toModel(PortfolioSaleRequest request);
+
+    List<PortfolioTradeDto> toTradeDto(List<TradeModel> trades);
 
     PortfolioCalendarDto toCalendarDto(PortfolioCalendarModel calendar);
 

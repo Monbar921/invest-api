@@ -6,6 +6,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ru.invest.api.bond.supplier.usecase.BondUseCase;
 import ru.invest.api.common.entity.PortfolioBroker;
 import ru.invest.api.common.entity.PortfolioPosition;
+import ru.invest.api.common.entity.PortfolioSale;
 import ru.invest.api.common.exception.GeneralNotFoundEntityException;
 import ru.invest.api.common.exception.GeneralUnprocessableEntityException;
 import ru.invest.api.common.exception.enums.ExceptionErrorCode;
@@ -17,8 +18,11 @@ import ru.invest.api.common.model.PriceModel;
 import ru.invest.api.common.model.account.PlanLimit;
 import ru.invest.api.common.repository.PortfolioBrokerRepository;
 import ru.invest.api.common.repository.PortfolioPositionRepository;
+import ru.invest.api.common.repository.PortfolioSaleRepository;
 import ru.invest.api.common.usecase.EntitlementUseCase;
 import ru.invest.api.portfolio.service.model.BrokerModel;
+import ru.invest.api.portfolio.service.model.ClosedPositionModel;
+import ru.invest.api.portfolio.service.model.IncomeModel;
 import ru.invest.api.portfolio.service.model.PortfolioModel;
 import ru.invest.api.portfolio.service.model.PortfolioTotalModel;
 import ru.invest.api.portfolio.service.model.PositionModel;
@@ -31,18 +35,24 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
 public class PortfolioUseCaseImpl implements PortfolioUseCase {
     private static final String NOT_FOUND = "Portfolio position %d not found";
-    private static final int MAX_BROKERS = 50;
     private static final int MAX_QUANTITY = 1_000_000;
     // цена покупки в % от номинала; верхний предел - как у порога цены в уведомлениях
     private static final BigDecimal MIN_PRICE = new BigDecimal("0.01");
@@ -53,30 +63,68 @@ public class PortfolioUseCaseImpl implements PortfolioUseCase {
     private static final Set<String> RUB_CODES = Set.of("RUB", "RUR");
 
     private final PortfolioPositionRepository repository;
+    private final PortfolioSaleRepository saleRepository;
     private final PortfolioBrokerRepository brokerRepository;
+    private final BrokerResolver brokerResolver;
     private final BondUseCase bondUseCase;
     private final DateTimeMapper dateTimeMapper;
     private final PriceConversionService priceConversionService;
     private final EntitlementUseCase entitlementUseCase;
+    private final PortfolioIncomeCalculator incomeCalculator;
 
     @Override
     @Transactional(readOnly = true)
-    public PortfolioModel getPortfolio(final String userId) {
+    public PortfolioModel getPortfolio(final String userId, final BigDecimal taxRatePercent) {
+        validateTaxRate(taxRatePercent);
         final List<PortfolioPosition> positions = repository.findByUserIdOrderByTickerAscBuyDateAscIdAsc(userId);
-        // с графиком купонов и амортизации - для купона и доходности к погашению по цене покупки
+        final List<PortfolioSale> sales = saleRepository.findByUserIdOrderByTickerAscSellDateAscIdAsc(userId);
+        final Map<String, List<PortfolioPosition>> lotsByTicker = positions.stream()
+                .collect(Collectors.groupingBy(PortfolioPosition::getTicker, LinkedHashMap::new, Collectors.toList()));
+        final Map<String, List<PortfolioSale>> salesByTicker = sales.stream()
+                .collect(Collectors.groupingBy(PortfolioSale::getTicker));
+        // с графиком купонов и амортизации - для купона, доходности к погашению и полного дохода
         final Map<String, BondModel> bonds = new HashMap<>();
-        positions.stream().map(PortfolioPosition::getTicker).distinct()
-                .forEach(ticker -> findWithSchedule(ticker).ifPresent(bond -> bonds.put(ticker, bond)));
-        final Map<Long, String> brokers = brokerRepository.findByUserIdOrderByNameAsc(userId).stream()
-                .collect(Collectors.toMap(PortfolioBroker::getId, PortfolioBroker::getName));
-        final RubRates rates = new RubRates();
-        final List<PositionModel> models = positions.stream()
-                .map(position -> toModel(position, bonds.get(position.getTicker()),
-                        position.getBrokerId() == null ? null : brokers.get(position.getBrokerId()), rates))
-                .toList();
-        final List<PortfolioTotalModel> totals = PortfolioAggregator.totals(models);
-        return new PortfolioModel(PortfolioAggregator.groups(models, metrics(bonds)), totals,
-                PortfolioAggregator.summary(totals));
+        final Set<String> known = lotsByTicker.isEmpty()
+                ? Set.of()
+                : bondUseCase.getByTickers(lotsByTicker.keySet()).keySet();
+        lotsByTicker.keySet().stream().filter(known::contains)
+                .forEach(ticker -> bonds.put(ticker, bondUseCase.getWithSchedule(ticker)));
+        final Map<Long, String> brokers = brokerResolver.names(userId);
+        final RubRates rates = new RubRates(priceConversionService);
+
+        final Map<String, BondIncome> incomes = new LinkedHashMap<>();
+        lotsByTicker.forEach((ticker, lots) -> incomes.put(ticker, incomeCalculator.calculate(ticker,
+                bonds.get(ticker), lots, salesByTicker.getOrDefault(ticker, List.of()), brokers, rates)));
+
+        final List<PositionModel> open = new ArrayList<>();
+        final List<ClosedPositionModel> closed = new ArrayList<>();
+        final Map<String, IncomeModel> groupIncomes = new HashMap<>();
+        lotsByTicker.forEach((ticker, lots) -> {
+            final BondIncome bondIncome = incomes.get(ticker);
+            final BondModel bond = bonds.get(ticker);
+            final IncomeModel income = IncomeAggregator.of(bondIncome.currency(), List.of(bondIncome), false,
+                    taxRatePercent);
+            if (bondIncome.openQuantity() > 0) {
+                final LotAllocation allocation = LotAllocation.of(lots, salesByTicker.getOrDefault(ticker, List.of()));
+                lots.forEach(lot -> open.add(toModel(lot, bond, broker(brokers, lot), allocation.remaining(lot),
+                        rates)));
+                groupIncomes.put(ticker, income);
+            } else {
+                closed.add(new ClosedPositionModel(ticker, bond == null ? null : bond.getName(),
+                        bond == null ? null : bond.getIsin(), bondIncome.currency(),
+                        lots.stream().mapToInt(PortfolioPosition::getQuantity).sum(),
+                        lots.stream().map(PortfolioPosition::getBuyDate).min(Comparator.naturalOrder()).orElse(null),
+                        bondIncome.closeDate(), income));
+            }
+        });
+        // последние закрытые - первыми
+        closed.sort(Comparator.comparing(ClosedPositionModel::closeDate,
+                Comparator.nullsLast(Comparator.reverseOrder())).thenComparing(ClosedPositionModel::ticker));
+
+        final List<PortfolioTotalModel> totals = PortfolioAggregator.totals(open);
+        return new PortfolioModel(PortfolioAggregator.groups(open, metrics(bonds), groupIncomes), totals,
+                PortfolioAggregator.summary(totals), closed, incomeTotals(incomes.values(), taxRatePercent),
+                IncomeAggregator.of(null, List.copyOf(incomes.values()), true, taxRatePercent));
     }
 
     @Override
@@ -91,7 +139,8 @@ public class PortfolioUseCaseImpl implements PortfolioUseCase {
         // 402, если покупок уже столько, сколько разрешает тариф
         entitlementUseCase.requireBelowLimit(userId, PlanLimit.PORTFOLIO_POSITIONS, repository.countByUserId(userId));
         validateBuyAmountRub(request.buyAmountRub(), currency(bond));
-        final PortfolioBroker broker = resolveBroker(userId, request.broker());
+        validateNotAfterMaturity(buyDate, bond);
+        final PortfolioBroker broker = brokerResolver.resolve(userId, request.broker());
         final PortfolioPosition position = repository.save(new PortfolioPosition()
                 .setUserId(userId)
                 .setTicker(bond.getTicker())
@@ -99,9 +148,12 @@ public class PortfolioUseCaseImpl implements PortfolioUseCase {
                 .setBuyPrice(request.buyPrice())
                 .setBuyDate(buyDate)
                 .setBuyAmountRub(request.buyAmountRub())
+                .setAci(request.aci())
+                .setCommission(request.commission())
                 .setBrokerId(broker == null ? null : broker.getId())
                 .setCreatedAt(LocalDateTime.now(ZoneOffset.UTC)));
-        return toModel(position, bond, broker == null ? null : broker.getName(), new RubRates());
+        return toModel(position, bond, broker == null ? null : broker.getName(),
+                remaining(userId, position, null), new RubRates(priceConversionService));
     }
 
     @Override
@@ -111,21 +163,29 @@ public class PortfolioUseCaseImpl implements PortfolioUseCase {
         final LocalDate buyDate = validate(request);
         final BondModel bond = findWithSchedule(position.getTicker()).orElse(null);
         validateBuyAmountRub(request.buyAmountRub(), currency(bond));
-        final PortfolioBroker broker = resolveBroker(userId, request.broker());
+        validateNotAfterMaturity(buyDate, bond);
+        final PortfolioBroker broker = brokerResolver.resolve(userId, request.broker());
         position.setQuantity(request.quantity())
                 .setBuyPrice(request.buyPrice())
                 .setBuyDate(buyDate)
                 .setBuyAmountRub(request.buyAmountRub())
+                .setAci(request.aci())
+                .setCommission(request.commission())
                 .setBrokerId(broker == null ? null : broker.getId())
                 .setUpdatedAt(LocalDateTime.now(ZoneOffset.UTC));
+        // меньше облигаций или дата позже - продажам может не хватить купленного
+        final int remaining = remaining(userId, position, null);
         repository.save(position);
-        return toModel(position, bond, broker == null ? null : broker.getName(), new RubRates());
+        return toModel(position, bond, broker == null ? null : broker.getName(), remaining,
+                new RubRates(priceConversionService));
     }
 
     @Override
     @Transactional
     public void delete(final String userId, final Long id) {
-        repository.delete(find(userId, id));
+        final PortfolioPosition position = find(userId, id);
+        remaining(userId, position, position.getId());
+        repository.delete(position);
     }
 
     @Override
@@ -137,23 +197,58 @@ public class PortfolioUseCaseImpl implements PortfolioUseCase {
     }
 
     /**
-     * Брокер по имени без учёта регистра и пробелов по краям; такого у пользователя ещё нет - создаётся и дальше
-     * доступен для других покупок. Пустое имя - без брокера.
+     * Сколько из покупки не продано - и проверка, что всем продажам облигации хватает покупок на их даты.
+     *
+     * @param position  покупка, уже с изменениями
+     * @param deletedId покупка, которую удаляют: её облигаций у продаж больше нет; null - ничего не удаляют
+     * @throws GeneralUnprocessableEntityException продаже не хватает облигаций
      */
-    private PortfolioBroker resolveBroker(final String userId, final String name) {
-        final String trimmed = name == null ? "" : name.strip();
-        if (trimmed.isEmpty()) {
-            return null;
+    private int remaining(final String userId, final PortfolioPosition position, final Long deletedId) {
+        final List<PortfolioSale> sales = saleRepository.findByUserIdAndTicker(userId, position.getTicker());
+        if (sales.isEmpty()) {
+            return deletedId == null ? position.getQuantity() : 0;
         }
-        return brokerRepository.findByUserIdAndNameIgnoreCase(userId, trimmed).orElseGet(() -> {
-            if (brokerRepository.countByUserId(userId) >= MAX_BROKERS) {
-                throw unprocessable("No more than %d brokers per user".formatted(MAX_BROKERS));
-            }
-            return brokerRepository.save(new PortfolioBroker()
-                    .setUserId(userId)
-                    .setName(trimmed)
-                    .setCreatedAt(LocalDateTime.now(ZoneOffset.UTC)));
-        });
+        final List<PortfolioPosition> lots = Stream.concat(
+                        repository.findByUserIdAndTicker(userId, position.getTicker()).stream()
+                                .filter(lot -> !lot.getId().equals(position.getId())),
+                        deletedId == null ? Stream.of(position) : Stream.empty())
+                .toList();
+        final LotAllocation allocation = LotAllocation.of(lots, sales);
+        if (allocation.unsold() != null) {
+            throw unprocessable("Sales of %s on %s would exceed the bonds bought by that date: change or delete the sale first"
+                    .formatted(position.getTicker(), allocation.unsold().getSellDate()));
+        }
+        return deletedId == null ? allocation.remaining(position) : 0;
+    }
+
+    /**
+     * Итог полного дохода по каждой валюте номинала, в порядке облигаций. Облигации нет в системе - её валюта
+     * неизвестна, она не входит ни в один итог (итог всего портфеля из-за неё неполный).
+     */
+    private static List<IncomeModel> incomeTotals(final Collection<BondIncome> incomes,
+                                                  final BigDecimal taxRatePercent) {
+        final Set<String> currencies = incomes.stream()
+                .map(BondIncome::currency)
+                .filter(Objects::nonNull)
+                .map(PortfolioUseCaseImpl::normalize)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        return currencies.stream()
+                .map(currency -> IncomeAggregator.of(currency, incomes.stream()
+                        .filter(income -> income.currency() != null && normalize(income.currency()).equals(currency))
+                        .toList(), false, taxRatePercent))
+                .filter(Objects::nonNull)
+                .toList();
+    }
+
+    private static String normalize(final String currency) {
+        return currency.toLowerCase();
+    }
+
+    /** НДФЛ - как в калькуляторе дохода: от 0 до 100 %, не задан - налог не считается */
+    private static void validateTaxRate(final BigDecimal taxRatePercent) {
+        if (taxRatePercent != null && (taxRatePercent.signum() < 0 || taxRatePercent.compareTo(HUNDRED) >= 0)) {
+            throw unprocessable("taxRatePercent must be from 0 to 100");
+        }
     }
 
     /**
@@ -169,12 +264,27 @@ public class PortfolioUseCaseImpl implements PortfolioUseCase {
             throw unprocessable("buyPrice must be from %s to %s %% of nominal".formatted(MIN_PRICE.toPlainString(),
                     MAX_PRICE.toPlainString()));
         }
+        if (isNegative(request.aci()) || isNegative(request.commission())) {
+            throw unprocessable("aci and commission must not be negative");
+        }
         final LocalDate today = dateTimeMapper.getNow().toLocalDate();
         final LocalDate buyDate = Optional.ofNullable(request.buyDate()).orElse(today);
         if (buyDate.isAfter(today)) {
             throw unprocessable("buyDate must not be in the future");
         }
         return buyDate;
+    }
+
+    /** После погашения облигацию не купить; дата погашения неизвестна - не проверяется */
+    private static void validateNotAfterMaturity(final LocalDate buyDate, final BondModel bond) {
+        final LocalDateTime maturity = bond == null ? null : bond.getMaturityDate();
+        if (maturity != null && buyDate.isAfter(maturity.toLocalDate())) {
+            throw unprocessable("buyDate must not be after the maturity date %s".formatted(maturity.toLocalDate()));
+        }
+    }
+
+    private static boolean isNegative(final BigDecimal value) {
+        return value != null && value.signum() < 0;
     }
 
     /**
@@ -208,18 +318,23 @@ public class PortfolioUseCaseImpl implements PortfolioUseCase {
         return new GeneralUnprocessableEntityException(ExceptionErrorCode.PORTFOLIO_INVALID, message);
     }
 
+    private static String broker(final Map<Long, String> brokers, final PortfolioPosition position) {
+        return position.getBrokerId() == null ? null : brokers.get(position.getBrokerId());
+    }
+
     /**
-     * Доход - только от изменения цены: номинал × (текущая цена − цена покупки) × количество. Номинал - текущий
-     * (после частичных погашений) и для покупки, и для текущей стоимости. Купоны и НКД не учитываются.
+     * Доход от цены непроданной части покупки: номинал × (текущая цена − цена покупки) × непроданное количество.
+     * Номинал - текущий (после частичных погашений) и для покупки, и для текущей стоимости. Купоны и НКД - в полном
+     * доходе строки облигации.
      */
     private PositionModel toModel(final PortfolioPosition position, final BondModel bond,
-                                  final String broker, final RubRates rates) {
+                                  final String broker, final int remaining, final RubRates rates) {
         final PriceModel price = bond == null ? null : bond.getPrice();
         final MoneyModel nominalMoney = price == null ? null : price.getNominal();
         final BigDecimal nominal = nominalMoney == null ? null : nominalMoney.getQuantity();
         final String currency = currency(bond);
         final BigDecimal currentPrice = price == null ? null : price.getPercentagePrice();
-        final BigDecimal quantity = BigDecimal.valueOf(position.getQuantity());
+        final BigDecimal quantity = BigDecimal.valueOf(remaining);
 
         final BigDecimal buyAmount = amount(nominal, position.getBuyPrice(), quantity);
         final BigDecimal currentAmount = amount(nominal, currentPrice, quantity);
@@ -231,10 +346,11 @@ public class PortfolioUseCaseImpl implements PortfolioUseCase {
                 : currentPrice.subtract(position.getBuyPrice()).multiply(HUNDRED)
                         .divide(position.getBuyPrice(), PERCENT_SCALE, RoundingMode.HALF_UP);
 
-        // рубли: покупка - сколько заплачено по отчёту брокера, не ввели - по курсу ЦБ на дату покупки; сейчас - по
-        // курсу на сегодня; разница включает изменение курса
+        // рубли: покупка - сколько заплачено по отчёту брокера (доля непроданного), не ввели - по курсу ЦБ на дату
+        // покупки; сейчас - по курсу на сегодня; разница включает изменение курса
         final BigDecimal buyAmountInRub = position.getBuyAmountRub() != null
-                ? position.getBuyAmountRub()
+                ? position.getBuyAmountRub().multiply(quantity)
+                        .divide(BigDecimal.valueOf(position.getQuantity()), MONEY_SCALE, RoundingMode.HALF_UP)
                 : rates.toRub(buyAmount, currency, position.getBuyDate());
         final BigDecimal currentAmountInRub = rates.toRub(currentAmount, currency, null);
         final BigDecimal revenueInRub = buyAmountInRub == null || currentAmountInRub == null
@@ -244,19 +360,21 @@ public class PortfolioUseCaseImpl implements PortfolioUseCase {
         return new PositionModel(position.getId(), position.getTicker(),
                 bond == null ? null : bond.getName(),
                 bond == null ? null : bond.getIsin(),
-                currency, position.getQuantity(), position.getBuyDate(), broker, nominal, position.getBuyPrice(),
-                currentPrice, buyAmount, currentAmount, revenue, revenuePercent,
+                currency, position.getQuantity(), remaining, position.getBuyDate(), broker, nominal,
+                position.getBuyPrice(), currentPrice, buyAmount, currentAmount, revenue, revenuePercent,
                 position.getBuyAmountRub(), buyAmountInRub, currentAmountInRub, revenueInRub,
-                yieldAtPrice(bond, position.getBuyPrice()), position.getCreatedAt());
+                yieldAtPrice(bond, position.getBuyPrice()), position.getAci(), position.getCommission(),
+                position.getCreatedAt());
     }
 
-    /** Облигация с графиками; её уже нет в системе - пусто (покупка остаётся в портфеле без цены) */
+    /**
+     * Облигация с графиками; её уже нет в системе - пусто (покупка остаётся в портфеле без цены). Есть ли она,
+     * проверяется заранее: исключение «облигации нет» из транзакционного метода пометило бы транзакцию на откат.
+     */
     private Optional<BondModel> findWithSchedule(final String ticker) {
-        try {
-            return Optional.of(bondUseCase.getWithSchedule(ticker));
-        } catch (final GeneralNotFoundEntityException e) {
-            return Optional.empty();
-        }
+        return bondUseCase.getByTickers(List.of(ticker)).containsKey(ticker)
+                ? Optional.of(bondUseCase.getWithSchedule(ticker))
+                : Optional.empty();
     }
 
     private BigDecimal yieldAtPrice(final BondModel bond, final BigDecimal pricePercent) {
@@ -308,25 +426,5 @@ public class PortfolioUseCaseImpl implements PortfolioUseCase {
             return null;
         }
         return nominal.multiply(percent).multiply(quantity).divide(HUNDRED, MONEY_SCALE, RoundingMode.HALF_UP);
-    }
-
-    /**
-     * Курсы к рублю на один запрос портфеля: каждая пара «валюта, дата» запрашивается один раз, в том числе неудачно.
-     * Дата null - курс на сегодня (ЦБ, иначе budget.org), иначе - курс ЦБ на эту дату.
-     */
-    private final class RubRates {
-        private final Map<String, Optional<BigDecimal>> rates = new HashMap<>();
-
-        BigDecimal toRub(final BigDecimal amount, final String currency, final LocalDate date) {
-            if (amount == null || currency == null) {
-                return null;
-            }
-            final String code = currency.toUpperCase();
-            return rates.computeIfAbsent(code + "@" + date, key -> Optional.ofNullable(date == null
-                            ? priceConversionService.getRubRate(code)
-                            : priceConversionService.getRubRate(code, date)))
-                    .map(rate -> amount.multiply(rate).setScale(MONEY_SCALE, RoundingMode.HALF_UP))
-                    .orElse(null);
-        }
     }
 }

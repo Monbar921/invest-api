@@ -54,6 +54,14 @@ public class PortfolioPosition {
     @Column(name = "buy_amount_rub")
     private BigDecimal buyAmountRub;
 
+    /** Уплаченный НКД на всю покупку, в валюте номинала; null - не вводили, считается по графику купонов */
+    @Column(name = "aci")
+    private BigDecimal aci;
+
+    /** Комиссия брокера за покупку, в валюте номинала; null - не вводили (0) */
+    @Column(name = "commission")
+    private BigDecimal commission;
+
     /** Брокер ({@link PortfolioBroker}); null - не указан */
     @Column(name = "broker_id")
     private Long brokerId;

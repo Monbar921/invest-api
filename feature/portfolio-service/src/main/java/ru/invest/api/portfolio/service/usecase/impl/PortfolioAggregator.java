@@ -1,5 +1,6 @@
 package ru.invest.api.portfolio.service.usecase.impl;
 
+import ru.invest.api.portfolio.service.model.IncomeModel;
 import ru.invest.api.portfolio.service.model.PortfolioGroupModel;
 import ru.invest.api.portfolio.service.model.PortfolioSummaryModel;
 import ru.invest.api.portfolio.service.model.PortfolioTotalModel;
@@ -30,17 +31,19 @@ final class PortfolioAggregator {
     /**
      * Покупки одной облигации (по тикеру) - одна строка; строки в порядке тикеров, покупки внутри - по дате.
      */
-    static List<PortfolioGroupModel> groups(final List<PositionModel> positions, final BondMetrics metrics) {
+    static List<PortfolioGroupModel> groups(final List<PositionModel> positions, final BondMetrics metrics,
+                                            final Map<String, IncomeModel> incomes) {
         return positions.stream()
                 .collect(Collectors.groupingBy(PositionModel::ticker, LinkedHashMap::new, Collectors.toList()))
                 .values().stream()
-                .map(group -> group(group, metrics))
+                .map(group -> group(group, metrics, incomes.get(group.getFirst().ticker())))
                 .toList();
     }
 
-    private static PortfolioGroupModel group(final List<PositionModel> positions, final BondMetrics metrics) {
+    private static PortfolioGroupModel group(final List<PositionModel> positions, final BondMetrics metrics,
+                                             final IncomeModel income) {
         final PositionModel first = positions.getFirst();
-        final int quantity = positions.stream().mapToInt(PositionModel::quantity).sum();
+        final int quantity = positions.stream().mapToInt(PositionModel::remainingQuantity).sum();
         // у покупок одной облигации цена и номинал общие: нет цены у одной - нет у всех
         final boolean priced = positions.stream().allMatch(position -> position.revenue() != null);
         final BigDecimal buyAmount = sumOrNull(positions, PositionModel::buyAmount);
@@ -61,17 +64,25 @@ final class PortfolioAggregator {
                 metrics.couponRate(first.ticker()),
                 metrics.yieldToMaturityAtPrice(first.ticker(), buyPrice),
                 metrics.currentYieldToMaturity(first.ticker()),
+                income,
                 positions.stream()
                         .sorted(Comparator.comparing(PositionModel::buyDate).thenComparing(PositionModel::id))
                         .toList());
     }
 
-    /** Средняя цена покупки в % от номинала, взвешенная по количеству: номинал у покупок одной облигации общий */
+    /**
+     * Средняя цена покупки в % от номинала, взвешенная по непроданному количеству: номинал у покупок одной облигации
+     * общий. Всё продано - по купленному количеству.
+     */
     private static BigDecimal averageBuyPrice(final List<PositionModel> positions, final int quantity) {
+        final boolean open = quantity > 0;
         final BigDecimal weighted = positions.stream()
-                .map(position -> position.buyPrice().multiply(BigDecimal.valueOf(position.quantity())))
+                .map(position -> position.buyPrice().multiply(BigDecimal.valueOf(open
+                        ? position.remainingQuantity()
+                        : position.quantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        return weighted.divide(BigDecimal.valueOf(quantity), PRICE_SCALE, RoundingMode.HALF_UP);
+        final int weight = open ? quantity : positions.stream().mapToInt(PositionModel::quantity).sum();
+        return weighted.divide(BigDecimal.valueOf(weight), PRICE_SCALE, RoundingMode.HALF_UP);
     }
 
     /** По валюте номинала, в порядке позиций; позиции без текущей цены не входят */
