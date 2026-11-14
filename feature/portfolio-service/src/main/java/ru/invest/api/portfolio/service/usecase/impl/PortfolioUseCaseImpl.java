@@ -132,6 +132,12 @@ public class PortfolioUseCaseImpl implements PortfolioUseCase {
     @Override
     @Transactional
     public PositionModel create(final String userId, final PositionRequestModel request) {
+        return create(userId, request, null);
+    }
+
+    @Override
+    @Transactional
+    public PositionModel create(final String userId, final PositionRequestModel request, final String importKey) {
         if (request.ticker() == null || request.ticker().isBlank()) {
             throw unprocessable("ticker is required");
         }
@@ -153,6 +159,7 @@ public class PortfolioUseCaseImpl implements PortfolioUseCase {
                 .setAci(request.aci())
                 .setCommission(request.commission())
                 .setBrokerId(broker == null ? null : broker.getId())
+                .setImportKey(importKey)
                 .setCreatedAt(LocalDateTime.now(ZoneOffset.UTC)));
         return toModel(position, bond, broker == null ? null : broker.getName(),
                 remaining(userId, position, null), new RubRates(priceConversionService));

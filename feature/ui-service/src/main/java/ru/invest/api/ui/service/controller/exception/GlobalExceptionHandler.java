@@ -17,11 +17,15 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import ru.invest.api.common.exception.GeneralNotFoundEntityException;
 import ru.invest.api.common.exception.GeneralPaymentRequiredException;
 import ru.invest.api.common.exception.GeneralUnauthorizedException;
 import ru.invest.api.common.exception.GeneralUnprocessableEntityException;
+import ru.invest.api.imports.tinvest.TinvestClientException;
 import ru.invest.api.payment.service.provider.PaymentProviderException;
 import ru.ttech.piapi.core.connector.exception.ServiceRuntimeException;
 
@@ -166,6 +170,39 @@ public class GlobalExceptionHandler {
         final ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.BAD_GATEWAY);
         problem.setTitle("Bad Gateway");
         problem.setDetail("Платёжный сервис не ответил, попробуйте позже");
+        return problem;
+    }
+
+    // T-Invest API с токеном пользователя не ответил (импорт сделок): код и описание - в лог, токена в них нет
+    @ExceptionHandler(TinvestClientException.class)
+    @ResponseStatus(HttpStatus.BAD_GATEWAY)
+    public ProblemDetail handleTinvestClient(final TinvestClientException ex) {
+        log.error("Broker API error: {}", ex.getMessage());
+        final ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.BAD_GATEWAY);
+        problem.setTitle("Bad Gateway");
+        problem.setDetail("Т-Инвестиции не ответили, попробуйте позже");
+        return problem;
+    }
+
+    // файл отчёта больше предела spring.servlet.multipart.max-file-size
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    @ResponseStatus(HttpStatus.CONTENT_TOO_LARGE)
+    public ProblemDetail handleMaxUploadSize(final MaxUploadSizeExceededException ex) {
+        log.warn("Upload too large: {}", ex.getMessage());
+        final ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.CONTENT_TOO_LARGE);
+        problem.setTitle("Content Too Large");
+        problem.setDetail("Файл слишком большой");
+        return problem;
+    }
+
+    // нет части multipart (file) или запрос не multipart
+    @ExceptionHandler({MissingServletRequestPartException.class, MultipartException.class})
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ProblemDetail handleMultipart(final Exception ex) {
+        log.warn("Bad multipart request: {}", ex.getMessage());
+        final ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
+        problem.setTitle("Bad Request");
+        problem.setDetail(ex.getMessage());
         return problem;
     }
 

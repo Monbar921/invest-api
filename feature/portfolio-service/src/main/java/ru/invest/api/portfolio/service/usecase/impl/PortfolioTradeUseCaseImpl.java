@@ -74,6 +74,12 @@ public class PortfolioTradeUseCaseImpl implements PortfolioTradeUseCase {
     @Override
     @Transactional
     public TradeModel createSale(final String userId, final SaleRequestModel request) {
+        return createSale(userId, request, null);
+    }
+
+    @Override
+    @Transactional
+    public TradeModel createSale(final String userId, final SaleRequestModel request, final String importKey) {
         if (request.ticker() == null || request.ticker().isBlank()) {
             throw unprocessable("Выберите облигацию");
         }
@@ -88,6 +94,7 @@ public class PortfolioTradeUseCaseImpl implements PortfolioTradeUseCase {
         final PortfolioSale sale = saleRepository.save(fill(new PortfolioSale()
                 .setUserId(userId)
                 .setTicker(bond.getTicker())
+                .setImportKey(importKey)
                 .setCreatedAt(LocalDateTime.now(ZoneOffset.UTC)), request, sellDate, broker));
         return checkedTrade(userId, sale, bond);
     }

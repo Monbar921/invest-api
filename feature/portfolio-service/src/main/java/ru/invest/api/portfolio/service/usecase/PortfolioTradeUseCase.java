@@ -24,6 +24,13 @@ public interface PortfolioTradeUseCase {
     TradeModel createSale(String userId, SaleRequestModel request);
 
     /**
+     * Продажа с ключом сделки у источника импорта - те же проверки, что у {@link #createSale(String, SaleRequestModel)}.
+     *
+     * @param importKey ключ сделки у источника; null - введена вручную
+     */
+    TradeModel createSale(String userId, SaleRequestModel request, String importKey);
+
+    /**
      * Меняет количество, цену, дату, НКД, комиссию и брокера; тикер из запроса не используется.
      */
     TradeModel updateSale(String userId, Long id, SaleRequestModel request);

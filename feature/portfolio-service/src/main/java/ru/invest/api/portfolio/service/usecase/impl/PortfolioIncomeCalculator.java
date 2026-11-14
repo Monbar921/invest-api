@@ -227,6 +227,29 @@ public class PortfolioIncomeCalculator {
                 .toList();
     }
 
+    /**
+     * Номинал одной облигации на дату - без частей, погашенных к ней (как у покупок и продажи портфеля): по нему цена
+     * сделки в деньгах переводится в % от номинала.
+     *
+     * @param bond облигация с ценой и графиком амортизации
+     * @return в валюте номинала; null - номинал неизвестен
+     */
+    public BigDecimal nominalAt(final BondModel bond, final LocalDate date) {
+        final String currency = currency(bond);
+        final BigDecimal nominal = Optional.ofNullable(bond).map(BondModel::getPrice).map(PriceModel::getNominal)
+                .map(MoneyModel::getQuantity).orElse(null);
+        if (currency == null || nominal == null || nominal.signum() <= 0) {
+            return null;
+        }
+        final LocalDate today = dateTimeMapper.getNow().toLocalDate();
+        return new Schedule(nominal, amortizations(bond.getAmortizations(), currency, today), today).nominalAt(date);
+    }
+
+    /** Валюта номинала облигации; null - облигации нет или валюта неизвестна */
+    public static String nominalCurrency(final BondModel bond) {
+        return currency(bond);
+    }
+
     /** Частичные погашения номинала с известным размером; синхронизация хранит их за 3 года назад и вперёд */
     private List<Payment> amortizations(final List<AmortizationModel> amortizations, final String currency,
                                         final LocalDate today) {

@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.4.xsd">
+
+    <!-- импорт от брокера: ключ сделки у источника (операция T-Invest, строка отчёта). Уникален у пользователя - повторный
+         импорт той же сделки не создаёт дубля. У сделок, введённых вручную, - null -->
+    <changeSet id="INVEST-001-add-portfolio-import-key" author="d.v.kornilovich">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="portfolio_position" columnName="import_key"/>
+            </not>
+        </preConditions>
+
+        <addColumn tableName="portfolio_position">
+            <column name="import_key" type="varchar(200)"/>
+        </addColumn>
+        <addColumn tableName="portfolio_sale">
+            <column name="import_key" type="varchar(200)"/>
+        </addColumn>
+        <sql>
+            create unique index portfolio_position_import_key_uq on portfolio_position (user_id, import_key)
+                where import_key is not null;
+            create unique index portfolio_sale_import_key_uq on portfolio_sale (user_id, import_key)
+                where import_key is not null;
+        </sql>
+    </changeSet>
+
+    <!-- токен T-Invest только на чтение: зашифрован AES-GCM ключом из конфигурации, открытым в БД не хранится.
+         Одно подключение на пользователя и источник -->
+    <changeSet id="INVEST-001-create-broker-connection-table" author="d.v.kornilovich">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="broker_connection"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="broker_connection">
+            <column autoIncrement="true" name="id" type="bigserial">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="user_id" type="varchar(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="provider" type="varchar(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="token_encrypted" type="varchar(1000)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="token_hint" type="varchar(10)"/>
+            <column name="created_at" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="timestamp"/>
+            <column name="last_import_at" type="timestamp"/>
+        </createTable>
+
+        <addUniqueConstraint tableName="broker_connection" columnNames="user_id, provider"
+                             constraintName="broker_connection_user_provider_uq"/>
+    </changeSet>
+
+    <!-- импорт: предпросмотр и отчёт. Строки - сделки источника со статусом; удаляются вместе с импортом -->
+    <changeSet id="INVEST-001-create-portfolio-import-tables" author="d.v.kornilovich">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="portfolio_import"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="portfolio_import">
+            <column autoIncrement="true" name="id" type="bigserial">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="user_id" type="varchar(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="source" type="varchar(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="file_name" type="varchar(255)"/>
+            <column name="status" type="varchar(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="skipped_operations" type="int" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="warnings" type="text"/>
+            <column name="created_at" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="applied_at" type="timestamp"/>
+        </createTable>
+
+        <createIndex tableName="portfolio_import" indexName="portfolio_import_user_idx">
+            <column name="user_id"/>
+        </createIndex>
+
+        <createTable tableName="portfolio_import_item">
+            <column autoIncrement="true" name="id" type="bigserial">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="import_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="line_no" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="kind" type="varchar(10)"/>
+            <column name="import_key" type="varchar(200)"/>
+            <column name="trade_date" type="date"/>
+            <column name="ticker" type="varchar(50)"/>
+            <column name="isin" type="varchar(20)"/>
+            <column name="figi" type="varchar(20)"/>
+            <column name="name" type="varchar(255)"/>
+            <column name="quantity" type="int"/>
+            <!-- % от номинала -->
+            <column name="price" type="numeric(10, 4)"/>
+            <column name="aci" type="numeric(18, 2)"/>
+            <column name="commission" type="numeric(18, 2)"/>
+            <column name="amount_rub" type="numeric(18, 2)"/>
+            <column name="broker" type="varchar(100)"/>
+            <column name="status" type="varchar(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="message" type="varchar(500)"/>
+            <column name="trade_id" type="bigint"/>
+        </createTable>
+
+        <createIndex tableName="portfolio_import_item" indexName="portfolio_import_item_import_idx">
+            <column name="import_id"/>
+        </createIndex>
+        <addForeignKeyConstraint baseTableName="portfolio_import_item" baseColumnNames="import_id"
+                                 constraintName="fk_portfolio_import_item_import_id"
+                                 referencedTableName="portfolio_import" referencedColumnNames="id"
+                                 onDelete="CASCADE"/>
+    </changeSet>
+</databaseChangeLog>

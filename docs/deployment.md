@@ -54,7 +54,7 @@ Telegram-бот: `ru.invest.api.telegram.enabled` (по умолчанию вы�
 
 Тарифы: `ru.invest.api.plans.default-plan` (тариф без подписки), `zone` (пояс последнего дня подписки, Москва),
 `plans.<id>` - `title`, `description`, `paid`, `limits` (все из `ALERTS`, `PORTFOLIO_POSITIONS`, не меньше 0),
-`features` (`CALENDAR_ICS`), `price` и `period` - цена и срок для оплаты (только у платного, вместе). id тарифа
+`features` (`CALENDAR_ICS`, `BROKER_IMPORT`), `price` и `period` - цена и срок для оплаты (только у платного, вместе). id тарифа
 хранится в подписках - у выданного не менять. Ошибка в настройке не даёт
 приложению стартовать. Выдать тариф: `PUT /internal/rest/maintenance/account/<sub Keycloak>/plan` с заголовком
 `From` и телом `{"plan": "premium", "validUntil": "2027-01-31"}`; отозвать - `DELETE` того же адреса.
@@ -72,6 +72,15 @@ Telegram-бот: `ru.invest.api.telegram.enabled` (по умолчанию вы�
 (рубли) и `period` (`P1M`, `P1Y`); без них тариф не продаётся. Локально Т-Касса не достучится до webhook - статус
 платежа узнаётся опросом со страницы «Тариф», автопродление при этом не включается (карту приносит только webhook).
 Запустить автопродление сейчас: `POST /internal/rest/maintenance/payments/renewals`.
+
+Импорт от брокера ([INVEST-001-broker-import](features/INVEST-001-broker-import/)): `ru.invest.api.imports` -
+`token-encryption-key` (`IMPORT_TOKEN_KEY`: 32 случайных байта в Base64, `openssl rand -base64 32`; секрет - им
+шифруются токены T-Invest пользователей; пусто - импорт по токену выключен, импорт файлов работает; ключ не той длины
+не даёт стартовать), `preview-ttl` (7 дней), `max-items` (5000 сделок), `max-file-size` (5 МБ; предел Spring -
+`spring.servlet.multipart.max-file-size`, 6 МБ), `zone` (дата сделки, Москва), `tinvest.target` (адрес T-Invest API;
+песочница - `sandbox-invest-public-api.tinkoff.ru:443`), `tinvest.timeout`, `tinvest.max-operations` (20 000 со счёта),
+`tinvest.broker-name`. **Смена ключа** делает сохранённые токены нечитаемыми: пользователи увидят «подключите токен
+заново»; старый ключ не храните в репозитории. Импорт - фича тарифа `BROKER_IMPORT` (`plans.<id>.features`).
 
 Брокеры-партнёры (блок «Купить у брокера»): `ru.invest.api.broker-referral.partners` - список `id`, `name`,
 `url-template` (https, подстановки `{ticker}` `{isin}` `{erid}`), `advertiser` (наименование и ИНН для маркировки

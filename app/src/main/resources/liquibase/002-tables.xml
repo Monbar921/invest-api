@@ -22,4 +22,5 @@
     <include file="tables/016-account-subscription.xml" relativeToChangelogFile="true"/>
     <include file="tables/017-payment.xml" relativeToChangelogFile="true"/>
     <include file="tables/018-portfolio-trades.xml" relativeToChangelogFile="true"/>
+    <include file="tables/019-portfolio-import.xml" relativeToChangelogFile="true"/>
 </databaseChangeLog>

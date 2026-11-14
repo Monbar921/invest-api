@@ -20,7 +20,8 @@ public class EntitlementUseCaseImpl implements EntitlementUseCase {
             PlanLimit.ALERTS, "правил уведомлений",
             PlanLimit.PORTFOLIO_POSITIONS, "покупок в портфеле");
     private static final Map<PlanFeature, String> FEATURE_NAMES = Map.of(
-            PlanFeature.CALENDAR_ICS, "Подписка на календарь выплат");
+            PlanFeature.CALENDAR_ICS, "Подписка на календарь выплат",
+            PlanFeature.BROKER_IMPORT, "Импорт сделок от брокера");
 
     private final ActivePlanResolver resolver;
 

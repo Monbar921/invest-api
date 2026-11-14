@@ -21,6 +21,7 @@ public enum ExceptionErrorCode {
     PLAN_INVALID,
     PAYMENT_INVALID,
     PAYMENT_NOT_FOUND,
+    IMPORT_INVALID,
 
     UNAUTHORIZED
 }

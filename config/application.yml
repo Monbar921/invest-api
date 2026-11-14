@@ -139,7 +139,7 @@ ru:
             limits:
               ALERTS: 500
               PORTFOLIO_POSITIONS: 2000
-            features: [CALENDAR_ICS]
+            features: [CALENDAR_ICS, BROKER_IMPORT]
       # оплата тарифов (docs/features/INVEST-001-payments): Т-Касса, выключена до решений владельца 0.1, 0.2, 0.5.
       # Ключи терминала - только из переменных окружения. notification-url - публичный адрес gateway: Т-Касса шлёт
       # туда webhook; локально без публичного адреса статус узнаётся опросом (GET /account/payments/{id})
@@ -160,6 +160,21 @@ ru:
           api-url: ${TBANK_API_URL:https://securepay.tinkoff.ru/v2}
           terminal-key: ${TBANK_TERMINAL_KEY:}
           password: ${TBANK_TERMINAL_PASSWORD:}
+      # импорт сделок от брокера (docs/features/INVEST-001-broker-import): токены T-Invest пользователей шифруются
+      # ключом из переменной окружения (32 байта в Base64: openssl rand -base64 32). Без ключа импорт по токену
+      # выключен, из файла отчёта - работает. Смена ключа делает сохранённые токены нечитаемыми - их подключают заново
+      imports:
+        token-encryption-key: ${IMPORT_TOKEN_KEY:}
+        preview-ttl: P7D
+        max-items: 5000
+        max-file-size: 5242880
+        zone: Europe/Moscow
+        tinvest:
+          target: invest-public-api.tinkoff.ru:443
+          timeout: 30s
+          app-name: invest-api
+          max-operations: 20000
+          broker-name: Т-Инвестиции
       # Telegram-бот (docs/features/INVEST-001-telegram-bot); токен - только из переменной окружения
       telegram:
         enabled: ${TELEGRAM_BOT_ENABLED:false}
@@ -179,6 +194,11 @@ spring:
     scheduling:
       pool:
         size: 4
+  # файл отчёта брокера для импорта: до 5 МБ (предел самого импорта - ru.invest.api.imports.max-file-size)
+  servlet:
+    multipart:
+      max-file-size: 6MB
+      max-request-size: 6MB
   jpa:
     # без этого EntityManager живёт весь HTTP-запрос: ручная синхронизация свечей копила в нём сотни тысяч
     # сохранённых сущностей и падала по памяти (OOMKilled на лимите 1 ГБ). Данные грузятся в @Transactional

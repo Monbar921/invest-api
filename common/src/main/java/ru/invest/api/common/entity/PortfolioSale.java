@@ -56,6 +56,13 @@ public class PortfolioSale {
     @Column(name = "commission")
     private BigDecimal commission;
 
+    /**
+     * Ключ сделки у источника импорта (операция T-Invest, строка отчёта брокера); уникален у пользователя - повторный
+     * импорт той же сделки её пропускает. null - продажи введена вручную
+     */
+    @Column(name = "import_key")
+    private String importKey;
+
     /** Брокер ({@link PortfolioBroker}); null - не указан */
     @Column(name = "broker_id")
     private Long brokerId;

@@ -32,6 +32,13 @@ public interface PortfolioUseCase {
     PositionModel create(String userId, PositionRequestModel request);
 
     /**
+     * Покупка с ключом сделки у источника импорта - те же проверки, что у {@link #create(String, PositionRequestModel)}.
+     *
+     * @param importKey ключ сделки у источника; null - введена вручную
+     */
+    PositionModel create(String userId, PositionRequestModel request, String importKey);
+
+    /**
      * Меняет количество, цену и дату покупки; тикер из запроса не используется.
      *
      * @throws ru.invest.api.common.exception.GeneralUnprocessableEntityException продажам облигации не хватило бы
