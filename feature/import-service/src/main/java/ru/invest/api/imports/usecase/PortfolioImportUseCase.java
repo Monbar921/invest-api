@@ -19,17 +19,20 @@ public interface PortfolioImportUseCase {
      *
      * @param accountIds счета; пусто - все счета токена
      * @param from       с какой даты; null - вся история
+     * @param broker     брокер у созданных сделок; пусто - «Т-Инвестиции» из настроек
      */
-    ImportModel previewTinvest(String userId, List<String> accountIds, LocalDate from);
+    ImportModel previewTinvest(String userId, List<String> accountIds, LocalDate from, String broker);
 
     /**
      * Сделки из файла отчёта брокера.
      *
+     * @param broker брокер у созданных сделок; пусто - из отчёта (у CSV - столбец «Брокер», у отчётов брокеров - имя
+     *               брокера)
      * @throws ru.invest.api.common.exception.GeneralUnprocessableEntityException файл не этого формата, пустой,
      *                                                                            слишком большой или сделок больше
      *                                                                            предела
      */
-    ImportModel previewFile(String userId, ImportSource format, String fileName, byte[] content);
+    ImportModel previewFile(String userId, ImportSource format, String fileName, byte[] content, String broker);
 
     /**
      * Создаёт выбранные сделки предпросмотра: покупки раньше продаж той же даты, каждая - в своей транзакции (не

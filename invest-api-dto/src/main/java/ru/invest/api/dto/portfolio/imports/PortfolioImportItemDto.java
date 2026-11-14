@@ -30,6 +30,8 @@ public class PortfolioImportItemDto {
     private BigDecimal aci;
     /** Комиссия, в валюте номинала */
     private BigDecimal commission;
+    /** Валюта номинала (rub, usd): в ней НКД и комиссия; null - облигация не найдена */
+    private String currency;
     /** Рубли за покупку валютной облигации */
     private BigDecimal amountRub;
     private String broker;

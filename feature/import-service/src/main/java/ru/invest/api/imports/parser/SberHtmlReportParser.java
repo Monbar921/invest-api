@@ -32,11 +32,12 @@ class SberHtmlReportParser implements ReportParser {
             header -> header.startsWith("количество") || header.startsWith("колво"),
             header -> header.startsWith("цена"),
             header -> header.startsWith("нкд"),
-            header -> header.contains("комисси"),
+            header -> header.startsWith("комисси"),
             header -> false,
             header -> header.startsWith("номерсделки"),
             header -> false,
-            header -> header.startsWith("валюта"));
+            header -> "валюта".equals(header) || header.startsWith("валютацены") || header.startsWith("валютарасч"),
+            header -> header.startsWith("валютакомисси"));
 
     @Override
     public ImportSource format() {
@@ -58,7 +59,7 @@ class SberHtmlReportParser implements ReportParser {
                 final TradeTable.Columns columns = TradeTable.Columns.of(cells, MATCHERS);
                 if (columns.complete()) {
                     // заголовок таблицы сделок (их может быть несколько - по площадкам)
-                    trade = new TradeTable(columns, "sber", BROKER, "rub", false);
+                    trade = new TradeTable(columns, "sber", BROKER, "rub", false, false);
                     found = true;
                     continue;
                 }

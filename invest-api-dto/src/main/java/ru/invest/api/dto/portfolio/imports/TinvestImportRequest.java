@@ -16,4 +16,6 @@ public class TinvestImportRequest {
     private List<String> accountIds;
     /** С какой даты; не задана - вся история и остатки позиций без истории */
     private LocalDate from;
+    /** Брокер у созданных сделок; пусто - «Т-Инвестиции» */
+    private String broker;
 }

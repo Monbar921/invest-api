@@ -138,4 +138,16 @@
                                  referencedTableName="portfolio_import" referencedColumnNames="id"
                                  onDelete="CASCADE"/>
     </changeSet>
+
+    <!-- валюта номинала строки импорта: в ней НКД и комиссия -->
+    <changeSet id="INVEST-001-add-portfolio-import-item-currency" author="d.v.kornilovich">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="portfolio_import_item" columnName="currency"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="portfolio_import_item">
+            <column name="currency" type="varchar(10)"/>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>

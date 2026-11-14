@@ -27,6 +27,7 @@ final class TradeTable {
     private final String keyPrefix;
     private final String broker;
     private final String commissionCurrency;
+    private final boolean amountIncludesAci;
     private final boolean strict;
     private final Map<String, Integer> occurrences = new HashMap<>();
 
@@ -34,15 +35,17 @@ final class TradeTable {
      * @param keyPrefix          источник в ключе импорта: csv, sber
      * @param broker             имя брокера у сделок, если в строке его нет
      * @param commissionCurrency валюта комиссии; null - валюта из столбца валюты или валюта номинала
+     * @param amountIncludesAci  сумма сделки - с НКД (отчёт Альфа-Банка): рубли за облигации - сумма без НКД
      * @param strict             строка без даты или операции - ошибка (свой шаблон); иначе - не сделка (итоги,
      *                           подзаголовки, РЕПО в отчётах брокеров)
      */
     TradeTable(final Columns columns, final String keyPrefix, final String broker, final String commissionCurrency,
-               final boolean strict) {
+               final boolean amountIncludesAci, final boolean strict) {
         this.columns = columns;
         this.keyPrefix = keyPrefix;
         this.broker = broker;
         this.commissionCurrency = commissionCurrency;
+        this.amountIncludesAci = amountIncludesAci;
         this.strict = strict;
     }
 
@@ -58,7 +61,7 @@ final class TradeTable {
                     : null;
         }
         final String kindText = cell(cells, columns.kind());
-        final ImportKind kind = ReportValues.kind(kindText);
+        final ImportKind kind = columns.kind() < 0 ? kindBySign(cells) : ReportValues.kind(kindText);
         if (kind == null) {
             return strict
                     ? TradeCandidate.invalid(lineNo, "Операция - «покупка» или «продажа», а не «%s»"
@@ -76,13 +79,13 @@ final class TradeTable {
         final BigDecimal price;
         final BigDecimal aci;
         final BigDecimal commission;
-        final BigDecimal amountRub;
+        final BigDecimal amount;
         try {
-            quantity = ReportValues.number(cell(cells, columns.quantity()));
+            quantity = abs(ReportValues.number(cell(cells, columns.quantity())));
             price = ReportValues.number(cell(cells, columns.price()));
             aci = abs(ReportValues.number(cell(cells, columns.aci())));
             commission = commission(cells);
-            amountRub = abs(ReportValues.number(cell(cells, columns.amountRub())));
+            amount = abs(ReportValues.number(cell(cells, columns.amountRub())));
         } catch (final NumberFormatException e) {
             return TradeCandidate.invalid(lineNo, "Число не разобрано в строке %d".formatted(lineNo));
         }
@@ -93,15 +96,31 @@ final class TradeTable {
             return TradeCandidate.invalid(lineNo, "Нет цены в % номинала");
         }
         final String currency = lower(cell(cells, columns.currency()));
+        final String feeCurrency = Optional.ofNullable(lower(cell(cells, columns.commissionCurrency())))
+                .orElse(commissionCurrency == null ? currency : commissionCurrency);
         final String tradeId = cell(cells, columns.tradeId());
         final String rowBroker = Optional.ofNullable(cell(cells, columns.broker())).orElse(broker);
         final String key = key(tradeId, rowBroker, date, kind, isin, ticker, quantity, price, aci, commission);
         return new TradeCandidate(lineNo, kind, key, date, null, isin, ticker, null, cell(cells, columns.name()),
                 quantity.intValueExact(), price.abs(), null,
                 aci == null ? null : new Money(aci, currency),
-                commission == null ? null : new Money(commission, commissionCurrency == null ? currency
-                        : commissionCurrency),
-                rowBroker, null, null);
+                commission == null ? null : new Money(commission, feeCurrency),
+                amountRub(amount, aci, currency), rowBroker, null, null);
+    }
+
+    /**
+     * Рубли за облигации без НКД: у своего шаблона - столбец «Сумма в руб»; у отчёта, где сумма сделки - в валюте
+     * расчётов и с НКД, - сумма без НКД, если расчёты в рублях, иначе null.
+     */
+    private BigDecimal amountRub(final BigDecimal amount, final BigDecimal aci, final String currency) {
+        if (amount == null || amount.signum() == 0) {
+            return null;
+        }
+        if (amountIncludesAci && !"rub".equals(currency) && !"rur".equals(currency)) {
+            return null;
+        }
+        final BigDecimal clean = amountIncludesAci && aci != null ? amount.subtract(aci) : amount;
+        return clean.signum() > 0 ? clean : null;
     }
 
     /**
@@ -118,6 +137,23 @@ final class TradeTable {
                 Objects.toString(ticker, ""), plain(quantity), plain(price), plain(aci), plain(commission));
         final int occurrence = occurrences.merge(values, 1, Integer::sum);
         return keyPrefix + ":" + ReportValues.sha256(values).substring(0, KEY_HASH_LENGTH) + "#" + occurrence;
+    }
+
+    /**
+     * Направление по знаку количества - когда столбца операции нет (отчёт Альфа-Банка: «-» - выбытие актива).
+     *
+     * @return null - количества нет или оно не число (строка не сделка)
+     */
+    private ImportKind kindBySign(final List<String> cells) {
+        try {
+            final BigDecimal quantity = ReportValues.number(cell(cells, columns.quantity()));
+            if (quantity == null || quantity.signum() == 0) {
+                return null;
+            }
+            return quantity.signum() > 0 ? ImportKind.BUY : ImportKind.SELL;
+        } catch (final NumberFormatException e) {
+            return null;
+        }
     }
 
     private BigDecimal commission(final List<String> cells) {
@@ -161,12 +197,19 @@ final class TradeTable {
      * @param isin        ISIN или код бумаги (не ISIN - считается тикером, если столбца тикера нет)
      * @param commissions все столбцы комиссий - складываются
      * @param currency    валюта НКД и комиссии
+     * @param amountRub   сумма сделки в рублях (у Альфа-Банка - в валюте расчётов, с НКД)
      */
     record Columns(int date, int kind, int isin, int ticker, int name, int quantity, int price, int aci,
-                   List<Integer> commissions, int amountRub, int tradeId, int broker, int currency) {
+                   List<Integer> commissions, int amountRub, int tradeId, int broker, int currency,
+                   int commissionCurrency) {
         /** Нашлись дата, операция, бумага, количество и цена */
         boolean complete() {
             return date >= 0 && kind >= 0 && (isin >= 0 || ticker >= 0) && quantity >= 0 && price >= 0;
+        }
+
+        /** То же, но операцию даёт знак количества - столбец операции не нужен */
+        boolean completeWithSignedQuantity() {
+            return date >= 0 && (isin >= 0 || ticker >= 0) && quantity >= 0 && price >= 0;
         }
 
         /** Каких обязательных столбцов нет - для сообщения пользователю */
@@ -207,7 +250,8 @@ final class TradeTable {
                     find(normalized, matchers.name()), find(normalized, matchers.quantity()),
                     find(normalized, matchers.price()), find(normalized, matchers.aci()), commissions,
                     find(normalized, matchers.amountRub()), find(normalized, matchers.tradeId()),
-                    find(normalized, matchers.broker()), find(normalized, matchers.currency()));
+                    find(normalized, matchers.broker()), find(normalized, matchers.currency()),
+                    find(normalized, matchers.commissionCurrency()));
         }
 
         private static int find(final List<String> headers, final Predicate<String> matcher) {
@@ -224,6 +268,7 @@ final class TradeTable {
     record Matchers(Predicate<String> date, Predicate<String> kind, Predicate<String> isin, Predicate<String> ticker,
                     Predicate<String> name, Predicate<String> quantity, Predicate<String> price,
                     Predicate<String> aci, Predicate<String> commission, Predicate<String> amountRub,
-                    Predicate<String> tradeId, Predicate<String> broker, Predicate<String> currency) {
+                    Predicate<String> tradeId, Predicate<String> broker, Predicate<String> currency,
+                    Predicate<String> commissionCurrency) {
     }
 }

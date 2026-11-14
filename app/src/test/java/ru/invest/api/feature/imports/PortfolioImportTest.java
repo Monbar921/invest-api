@@ -32,6 +32,7 @@ import tools.jackson.databind.json.JsonMapper;
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -167,6 +168,7 @@ public class PortfolioImportTest extends AbstractInvestApplicationTest {
         assertThat(buy.getPrice(), comparesEqualTo(new BigDecimal("60.5")));
         assertThat(buy.getAci(), comparesEqualTo(new BigDecimal("12.30")));
         assertThat(buy.getCommission(), comparesEqualTo(new BigDecimal("1.50")));
+        assertThat(buy.getCurrency(), equalTo("rub"));
         assertThat(buy.isSelectable(), equalTo(true));
         // не потерялась: и строкой, и в списке неизвестных облигаций
         assertThat(preview.getUnknownBonds(), hasSize(1));
@@ -225,6 +227,9 @@ public class PortfolioImportTest extends AbstractInvestApplicationTest {
                 row(today.minusDays(10), "buy", OFZ, "1", "61", "", "", "")));
         assertThat(preview.getItems().getFirst().getStatus(), equalTo(ImportItemStatusDto.POSSIBLE_DUPLICATE));
         assertThat(preview.getItems().getFirst().getMessage(), containsString("вручную"));
+        // продаже нечего продавать - видно уже в предпросмотре, не выбрана по умолчанию
+        assertThat(preview.getItems().get(1).getStatus(), equalTo(ImportItemStatusDto.NEEDS_REVIEW));
+        assertThat(preview.getItems().get(1).getMessage(), containsString("Не хватает покупок"));
         // по тикеру тоже находится
         assertThat(preview.getItems().get(2).getStatus(), equalTo(ImportItemStatusDto.NEW));
 
@@ -236,6 +241,84 @@ public class PortfolioImportTest extends AbstractInvestApplicationTest {
         assertThat(report.getItems().get(2).getStatus(), equalTo(ImportItemStatusDto.CREATED));
         assertThat(count("portfolio_position"), equalTo(2));
         assertThat(count("portfolio_sale"), equalTo(0));
+    }
+
+    /**
+     * Ручные покупки введены с другой датой или одной сделкой вместо нескольких исполнений - всё равно «похожа на
+     * введённую»; продажа больше, чем есть, - «проверить» уже в предпросмотре.
+     */
+    @Test
+    void fuzzyManualDuplicatesAndUncoveredSale() {
+        jdbcTemplate.update("insert into portfolio_position (user_id, ticker, quantity, buy_price, buy_date, created_at)"
+                + " values (?, ?, 5, 60, ?, now()), (?, ?, 46, 60, ?, now())", ALICE, OFZ, today.minusDays(40), ALICE,
+                OFZ, today.minusDays(30));
+        final LocalDate fills = today.minusDays(31);
+        final PortfolioImportDto preview = preview(ALICE, "CSV", csv(
+                row(today.minusDays(37), "buy", OFZ_ISIN, "5", "60", "", "", ""),
+                row(fills, "buy", OFZ_ISIN, "7", "60", "", "", ""),
+                row(fills, "buy", OFZ_ISIN, "10", "60", "", "", ""),
+                row(fills, "buy", OFZ_ISIN, "28", "60", "", "", ""),
+                row(fills, "buy", OFZ_ISIN, "1", "60", "", "", ""),
+                row(today.minusDays(60), "buy", OFZ_ISIN, "3", "60", "", "", ""),
+                row(today.minusDays(5), "buy", OFZ_ISIN, "2", "61", "", "", ""),
+                row(today.minusDays(4), "sell", OFZ_ISIN, "100", "62", "", "", ""),
+                row(today.minusDays(3), "sell", OFZ_ISIN, "50", "62", "", "", "")));
+        final List<PortfolioImportItemDto> items = preview.getItems();
+        // та же облигация и количество, дата отличается на 3 дня
+        assertThat(items.getFirst().getStatus(), equalTo(ImportItemStatusDto.POSSIBLE_DUPLICATE));
+        assertThat(items.getFirst().getMessage(), containsString("та же облигация и количество"));
+        // 7 + 10 + 28 + 1 = 46 - одна ручная покупка
+        for (int i = 1; i <= 4; i++) {
+            assertThat(items.get(i).getStatus(), equalTo(ImportItemStatusDto.POSSIBLE_DUPLICATE));
+            assertThat(items.get(i).getMessage(), containsString("46"));
+        }
+        // раньше последней ручной покупки - вероятно, вошла в ручной ввод
+        assertThat(items.get(5).getStatus(), equalTo(ImportItemStatusDto.POSSIBLE_DUPLICATE));
+        // позже ручных - новая
+        assertThat(items.get(6).getStatus(), equalTo(ImportItemStatusDto.NEW));
+        // в портфеле 51 + новая 2 = 53: на 100 не хватает, на 50 - хватает
+        assertThat(items.get(7).getStatus(), equalTo(ImportItemStatusDto.NEEDS_REVIEW));
+        assertThat(items.get(7).getMessage(), containsString("куплено 53 шт."));
+        assertThat(items.get(8).getStatus(), equalTo(ImportItemStatusDto.NEW));
+    }
+
+    /**
+     * Предпросмотр, открытый после того, как его сделки импортировал другой импорт, показывает их «уже
+     * импортирована»; брокер с тем же именем без учёта знаков («Альфа-Банк» и «АльфаБанк») - уже заведённый.
+     */
+    @Test
+    void stalePreviewAndKnownBroker() {
+        jdbcTemplate.update("insert into portfolio_broker (user_id, name, created_at) values (?, 'АльфаБанк', now())",
+                ALICE);
+        final String file = csv(row(today.minusDays(7), "Покупка", OFZ_ISIN, "2", "60", "", "", "Альфа-Банк"));
+        final PortfolioImportDto first = preview(ALICE, "CSV", file);
+        assertThat(first.getItems().getFirst().getBroker(), equalTo("АльфаБанк"));
+        final PortfolioImportDto second = preview(ALICE, "CSV", file);
+        apply(ALICE, second, allIds(second));
+
+        final HttpResponse<String> response = send("GET", "/imports/" + first.getId(), ALICE, null);
+        assertThat(response.body(), response.statusCode(), equalTo(OK));
+        final PortfolioImportDto reopened = jsonMapper.readValue(response.body(), PortfolioImportDto.class);
+        assertThat(reopened.getItems().getFirst().getStatus(), equalTo(ImportItemStatusDto.DUPLICATE));
+        assertThat(reopened.getItems().getFirst().isSelectable(), equalTo(false));
+        assertThat(jdbcTemplate.queryForObject("select count(*) from portfolio_broker where user_id = ?",
+                Integer.class, ALICE), equalTo(1));
+    }
+
+    /** Брокер, указанный при импорте, - у всех сделок; ключи не меняются, повтор без него - те же сделки */
+    @Test
+    void brokerLabelFromImport() {
+        final String file = csv(row(today.minusDays(7), "Покупка", OFZ_ISIN, "2", "60", "", "", "Из файла"));
+        final HttpResponse<String> response = upload(ALICE, "CSV&broker=" + URLEncoder.encode(" ВТБ ",
+                StandardCharsets.UTF_8), file);
+        assertThat(response.body(), response.statusCode(), equalTo(CREATED));
+        final PortfolioImportDto preview = jsonMapper.readValue(response.body(), PortfolioImportDto.class);
+        assertThat(preview.getItems().getFirst().getBroker(), equalTo("ВТБ"));
+        apply(ALICE, preview, allIds(preview));
+        assertThat(portfolio(ALICE).getGroups().getFirst().getBrokers().toString(), containsString("ВТБ"));
+
+        assertThat(preview(ALICE, "CSV", file).getItems().getFirst().getStatus(), equalTo(ImportItemStatusDto.DUPLICATE));
+        assertThat(upload(ALICE, "CSV&broker=" + "x".repeat(101), file).statusCode(), equalTo(UNPROCESSABLE));
     }
 
     @Test

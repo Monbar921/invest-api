@@ -7,5 +7,7 @@ public enum ImportSourceDto {
     /** Свой шаблон CSV */
     CSV,
     /** Брокерский отчёт Сбербанка (HTML) */
-    SBER_HTML
+    SBER_HTML,
+    /** Брокерский отчёт Альфа-Банка (XLSX) */
+    ALFA_XLSX
 }

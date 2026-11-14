@@ -30,7 +30,8 @@ class CsvReportParser implements ReportParser {
             Set.of("суммавруб", "суммаруб", "amountrub")::contains,
             Set.of("номерсделки", "tradeid", "номер")::contains,
             Set.of("брокер", "broker")::contains,
-            Set.of("валюта", "currency")::contains);
+            Set.of("валюта", "currency")::contains,
+            Set.of("валютакомиссии", "commissioncurrency")::contains);
 
     @Override
     public ImportSource format() {
@@ -53,7 +54,7 @@ class CsvReportParser implements ReportParser {
             throw new ReportParseException("В первой строке CSV нет столбцов: %s. Нужны: дата, операция, ISIN или "
                     .formatted(String.join(", ", columns.missing())) + "тикер, количество, цена в % номинала");
         }
-        final TradeTable table = new TradeTable(columns, "csv", null, null, true);
+        final TradeTable table = new TradeTable(columns, "csv", null, null, false, true);
         final List<TradeCandidate> trades = new ArrayList<>();
         for (int i = headerLine + 1; i < lines.size(); i++) {
             if (!lines.get(i).isBlank()) {

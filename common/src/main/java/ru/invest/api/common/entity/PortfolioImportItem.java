@@ -76,6 +76,10 @@ public class PortfolioImportItem {
     @Column(name = "commission")
     private BigDecimal commission;
 
+    /** Валюта номинала облигации (rub, usd): в ней НКД и комиссия; null - облигация не найдена */
+    @Column(name = "currency")
+    private String currency;
+
     /** Рубли за покупку валютной облигации, если брокер списал рубли */
     @Column(name = "amount_rub")
     private BigDecimal amountRub;

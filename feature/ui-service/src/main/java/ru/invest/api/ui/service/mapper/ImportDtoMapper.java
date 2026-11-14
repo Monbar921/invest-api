@@ -85,6 +85,7 @@ public class ImportDtoMapper {
                 .setPrice(item.price())
                 .setAci(item.aci())
                 .setCommission(item.commission())
+                .setCurrency(item.currency())
                 .setAmountRub(item.amountRub())
                 .setBroker(item.broker())
                 .setStatus(ImportItemStatusDto.valueOf(item.status().name()))

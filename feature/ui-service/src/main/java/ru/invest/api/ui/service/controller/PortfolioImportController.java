@@ -92,23 +92,24 @@ public class PortfolioImportController {
             @RequestBody(required = false) final TinvestImportRequest request) {
         final TinvestImportRequest body = request == null ? new TinvestImportRequest() : request;
         return importDtoMapper.toDto(portfolioImportUseCase.previewTinvest(UserIdHeader.require(userId),
-                body.getAccountIds(), body.getFrom()));
+                body.getAccountIds(), body.getFrom(), body.getBroker()));
     }
 
     /**
-     * Предпросмотр сделок из файла отчёта (multipart, поле file). format - CSV или SBER_HTML; файл не этого формата,
-     * пустой или слишком большой - 422.
+     * Предпросмотр сделок из файла отчёта (multipart, поле file). format - CSV, SBER_HTML или ALFA_XLSX; broker -
+     * брокер у созданных сделок (пусто - из отчёта); файл не этого формата, пустой или слишком большой - 422.
      */
     @PostMapping(value = "/file/preview", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
     public PortfolioImportDto previewFile(
             @RequestHeader(value = UserIdHeader.NAME, required = false) final String userId,
             @RequestParam final ImportSourceDto format,
+            @RequestParam(required = false) final String broker,
             @RequestPart("file") final MultipartFile file) {
         final String user = UserIdHeader.require(userId);
         try {
             return importDtoMapper.toDto(portfolioImportUseCase.previewFile(user, ImportSource.valueOf(format.name()),
-                    file.getOriginalFilename(), file.getBytes()));
+                    file.getOriginalFilename(), file.getBytes(), broker));
         } catch (final IOException e) {
             throw new UncheckedIOException(e);
         }

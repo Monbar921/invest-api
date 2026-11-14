@@ -16,6 +16,8 @@ import ru.invest.api.common.exception.enums.ExceptionErrorCode;
 import ru.invest.api.common.mapper.DateTimeMapper;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.account.PlanFeature;
+import ru.invest.api.common.entity.PortfolioBroker;
+import ru.invest.api.common.repository.PortfolioBrokerRepository;
 import ru.invest.api.common.repository.PortfolioImportItemRepository;
 import ru.invest.api.common.repository.PortfolioImportRepository;
 import ru.invest.api.common.repository.PortfolioPositionRepository;
@@ -73,6 +75,7 @@ public class PortfolioImportUseCaseImpl implements PortfolioImportUseCase {
     private static final int KEY_HASH_LENGTH = 40;
     private static final int MAX_MESSAGE = 500;
     private static final int MAX_FILE_NAME = 255;
+    private static final int MAX_BROKER = 100;
     private static final int MEGABYTE = 1024 * 1024;
     private static final int PRICE_SCALE = 10;
 
@@ -80,6 +83,7 @@ public class PortfolioImportUseCaseImpl implements PortfolioImportUseCase {
     private final PortfolioImportItemRepository itemRepository;
     private final PortfolioPositionRepository positionRepository;
     private final PortfolioSaleRepository saleRepository;
+    private final PortfolioBrokerRepository brokerRepository;
     private final ImportItemResolver resolver;
     private final BrokerConnectionUseCaseImpl connectionUseCase;
     private final TinvestClient tinvestClient;
@@ -97,6 +101,7 @@ public class PortfolioImportUseCaseImpl implements PortfolioImportUseCase {
                                       final PortfolioImportItemRepository itemRepository,
                                       final PortfolioPositionRepository positionRepository,
                                       final PortfolioSaleRepository saleRepository,
+                                      final PortfolioBrokerRepository brokerRepository,
                                       final ImportItemResolver resolver,
                                       final BrokerConnectionUseCaseImpl connectionUseCase,
                                       final TinvestClient tinvestClient,
@@ -111,6 +116,7 @@ public class PortfolioImportUseCaseImpl implements PortfolioImportUseCase {
         this.itemRepository = itemRepository;
         this.positionRepository = positionRepository;
         this.saleRepository = saleRepository;
+        this.brokerRepository = brokerRepository;
         this.resolver = resolver;
         this.connectionUseCase = connectionUseCase;
         this.tinvestClient = tinvestClient;
@@ -126,8 +132,10 @@ public class PortfolioImportUseCaseImpl implements PortfolioImportUseCase {
     }
 
     @Override
-    public ImportModel previewTinvest(final String userId, final List<String> accountIds, final LocalDate from) {
+    public ImportModel previewTinvest(final String userId, final List<String> accountIds, final LocalDate from,
+                                      final String broker) {
         entitlementUseCase.requireFeature(userId, PlanFeature.BROKER_IMPORT);
+        final String label = brokerLabel(broker);
         if (from != null && from.isAfter(today())) {
             throw unprocessable("Дата начала не может быть в будущем");
         }
@@ -157,8 +165,8 @@ public class PortfolioImportUseCaseImpl implements PortfolioImportUseCase {
                             .formatted(entry.getKey().name(), max));
                 }
             }
-            final PortfolioImport result = save(userId, ImportSource.TINVEST_API, null, candidates, skipped,
-                    warnings, index);
+            final PortfolioImport result = save(userId, ImportSource.TINVEST_API, null,
+                    withBroker(candidates, label), skipped, warnings, index);
             connectionUseCase.markImported(userId);
             return result;
         });
@@ -167,8 +175,9 @@ public class PortfolioImportUseCaseImpl implements PortfolioImportUseCase {
 
     @Override
     public ImportModel previewFile(final String userId, final ImportSource format, final String fileName,
-                                   final byte[] content) {
+                                   final byte[] content, final String broker) {
         entitlementUseCase.requireFeature(userId, PlanFeature.BROKER_IMPORT);
+        final String label = brokerLabel(broker);
         final ReportParser parser = format == null ? null : parsers.get(format);
         if (parser == null) {
             throw unprocessable("Выберите формат отчёта: " + fileFormats().stream().map(Enum::name)
@@ -190,12 +199,13 @@ public class PortfolioImportUseCaseImpl implements PortfolioImportUseCase {
             throw unprocessable("В файле не найдено ни одной покупки или продажи");
         }
         final PortfolioImport created = transaction.execute(status -> save(userId, format,
-                truncate(fileName, MAX_FILE_NAME), report.trades(), report.skipped(), List.of(),
+                truncate(fileName, MAX_FILE_NAME), withBroker(report.trades(), label), report.skipped(), List.of(),
                 resolver.bondIndex()));
         return get(userId, Objects.requireNonNull(created).getId());
     }
 
     @Override
+    @SuppressWarnings("checkstyle:IllegalCatch")
     public ImportModel apply(final String userId, final Long importId, final Set<Long> itemIds) {
         entitlementUseCase.requireFeature(userId, PlanFeature.BROKER_IMPORT);
         final Integer changed = transaction.execute(status -> importRepository.changeStatus(importId, userId,
@@ -204,7 +214,19 @@ public class PortfolioImportUseCaseImpl implements PortfolioImportUseCase {
             find(userId, importId);
             throw unprocessable("Импорт уже подтверждён - загрузите сделки заново, уже импортированные пропустятся");
         }
-        final Set<Long> selected = itemIds == null ? Set.of() : itemIds;
+        try {
+            applyItems(userId, importId, itemIds == null ? Set.of() : itemIds);
+        } catch (final RuntimeException e) {
+            // не оставлять импорт в APPLYING: созданные сделки при повторе - «уже импортирована» по ключу
+            log.error("Portfolio import apply failed: userId={}, importId={}", userId, importId, e);
+            transaction.executeWithoutResult(status -> importRepository.changeStatus(importId, userId,
+                    ImportStatus.APPLYING.name(), ImportStatus.PREVIEW.name()));
+            throw e;
+        }
+        return get(userId, importId);
+    }
+
+    private void applyItems(final String userId, final Long importId, final Set<Long> selected) {
         final List<PortfolioImportItem> items = itemRepository.findByImportIdOrderByLineNoAscIdAsc(importId);
         final Set<String> buyKeys = new HashSet<>(positionRepository.findImportKeys(userId));
         final Set<String> saleKeys = new HashSet<>(saleRepository.findImportKeys(userId));
@@ -240,14 +262,18 @@ public class PortfolioImportUseCaseImpl implements PortfolioImportUseCase {
         });
         log.info("Portfolio import applied: userId={}, importId={}, created={}", userId, importId,
                 items.stream().filter(item -> ImportItemStatus.CREATED.name().equals(item.getStatus())).count());
-        return get(userId, importId);
     }
 
     @Override
     public ImportModel get(final String userId, final Long importId) {
         return transaction.execute(status -> {
             final PortfolioImport entity = find(userId, importId);
-            return toModel(entity, itemRepository.findByImportIdOrderByLineNoAscIdAsc(entity.getId()), true);
+            final List<PortfolioImportItem> items = itemRepository.findByImportIdOrderByLineNoAscIdAsc(entity.getId());
+            // предпросмотр открыт позже: сделки, импортированные с тех пор, - уже «уже импортирована»
+            if (ImportStatus.PREVIEW.name().equals(entity.getStatus()) && resolver.refresh(userId, items)) {
+                itemRepository.saveAll(items);
+            }
+            return toModel(entity, items, true);
         });
     }
 
@@ -266,6 +292,7 @@ public class PortfolioImportUseCaseImpl implements PortfolioImportUseCase {
     }
 
     /** Одна сделка - своя транзакция: не прошедшая проверки портфеля не откатывает остальные */
+    @SuppressWarnings("checkstyle:IllegalCatch")
     private void create(final String userId, final PortfolioImportItem item, final boolean buy) {
         try {
             final Long id = itemTransaction.execute(status -> buy
@@ -282,6 +309,10 @@ public class PortfolioImportUseCaseImpl implements PortfolioImportUseCase {
         } catch (final DataIntegrityViolationException e) {
             // ту же сделку только что создал параллельный импорт - уникальный индекс по ключу
             item.setStatus(ImportItemStatus.DUPLICATE.name()).setMessage("Уже импортирована");
+        } catch (final RuntimeException e) {
+            // непредвиденная ошибка одной сделки не останавливает остальные
+            log.error("Portfolio import item failed: userId={}, itemId={}", userId, item.getId(), e);
+            item.setStatus(ImportItemStatus.FAILED.name()).setMessage("Не удалось создать сделку - попробуйте позже");
         }
     }
 
@@ -313,7 +344,7 @@ public class PortfolioImportUseCaseImpl implements PortfolioImportUseCase {
                     key("tinvest", account.id(), basis), LocalDate.ofInstant(operation.date(), properties.getZone()),
                     operation.instrumentUid(), null, null, operation.figi(), operation.name(),
                     fits ? (int) operation.quantity() : null, null, price(operation), operation.aci(),
-                    operation.commission(), broker, null, null));
+                    operation.commission(), null, broker, null, null));
         }
         if (positions == null) {
             return skipped;
@@ -328,7 +359,7 @@ public class PortfolioImportUseCaseImpl implements PortfolioImportUseCase {
                 candidates.add(new TradeCandidate(candidates.size() + 1, ImportKind.BUY,
                         key("tinvest-rest", account.id(), position.instrumentUid() + ":" + rest), date,
                         position.instrumentUid(), null, position.ticker(), position.figi(), position.ticker(),
-                        (int) rest, null, position.averagePrice(), null, null, broker, null,
+                        (int) rest, null, position.averagePrice(), null, null, null, broker, null,
                         ("У брокера %d шт. без покупки в истории счёта: дата - открытие счёта, цена - средняя цена "
                                 + "позиции у брокера. Проверьте перед импортом").formatted(rest)));
             }
@@ -374,6 +405,37 @@ public class PortfolioImportUseCaseImpl implements PortfolioImportUseCase {
                 .toList();
     }
 
+    /**
+     * Брокер, которого пользователь указал для импорта: пробелы по краям отбрасываются; пусто - null (брокер из
+     * источника).
+     */
+    private static String brokerLabel(final String broker) {
+        final String label = broker == null ? null : broker.strip();
+        if (label != null && label.length() > MAX_BROKER) {
+            throw unprocessable("Имя брокера - не длиннее %d символов".formatted(MAX_BROKER));
+        }
+        return label == null || label.isEmpty() ? null : label;
+    }
+
+    /** Брокер, указанный при импорте, - всем сделкам; ключи импорта не меняются */
+    private static List<TradeCandidate> withBroker(final List<TradeCandidate> candidates, final String label) {
+        return label == null ? candidates : candidates.stream().map(candidate -> candidate.withBroker(label)).toList();
+    }
+
+    /**
+     * Брокер сделки - уже заведённый у пользователя, если имена совпадают без учёта регистра, пробелов и знаков
+     * («Альфа-Банк» и «АльфаБанк»): иначе импорт завёл бы второго брокера рядом с тем, что пользователь вводил вручную.
+     */
+    private List<TradeCandidate> knownBrokers(final String userId, final List<TradeCandidate> candidates) {
+        final Map<String, String> known = brokerRepository.findByUserIdOrderByNameAsc(userId).stream()
+                .map(PortfolioBroker::getName)
+                .collect(Collectors.toMap(ReportValues::header, Function.identity(), (a, b) -> a));
+        return candidates.stream().map(candidate -> {
+            final String name = candidate.broker() == null ? null : known.get(ReportValues.header(candidate.broker()));
+            return name == null || name.equals(candidate.broker()) ? candidate : candidate.withBroker(name);
+        }).toList();
+    }
+
     private PortfolioImport save(final String userId, final ImportSource source, final String fileName,
                                  final List<TradeCandidate> candidates, final int skipped, final List<String> warnings,
                                  final ImportItemResolver.BondIndex index) {
@@ -392,7 +454,7 @@ public class PortfolioImportUseCaseImpl implements PortfolioImportUseCase {
                 .setSkippedOperations(skipped)
                 .setWarnings(warnings.isEmpty() ? null : String.join("\n", warnings))
                 .setCreatedAt(now));
-        final List<PortfolioImportItem> items = resolver.resolve(userId, candidates, index);
+        final List<PortfolioImportItem> items = resolver.resolve(userId, knownBrokers(userId, candidates), index);
         items.forEach(item -> item.setImportId(entity.getId()));
         itemRepository.saveAll(items);
         return entity;
@@ -422,7 +484,7 @@ public class PortfolioImportUseCaseImpl implements PortfolioImportUseCase {
         return new ImportItemModel(item.getId(), item.getLineNo(),
                 item.getKind() == null ? null : ImportKind.valueOf(item.getKind()), item.getTradeDate(),
                 item.getTicker(), item.getIsin(), item.getFigi(), item.getName(), item.getQuantity(), item.getPrice(),
-                item.getAci(), item.getCommission(), item.getAmountRub(), item.getBroker(),
+                item.getAci(), item.getCommission(), item.getCurrency(), item.getAmountRub(), item.getBroker(),
                 ImportItemStatus.valueOf(item.getStatus()), item.getMessage(), item.getTradeId());
     }
 
