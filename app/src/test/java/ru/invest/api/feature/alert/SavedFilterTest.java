@@ -91,7 +91,11 @@ public class SavedFilterTest extends AbstractInvestApplicationTest {
         assertThat(created.getMatches(), equalTo(1));
 
         // название уникально без учёта регистра
-        assertThat(send("POST", FILTERS_URL, ALICE, Map.of("name", "доходные")).statusCode(), equalTo(UNPROCESSABLE));
+        final HttpResponse<String> duplicate = send("POST", FILTERS_URL, ALICE, Map.of("name", "доходные"));
+        assertThat(duplicate.statusCode(), equalTo(UNPROCESSABLE));
+        // текст ошибки UI показывает пользователю как есть
+        assertThat(jsonMapper.readTree(duplicate.body()).get("detail").asString(),
+                equalTo("Фильтр «доходные» уже есть - выберите другое название"));
         assertThat(send("POST", FILTERS_URL, ALICE, Map.of("name", " ")).statusCode(), equalTo(BAD_REQUEST));
         assertThat(send("POST", FILTERS_URL, ALICE, Map.of("name", "Рейтинг",
                 "parameters", Map.of("creditRating", Map.of("min", "XYZ")))).statusCode(), equalTo(BAD_REQUEST));

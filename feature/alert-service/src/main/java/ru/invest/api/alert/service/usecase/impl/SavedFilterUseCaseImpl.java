@@ -161,14 +161,15 @@ public class SavedFilterUseCaseImpl implements SavedFilterUseCase {
 
     private static String name(final String name) {
         if (name == null || name.isBlank()) {
-            throw new GeneralUnprocessableEntityException(ExceptionErrorCode.ALERT_INVALID, "name must not be blank");
+            throw new GeneralUnprocessableEntityException(ExceptionErrorCode.ALERT_INVALID,
+                    "Название фильтра не может быть пустым");
         }
         return name.strip();
     }
 
     private static GeneralUnprocessableEntityException duplicate(final String name) {
         return new GeneralUnprocessableEntityException(ExceptionErrorCode.ALERT_INVALID,
-                "Saved filter \"%s\" already exists".formatted(name));
+                "Фильтр «%s» уже есть - выберите другое название".formatted(name));
     }
 
     private SavedFilterModel toModel(final SavedFilter filter, final BondAlert alert) {
