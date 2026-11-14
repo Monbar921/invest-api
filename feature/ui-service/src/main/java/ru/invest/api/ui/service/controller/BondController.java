@@ -1,11 +1,16 @@
 package ru.invest.api.ui.service.controller;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -14,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import ru.invest.api.bond.supplier.model.BondScope;
 import ru.invest.api.bond.supplier.usecase.BondUseCase;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.dto.bond.BondDto;
@@ -24,15 +30,21 @@ import ru.invest.api.dto.bond.candle.CandleDto;
 import ru.invest.api.dto.bond.candle.CandleIntervalDto;
 import ru.invest.api.dto.bond.event.BondEventDto;
 import ru.invest.api.dto.page.PageDto;
+import ru.invest.api.dto.request.bond.BondExportFormatRequest;
 import ru.invest.api.dto.request.bond.BondParametersRequest;
+import ru.invest.api.ui.service.export.BondCsvWriter;
+import ru.invest.api.ui.service.export.BondXlsxWriter;
 import ru.invest.api.ui.service.mapper.BondDtoMapper;
 import ru.invest.api.news.supplier.usecase.IssuerUseCase;
 import ru.invest.api.ui.service.mapper.BondParametersRequestMapper;
 import ru.invest.api.ui.service.mapper.IssuerDtoMapper;
 import ru.invest.api.ui.service.mapper.NewsDtoMapper;
 
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
+import java.util.Locale;
 
 @Validated
 @RestController
@@ -43,6 +55,9 @@ public class BondController {
     private static final long MAX_PAGE_SIZE = 500;
     private static final String DEFAULT_SEARCH_LIMIT = "20";
     private static final long MAX_SEARCH_LIMIT = 50;
+    private static final ZoneId MOSCOW = ZoneId.of("Europe/Moscow");
+    private static final MediaType CSV = new MediaType("text", "csv", StandardCharsets.UTF_8);
+    private static final MediaType XLSX = MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
 
     private final BondUseCase bondUseCase;
     private final BondParametersRequestMapper bondParametersRequestMapper;
@@ -63,7 +78,7 @@ public class BondController {
             @RequestParam(defaultValue = "0") @PositiveOrZero(message = "page must not be negative") final int page,
             @RequestParam(defaultValue = DEFAULT_PAGE_SIZE) @Positive(message = "size must be a positive number")
             @Max(value = MAX_PAGE_SIZE, message = "size must not exceed 500") final int size,
-            @RequestBody(required = false) final BondParametersRequest bondParametersRequest) {
+            @RequestBody(required = false) @Valid final BondParametersRequest bondParametersRequest) {
         return bondDtoMapper.toDto(
                 bondUseCase.getAllPage(
                         bondParametersRequestMapper.toModel(null, bondParametersRequest), PageRequest.of(page, size)));
@@ -77,7 +92,7 @@ public class BondController {
             @RequestParam(defaultValue = "0") @PositiveOrZero(message = "page must not be negative") final int page,
             @RequestParam(defaultValue = DEFAULT_PAGE_SIZE) @Positive(message = "size must be a positive number")
             @Max(value = MAX_PAGE_SIZE, message = "size must not exceed 500") final int size,
-            @RequestBody(required = false) final BondParametersRequest bondParametersRequest) {
+            @RequestBody(required = false) @Valid final BondParametersRequest bondParametersRequest) {
         return bondDtoMapper.toDto(
                 bondUseCase.getForeignCurrencyBondsPage(
                         bondParametersRequestMapper.toModel(null, bondParametersRequest), PageRequest.of(page, size)));
@@ -91,10 +106,38 @@ public class BondController {
             @RequestParam(defaultValue = "0") @PositiveOrZero(message = "page must not be negative") final int page,
             @RequestParam(defaultValue = DEFAULT_PAGE_SIZE) @Positive(message = "size must be a positive number")
             @Max(value = MAX_PAGE_SIZE, message = "size must not exceed 500") final int size,
-            @RequestBody(required = false) final BondParametersRequest bondParametersRequest) {
+            @RequestBody(required = false) @Valid final BondParametersRequest bondParametersRequest) {
         return bondDtoMapper.toDto(
                 bondUseCase.getRubbleCurrencyBondsPage(
                         bondParametersRequestMapper.toModel(null, bondParametersRequest), PageRequest.of(page, size)));
+    }
+
+    /**
+     * Вся выборка с фильтрами и сортировкой страницы - файлом CSV или Excel. Скринер без входа, как и список.
+     *
+     * @param scope  all, local или foreign - как у страницы
+     * @param format CSV или XLSX
+     */
+    @PostMapping("/{scope:all|local|foreign}/export")
+    public ResponseEntity<byte[]> export(@PathVariable final String scope,
+                                         @RequestParam(defaultValue = "CSV") final BondExportFormatRequest format,
+                                         @RequestBody(required = false) @Valid final BondParametersRequest bondParametersRequest) {
+        final List<BondModel> bonds = bondUseCase.getAllFiltered(BondScope.valueOf(scope.toUpperCase(Locale.ROOT)),
+                bondParametersRequestMapper.toModel(null, bondParametersRequest));
+        final boolean xlsx = format == BondExportFormatRequest.XLSX;
+        final String fileName = "bonds-" + scope + "-" + LocalDate.now(MOSCOW) + (xlsx ? ".xlsx" : ".csv");
+        return ResponseEntity.ok()
+                .contentType(xlsx ? XLSX : CSV)
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment().filename(fileName).build().toString())
+                .body(xlsx ? BondXlsxWriter.write(bonds) : BondCsvWriter.write(bonds));
+    }
+
+    /**
+     * Секторы облигаций в системе - значения для фильтра по сектору.
+     */
+    @GetMapping("/sectors")
+    public List<String> getSectors() {
+        return bondUseCase.getSectors();
     }
 
     /**

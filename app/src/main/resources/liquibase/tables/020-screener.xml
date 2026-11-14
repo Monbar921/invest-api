@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.4.xsd">
+
+    <!-- дюрация к погашению - считается вместе с доходностью к погашению после каждой синхронизации цен, лет -->
+    <changeSet id="INVEST-001-add-coupon-duration" author="d.v.kornilovich">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="coupon" columnName="duration_macaulay"/>
+            </not>
+        </preConditions>
+
+        <addColumn tableName="coupon">
+            <column name="duration_macaulay" type="numeric(10,4)"/>
+            <column name="duration_modified" type="numeric(10,4)"/>
+        </addColumn>
+    </changeSet>
+
+    <!-- текущие кредитные рейтинги АКРА и НКР: строка на агентство и эмитента (рейтинг эмитента) или ISIN (рейтинг
+         выпуска). Не удаляются вместе с новостями; отзыв - withdrawn -->
+    <changeSet id="INVEST-001-create-credit-rating-table" author="d.v.kornilovich">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="credit_rating"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="credit_rating">
+            <column autoIncrement="true" name="id" type="bigserial">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="agency" type="varchar(10)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="scope" type="varchar(10)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="emitter_id" type="bigint"/>
+            <column name="isin" type="varchar(20)"/>
+            <column name="rating" type="varchar(20)"/>
+            <column name="grade" type="varchar(10)"/>
+            <column name="score" type="integer"/>
+            <column name="outlook" type="varchar(20)"/>
+            <column name="withdrawn" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="action_date" type="date">
+                <constraints nullable="false"/>
+            </column>
+            <column name="release_id" type="varchar(200)"/>
+            <column name="title" type="varchar(1000)"/>
+            <column name="url" type="varchar(1000)"/>
+            <column name="updated_at" type="timestamp"/>
+            <column name="updated_by" type="varchar(100)"/>
+        </createTable>
+        <sql>
+            alter table credit_rating add constraint credit_rating_subject_ck check (
+                scope = 'ISSUER' and emitter_id is not null and isin is null
+                or scope = 'ISSUE' and isin is not null and emitter_id is null);
+            create unique index credit_rating_issuer_uq on credit_rating (agency, emitter_id) where scope = 'ISSUER';
+            create unique index credit_rating_issue_uq on credit_rating (agency, isin) where scope = 'ISSUE';
+        </sql>
+    </changeSet>
+
+    <!-- описание купона выпуска с Мосбиржи (COUPON_DETAILS) - база ставки флоатера -->
+    <changeSet id="INVEST-001-create-bond-coupon-base-table" author="d.v.kornilovich">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="bond_coupon_base"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="bond_coupon_base">
+            <column name="isin" type="varchar(20)">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="coupon_details" type="varchar(200)"/>
+            <column name="updated_at" type="timestamp"/>
+            <column name="updated_by" type="varchar(100)"/>
+        </createTable>
+    </changeSet>
+
+    <!-- ликвидность: свечи всех облигаций за последние 30 дней и число торговых дней в окне -->
+    <changeSet id="INVEST-001-add-price-candle-date-index" author="d.v.kornilovich">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <indexExists tableName="price_candle" indexName="price_candle_date_idx"/>
+            </not>
+        </preConditions>
+
+        <createIndex tableName="price_candle" indexName="price_candle_date_idx">
+            <column name="candle_date"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

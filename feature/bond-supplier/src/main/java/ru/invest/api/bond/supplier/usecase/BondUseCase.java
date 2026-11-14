@@ -1,5 +1,6 @@
 package ru.invest.api.bond.supplier.usecase;
 
+import ru.invest.api.bond.supplier.model.BondScope;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import ru.invest.api.common.model.BondModel;
@@ -33,9 +34,19 @@ public interface BondUseCase {
     Page<BondModel> getAllPage(BondParametersModel bondParametersModel, Pageable pageable);
 
     /**
-     * Облигация с ценой и купоном вместе с графиком выплат.
+     * Облигация с ценой и купоном вместе с графиком выплат и данными скринера (рейтинги всех агентств).
      */
     BondModel getByTicker(String ticker);
+
+    /**
+     * Вся выборка с фильтрами и сортировкой, без страниц - для выгрузки в файл.
+     */
+    List<BondModel> getAllFiltered(BondScope scope, BondParametersModel bondParametersModel);
+
+    /**
+     * Секторы облигаций в системе (в нижнем регистре, по алфавиту) - для фильтра.
+     */
+    List<String> getSectors();
 
     /**
      * Облигации с текущей ценой по тикерам, ключ - тикер; облигаций, которых нет, в ответе нет.

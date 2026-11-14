@@ -25,6 +25,14 @@ public interface CouponCalculationService {
     BigDecimal calculateYieldToMaturity(CouponModel couponModel, BondModel bondModel);
 
     /**
+     * Доходность к погашению вместе с дюрацией Маколея и модифицированной: дюрация - средний срок выплат того же
+     * расчёта, взвешенный по их стоимости, приведённой по найденной ставке.
+     *
+     * @return метрики; если доходность посчитать нельзя - все поля null
+     */
+    YieldMetrics calculateMaturityMetrics(CouponModel couponModel, BondModel bondModel);
+
+    /**
      * Рассчитывает эффективную доходность к ближайшей оферте - так же, как к погашению, но выплаты учитываются
      * до даты оферты, а в дату оферты облигация выкупается по остатку номинала.
      *

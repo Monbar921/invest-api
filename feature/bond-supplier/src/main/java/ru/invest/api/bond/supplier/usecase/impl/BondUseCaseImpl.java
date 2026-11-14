@@ -2,10 +2,12 @@ package ru.invest.api.bond.supplier.usecase.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.collections4.MapUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import ru.invest.api.bond.supplier.model.BondScope;
 import ru.invest.api.bond.supplier.usecase.BondUseCase;
 import ru.invest.api.common.mapper.DateTimeMapper;
 import ru.invest.api.common.model.AuditModel;
@@ -19,6 +21,7 @@ import ru.invest.api.common.model.candle.CandleModel;
 import ru.invest.api.common.model.event.BondEventModel;
 import ru.invest.api.common.model.parameters.BondParametersModel;
 import ru.invest.api.common.usecase.BondEventUseCase;
+import ru.invest.api.common.usecase.BondScreenerEnricher;
 import ru.invest.api.common.usecase.BondSearchUseCase;
 import ru.invest.api.common.usecase.CandleAggregationUseCase;
 import ru.invest.api.common.usecase.BondSortUseCase;
@@ -36,6 +39,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -63,6 +67,7 @@ public class BondUseCaseImpl implements BondUseCase {
     private final CandleAggregationUseCase candleAggregationUseCase;
     private final BondEventUseCase bondEventUseCase;
     private final DateTimeMapper dateTimeMapper;
+    private final List<BondScreenerEnricher> screenerEnrichers;
 
     @Override
     public Page<BondModel> getForeignCurrencyBondsPage(final BondParametersModel bondParametersModel, final Pageable pageable) {
@@ -81,7 +86,33 @@ public class BondUseCaseImpl implements BondUseCase {
 
     @Override
     public BondModel getByTicker(final String ticker) {
-        return tinkoffBondUseCase.findDetailedByTicker(ticker);
+        final BondModel bond = tinkoffBondUseCase.findDetailedByTicker(ticker);
+        // карточка читается мимо кэша - данные скринера добавляем так же, как при загрузке кэша, и с подробностями
+        screenerEnrichers.forEach(enricher -> enricher.enrich(List.of(bond), true));
+        return bond;
+    }
+
+    @Override
+    public List<BondModel> getAllFiltered(final BondScope scope, final BondParametersModel bondParametersModel) {
+        final Map<String, BondModel> cachedBonds = switch (scope) {
+            case ALL -> tinkoffBondCacheRepositoryUseCase.getBonds();
+            case LOCAL -> tinkoffBondCacheRepositoryUseCase.getRubbleCurrencyBonds();
+            case FOREIGN -> tinkoffBondCacheRepositoryUseCase.getForeignCurrencyBonds();
+        };
+        return MapUtils.isEmpty(cachedBonds)
+                ? List.of()
+                : bondSortUseCase.getAllFilteredBonds(bondParametersModel, List.copyOf(cachedBonds.values()));
+    }
+
+    @Override
+    public List<String> getSectors() {
+        return tinkoffBondCacheRepositoryUseCase.getBonds().values().stream()
+                .map(BondModel::getSector)
+                .filter(StringUtils::isNotBlank)
+                .map(sector -> sector.toLowerCase(Locale.ROOT))
+                .distinct()
+                .sorted()
+                .toList();
     }
 
     @Override

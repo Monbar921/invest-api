@@ -17,6 +17,10 @@ public class CouponModel {
     private BigDecimal yieldToMaturity;
     /** Эффективная доходность к оферте в % годовых, с учётом НКД; null - оферты нет или посчитать нельзя */
     private BigDecimal yieldToOffer;
+    /** Дюрация Маколея к погашению, лет - считается вместе с доходностью к погашению; null - доходности нет */
+    private BigDecimal durationMacaulay;
+    /** Модифицированная дюрация к погашению, лет: на сколько % изменится цена при сдвиге доходности на 1 п.п. */
+    private BigDecimal durationModified;
     private Boolean isFixed;
     private int quantityPerYear;
     private List<CouponDataModel> couponData;

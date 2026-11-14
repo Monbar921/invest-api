@@ -22,6 +22,10 @@ ru:
       news:
         acra-url: https://acra.test/press-releases/
         nkr-url: https://nkr.test/ratings/press-releases/
+        # историю релизов ScreenerTest загружает сам, без пауз между страницами
+        ratings:
+          history-on-empty: false
+          history-page-pause: 0ms
         key-rate-meetings: [2026-09-11, 2026-10-23]
         feeds:
           - source: INTERFAX

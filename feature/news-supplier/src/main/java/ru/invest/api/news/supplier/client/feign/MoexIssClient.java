@@ -29,4 +29,17 @@ public interface MoexIssClient {
      */
     @GetMapping("/iss/securities.json")
     Map<String, IssTableDto> getSecurities(@RequestParam Map<String, String> parameters);
+
+    /**
+     * Кривая бескупонной доходности ОФЗ (КБД) на последний расчёт: блок params - параметры формулы (B1, B2, B3, T1,
+     * G1..G9), блок yearyields - доходности на стандартные сроки.
+     */
+    @GetMapping("/iss/engines/stock/zcyc.json")
+    Map<String, IssTableDto> getZeroCouponCurve(@RequestParam Map<String, String> parameters);
+
+    /**
+     * Облигации рынка облигаций одним ответом: блок securities (колонки - через securities.columns).
+     */
+    @GetMapping("/iss/engines/stock/markets/bonds/securities.json")
+    Map<String, IssTableDto> getBondMarketSecurities(@RequestParam Map<String, String> parameters);
 }

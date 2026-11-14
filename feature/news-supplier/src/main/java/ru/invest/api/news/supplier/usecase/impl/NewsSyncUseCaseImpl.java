@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 import ru.invest.api.cb.rf.supplier.usecase.CbRfNewsUseCase;
 import ru.invest.api.common.entity.Audit;
+import ru.invest.api.common.entity.BondCouponBase;
 import ru.invest.api.common.entity.BondIssuer;
 import ru.invest.api.common.entity.News;
 import ru.invest.api.common.entity.NewsLink;
@@ -18,10 +19,15 @@ import ru.invest.api.common.model.event.NewsSyncedEvent;
 import ru.invest.api.common.model.news.IssuerModel;
 import ru.invest.api.common.model.news.NewsModel;
 import ru.invest.api.common.model.news.NewsSource;
+import ru.invest.api.common.repository.BondCouponBaseRepository;
 import ru.invest.api.common.repository.BondIssuerRepository;
 import ru.invest.api.common.repository.BondRepository;
+import ru.invest.api.common.repository.CreditRatingRepository;
 import ru.invest.api.common.repository.NewsRepository;
+import ru.invest.api.news.supplier.config.NewsProperties;
+import ru.invest.api.news.supplier.usecase.CreditRatingSyncUseCase;
 import ru.invest.api.news.supplier.usecase.ExternalNewsUseCase;
+import ru.invest.api.news.supplier.usecase.MoexBondDataUseCase;
 import ru.invest.api.news.supplier.usecase.MoexNewsUseCase;
 import ru.invest.api.news.supplier.usecase.NewsSyncUseCase;
 
@@ -55,15 +61,26 @@ public class NewsSyncUseCaseImpl implements NewsSyncUseCase {
     private final AuditMapper auditMapper;
     private final DateTimeMapper dateTimeMapper;
     private final TransactionTemplate transactionTemplate;
+    private final CreditRatingSyncUseCase creditRatingSyncUseCase;
+    private final CreditRatingRepository creditRatingRepository;
+    private final MoexBondDataUseCase moexBondDataUseCase;
+    private final BondCouponBaseRepository bondCouponBaseRepository;
+    private final NewsProperties newsProperties;
 
     @Override
     public void syncAll(final AuditModel audit) {
         // шаги независимы: недоступный источник не мешает загрузить остальные
         runStep("issuers", () -> refreshIssuersIfStale(audit));
+        runStep("coupon-base", () -> refreshCouponBaseIfStale(audit));
         final IssuerMatcher matcher = new IssuerMatcher(bondIssuerRepository.findAll());
         saveStep("cbr", cbRfNewsUseCase::getNews, matcher, audit);
         saveStep("moex", () -> moexNewsUseCase.getNewsAfter(newsRepository.findLastMoexId().orElse(null)), matcher, audit);
-        saveStep("ratings", externalNewsUseCase::getRatingNews, matcher, audit);
+        runStep("ratings-history", () -> loadRatingHistoryIfEmpty(audit));
+        runStep("ratings", () -> {
+            final List<NewsModel> releases = externalNewsUseCase.getRatingNews();
+            save(releases, matcher, audit);
+            creditRatingSyncUseCase.apply(releases, audit);
+        });
         saveStep("media", externalNewsUseCase::getMediaNews, matcher, audit);
         runStep("cleanup", () -> {
             final Integer deleted = transactionTemplate.execute(status ->
@@ -127,6 +144,43 @@ public class NewsSyncUseCaseImpl implements NewsSyncUseCase {
             bondIssuerRepository.saveAll(toSave);
         });
         log.info("Bond issuers refreshed: {} saved, {} deleted", toSave.size(), toDelete.size());
+    }
+
+    /**
+     * Первый запуск: рейтингов ещё нет, а последние 50 релизов дают лишь малую часть - загружаем историю за срок
+     * действия рейтинга. Дальше хватает свежих релизов из каждой загрузки ленты.
+     */
+    private void loadRatingHistoryIfEmpty(final AuditModel audit) {
+        if (newsProperties.getRatings().isHistoryOnEmpty() && creditRatingRepository.count() == 0) {
+            creditRatingSyncUseCase.loadHistory(audit);
+        }
+    }
+
+    /**
+     * Описание купона выпусков с Мосбиржи (база флоатера) - раз в 20 часов, как эмитенты; только выпуски из системы.
+     */
+    private void refreshCouponBaseIfStale(final AuditModel audit) {
+        final LocalDateTime lastUpdate = bondCouponBaseRepository.findLastUpdate().orElse(null);
+        if (lastUpdate != null && lastUpdate.isAfter(dateTimeMapper.getNow().minus(ISSUER_REFRESH_PERIOD))) {
+            return;
+        }
+        final Set<String> ourIsins = bondRepository.findAllIsins();
+        final Map<String, String> details = moexBondDataUseCase.getCouponDetails().entrySet().stream()
+                .filter(entry -> ourIsins.contains(entry.getKey()))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        if (details.isEmpty()) {
+            log.warn("MOEX returned no coupon details for our bonds, coupon bases are kept");
+            return;
+        }
+        final Audit updated = auditMapper.toEntity(audit);
+        final List<BondCouponBase> toSave = details.entrySet().stream()
+                .map(entry -> new BondCouponBase().setIsin(entry.getKey()).setCouponDetails(entry.getValue()).setUpdated(updated))
+                .toList();
+        transactionTemplate.executeWithoutResult(status -> {
+            bondCouponBaseRepository.deleteAllInBatch();
+            bondCouponBaseRepository.saveAll(toSave);
+        });
+        log.info("Bond coupon bases refreshed: {}", toSave.size());
     }
 
     private void save(final List<NewsModel> news, final IssuerMatcher matcher, final AuditModel audit) {

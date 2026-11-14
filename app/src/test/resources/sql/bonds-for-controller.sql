@@ -1,3 +1,5 @@
+truncate table credit_rating restart identity;
+truncate table bond_coupon_base;
 truncate table coupon_data restart identity cascade;
 truncate table bond restart identity cascade;
 truncate table coupon restart identity cascade;

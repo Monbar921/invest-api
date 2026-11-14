@@ -26,6 +26,8 @@ import static ru.invest.api.common.constants.CacheConstants.CURRENCY_RATE_CACHE_
 import static ru.invest.api.common.constants.CacheConstants.CURRENCY_RATE_CACHE_NAME;
 import static ru.invest.api.common.constants.CacheConstants.MARKET_OVERVIEW_CACHE_MANAGER;
 import static ru.invest.api.common.constants.CacheConstants.MARKET_OVERVIEW_CACHE_NAME;
+import static ru.invest.api.common.constants.CacheConstants.OFZ_CURVE_CACHE_MANAGER;
+import static ru.invest.api.common.constants.CacheConstants.OFZ_CURVE_CACHE_NAME;
 import static ru.invest.api.common.constants.CacheConstants.PRICE_CACHE_MANAGER;
 import static ru.invest.api.common.constants.CacheConstants.PRICE_CACHE_NAME;
 
@@ -126,6 +128,19 @@ public class CacheConfig {
         cacheManager.setCaffeine(Caffeine.newBuilder()
                 .maximumSize(1)
                 .expireAfterWrite(30, TimeUnit.MINUTES));
+        return cacheManager;
+    }
+
+    /**
+     * Кривая доходности ОФЗ для спреда: биржа пересчитывает её в течение дня, спред по свежести не точнее цены облигаций.
+     * Пустой результат (биржа не ответила) не кэшируется.
+     */
+    @Bean(OFZ_CURVE_CACHE_MANAGER)
+    public CacheManager ofzCurveCacheManager() {
+        final CaffeineCacheManager cacheManager = new CaffeineCacheManager(OFZ_CURVE_CACHE_NAME);
+        cacheManager.setCaffeine(Caffeine.newBuilder()
+                .maximumSize(1)
+                .expireAfterWrite(1, TimeUnit.HOURS));
         return cacheManager;
     }
 }

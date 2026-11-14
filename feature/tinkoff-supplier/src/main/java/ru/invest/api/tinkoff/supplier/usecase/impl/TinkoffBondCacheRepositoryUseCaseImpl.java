@@ -8,6 +8,7 @@ import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 import ru.invest.api.common.model.BondModel;
+import ru.invest.api.common.usecase.BondScreenerEnricher;
 import ru.invest.api.tinkoff.supplier.service.PriceConversionService;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondCacheRepositoryUseCase;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffBondUseCase;
@@ -37,6 +38,7 @@ public class TinkoffBondCacheRepositoryUseCaseImpl implements TinkoffBondCacheRe
 
     private final TinkoffBondUseCase tinkoffBondUseCase;
     private final PriceConversionService priceConversionService;
+    private final List<BondScreenerEnricher> screenerEnrichers;
 
     @Override
     public Map<String, BondModel> getForeignCurrencyBonds() {
@@ -80,6 +82,8 @@ public class TinkoffBondCacheRepositoryUseCaseImpl implements TinkoffBondCacheRe
 
         // фильтр и сортировка по цене сравнивают облигации в разных валютах через рублёвый эквивалент
         priceConversionService.fillCurrentInRub(allBonds);
+        // рейтинг, ликвидность, спред к ОФЗ - для фильтров и сортировок скринера, считаются вместе с кэшем
+        screenerEnrichers.forEach(enricher -> enricher.enrich(allBonds, false));
 
         return allBonds.stream()
                 .filter(Objects::nonNull)

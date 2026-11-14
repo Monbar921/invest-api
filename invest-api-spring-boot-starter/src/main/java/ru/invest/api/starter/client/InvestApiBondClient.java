@@ -70,6 +70,12 @@ public interface InvestApiBondClient {
     BondDto getByTicker(@PathVariable("ticker") String ticker);
 
     /**
+     * Секторы облигаций в системе (в нижнем регистре, по алфавиту) - значения фильтра по сектору.
+     */
+    @GetMapping("/bonds/sectors")
+    List<String> getSectors();
+
+    /**
      * Нестрогий поиск облигаций по тикеру, ISIN или названию.
      *
      * @param limit сколько облигаций вернуть (1..50), null - 20

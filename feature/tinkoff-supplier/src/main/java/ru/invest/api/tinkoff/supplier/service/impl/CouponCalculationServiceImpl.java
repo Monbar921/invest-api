@@ -15,6 +15,7 @@ import ru.invest.api.common.model.MoneyModel;
 import ru.invest.api.common.model.PriceModel;
 import ru.invest.api.currency.service.usecase.CurrencyPriceUseCase;
 import ru.invest.api.tinkoff.supplier.service.CouponCalculationService;
+import ru.invest.api.tinkoff.supplier.service.YieldMetrics;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -33,6 +34,7 @@ public class CouponCalculationServiceImpl implements CouponCalculationService {
     private static final int SCALE = 10;
     private static final BigDecimal PERCENT = BigDecimal.valueOf(100.0);
     private static final int YIELD_SCALE = 4;
+    private static final int DURATION_SCALE = 4;
     private static final double DAYS_IN_YEAR = 365.0;
     // границы поиска ставки доходности: от -99% до 1000% годовых
     private static final double MIN_RATE = -0.99;
@@ -100,6 +102,11 @@ public class CouponCalculationServiceImpl implements CouponCalculationService {
 
     @Override
     public BigDecimal calculateYieldToMaturity(final CouponModel couponModel, final BondModel bondModel) {
+        return calculateYield(couponModel, bondModel, bondModel.getMaturityDate()).yield();
+    }
+
+    @Override
+    public YieldMetrics calculateMaturityMetrics(final CouponModel couponModel, final BondModel bondModel) {
         return calculateYield(couponModel, bondModel, bondModel.getMaturityDate());
     }
 
@@ -111,40 +118,40 @@ public class CouponCalculationServiceImpl implements CouponCalculationService {
             return null;
         }
 
-        return calculateYield(couponModel, bondModel, offerDate);
+        return calculateYield(couponModel, bondModel, offerDate).yield();
     }
 
     /**
      * Доходность, если держать облигацию до даты horizon и получить в эту дату остаток номинала.
      * Цена покупки - текущая цена плюс НКД; выплаты - купоны и частичные погашения номинала до horizon включительно.
      */
-    private BigDecimal calculateYield(final CouponModel couponModel, final BondModel bondModel, final LocalDateTime horizon) {
+    private YieldMetrics calculateYield(final CouponModel couponModel, final BondModel bondModel, final LocalDateTime horizon) {
         final PriceModel price = bondModel.getPrice();
         // НКД null - облигации ещё не синхронизированы, без него доходность была бы завышена
         if (ObjectUtils.anyNull(couponModel, price, horizon)
                 || ObjectUtils.anyNull(price.getAci(), price.getNominal())
                 || !isPositive(price.getCurrent())
                 || !isPositive(price.getNominal())) {
-            return null;
+            return YieldMetrics.EMPTY;
         }
 
         final LocalDateTime now = dateTimeMapper.getNow();
         if (!horizon.isAfter(now)) {
-            return null;
+            return YieldMetrics.EMPTY;
         }
 
         final List<AmortizationModel> futureAmortizations = getFuturePayments(bondModel.getAmortizations(),
                 AmortizationModel::getPaymentDate, now);
         // график амортизации ещё не загружен - весь номинал ушёл бы на дату погашения и исказил доходность
         if (bondModel.isAmortizationFlag() && futureAmortizations.isEmpty()) {
-            return null;
+            return YieldMetrics.EMPTY;
         }
 
         final String bondPriceCurrency = price.getCurrent().getCurrency();
         final BigDecimal dirtyPrice = getDirtyPrice(price, bondPriceCurrency);
         final MoneyModel nominal = convertToBondCurrency(price.getNominal(), bondPriceCurrency);
         if (ObjectUtils.anyNull(dirtyPrice, nominal)) {
-            return null;
+            return YieldMetrics.EMPTY;
         }
 
         final List<CashFlow> cashFlows = new ArrayList<>();
@@ -159,7 +166,7 @@ public class CouponCalculationServiceImpl implements CouponCalculationService {
                     ? convertToBondCurrency(coupon.getPrice(), bondPriceCurrency)
                     : null;
             if (payment == null) {
-                return null;
+                return YieldMetrics.EMPTY;
             }
             cashFlows.add(toCashFlow(now, coupon.getPaymentDate(), payment.getQuantity()));
         }
@@ -173,7 +180,7 @@ public class CouponCalculationServiceImpl implements CouponCalculationService {
                     ? convertToBondCurrency(amortization.getPrice(), bondPriceCurrency)
                     : null;
             if (payment == null) {
-                return null;
+                return YieldMetrics.EMPTY;
             }
             cashFlows.add(toCashFlow(now, amortization.getPaymentDate(), payment.getQuantity()));
             repaid = repaid.add(payment.getQuantity());
@@ -183,7 +190,7 @@ public class CouponCalculationServiceImpl implements CouponCalculationService {
         final BigDecimal remainder = nominal.getQuantity().subtract(repaid);
         if (remainder.compareTo(NOMINAL_TOLERANCE.negate()) < 0) {
             // погашений по графику больше текущего номинала - данные противоречивы
-            return null;
+            return YieldMetrics.EMPTY;
         }
         if (remainder.signum() > 0) {
             cashFlows.add(toCashFlow(now, horizon, remainder));
@@ -271,10 +278,10 @@ public class CouponCalculationServiceImpl implements CouponCalculationService {
     /**
      * Ставка ищется делением отрезка пополам: приведённая стоимость выплат монотонно убывает с ростом ставки.
      */
-    private BigDecimal solveYield(final List<CashFlow> cashFlows, final double price) {
+    private YieldMetrics solveYield(final List<CashFlow> cashFlows, final double price) {
         // доходность вне границ поиска - такую облигацию честно оценить нельзя
         if (presentValue(cashFlows, MAX_RATE) > price || presentValue(cashFlows, MIN_RATE) < price) {
-            return null;
+            return YieldMetrics.EMPTY;
         }
 
         double low = MIN_RATE;
@@ -288,9 +295,27 @@ public class CouponCalculationServiceImpl implements CouponCalculationService {
             }
         }
 
-        return BigDecimal.valueOf((low + high) / 2)
-                .multiply(PERCENT)
-                .setScale(YIELD_SCALE, RoundingMode.HALF_UP);
+        final double rate = (low + high) / 2;
+        final double macaulay = macaulayDuration(cashFlows, rate);
+        return new YieldMetrics(
+                BigDecimal.valueOf(rate).multiply(PERCENT).setScale(YIELD_SCALE, RoundingMode.HALF_UP),
+                BigDecimal.valueOf(macaulay).setScale(DURATION_SCALE, RoundingMode.HALF_UP),
+                BigDecimal.valueOf(macaulay / (1 + rate)).setScale(DURATION_SCALE, RoundingMode.HALF_UP));
+    }
+
+    /**
+     * Дюрация Маколея: срок каждой выплаты в годах, взвешенный по её приведённой стоимости. Сумма приведённых
+     * стоимостей по найденной ставке - это и есть цена с НКД, поэтому веса в сумме дают 1.
+     */
+    private double macaulayDuration(final List<CashFlow> cashFlows, final double rate) {
+        double weighted = 0;
+        double total = 0;
+        for (final CashFlow cashFlow : cashFlows) {
+            final double value = cashFlow.amount() / Math.pow(1 + rate, cashFlow.years());
+            weighted += cashFlow.years() * value;
+            total += value;
+        }
+        return weighted / total;
     }
 
     private double presentValue(final List<CashFlow> cashFlows, final double rate) {

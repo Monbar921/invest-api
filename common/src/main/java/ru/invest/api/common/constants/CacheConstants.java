@@ -27,4 +27,7 @@ public interface CacheConstants {
 
     String MARKET_OVERVIEW_CACHE_MANAGER = "marketOverviewCacheManager";
     String MARKET_OVERVIEW_CACHE_NAME = "marketOverviewCache";
+
+    String OFZ_CURVE_CACHE_MANAGER = "ofzCurveCacheManager";
+    String OFZ_CURVE_CACHE_NAME = "ofzCurveCache";
 }

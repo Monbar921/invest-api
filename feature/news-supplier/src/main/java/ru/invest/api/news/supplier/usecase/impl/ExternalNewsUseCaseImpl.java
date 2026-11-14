@@ -16,7 +16,9 @@ import ru.invest.api.news.supplier.usecase.ExternalNewsUseCase;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -66,20 +68,76 @@ public class ExternalNewsUseCaseImpl implements ExternalNewsUseCase {
     public List<NewsModel> getRatingNews() {
         final List<NewsModel> news = new ArrayList<>();
         if (StringUtils.isNotBlank(newsProperties.getAcraUrl())) {
-            news.addAll(load("ACRA", () -> parseAcra(page(newsProperties.getAcraUrl()))));
+            news.addAll(load("ACRA", () -> parseAcra(page(newsProperties.getAcraUrl()), MAX_RATING_RELEASES)));
         }
         if (StringUtils.isNotBlank(newsProperties.getNkrUrl())) {
-            news.addAll(load("NKR", () -> parseNkr(page(newsProperties.getNkrUrl()))));
+            news.addAll(load("NKR", () -> parseNkr(page(newsProperties.getNkrUrl()), MAX_RATING_RELEASES)));
+        }
+        return news;
+    }
+
+    @Override
+    public List<NewsModel> getRatingHistory(final LocalDate since, final int maxPages, final Duration pagePause) {
+        final List<NewsModel> news = new ArrayList<>();
+        final LocalDateTime from = since.atStartOfDay(MOSCOW).withZoneSameInstant(ZoneOffset.UTC).toLocalDateTime();
+        if (StringUtils.isNotBlank(newsProperties.getAcraUrl())) {
+            news.addAll(load("ACRA history", () -> acraHistory(from, maxPages, pagePause)));
+        }
+        if (StringUtils.isNotBlank(newsProperties.getNkrUrl())) {
+            news.addAll(load("NKR history", () -> parseNkr(page(newsProperties.getNkrUrl()), Integer.MAX_VALUE).stream()
+                    .filter(release -> !release.getPublishedAt().isBefore(from))
+                    .toList()));
         }
         return news;
     }
 
     /**
+     * Список АКРА по страницам (?PAGEN_1=N, новые сверху), пока релизы не станут старше даты. Страница за последней
+     * отдаёт снова последнюю - повтор первой строки тоже конец.
+     */
+    private List<NewsModel> acraHistory(final LocalDateTime from, final int maxPages, final Duration pagePause) {
+        final List<NewsModel> news = new ArrayList<>();
+        String previousFirst = null;
+        for (int number = 1; number <= maxPages; number++) {
+            if (number > 1) {
+                pause(pagePause);
+            }
+            final List<NewsModel> releases = parseAcra(page(acraPage(number)), Integer.MAX_VALUE);
+            if (releases.isEmpty() || releases.getFirst().getExternalId().equals(previousFirst)) {
+                break;
+            }
+            previousFirst = releases.getFirst().getExternalId();
+            releases.stream().filter(release -> !release.getPublishedAt().isBefore(from)).forEach(news::add);
+            if (releases.getLast().getPublishedAt().isBefore(from)) {
+                break;
+            }
+        }
+        return news;
+    }
+
+    private String acraPage(final int number) {
+        final String url = newsProperties.getAcraUrl();
+        return url + (url.contains("?") ? "&" : "?") + "PAGEN_1=" + number;
+    }
+
+    private void pause(final Duration pause) {
+        if (pause == null || pause.isZero() || pause.isNegative()) {
+            return;
+        }
+        try {
+            Thread.sleep(pause.toMillis());
+        } catch (final InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Rating history loading interrupted", e);
+        }
+    }
+
+    /**
      * Строка списка АКРА: эмитент (.item__emit), заголовок-ссылка (a.item__title), дата «5 ноя 2026».
      */
-    private List<NewsModel> parseAcra(final Document page) {
+    private List<NewsModel> parseAcra(final Document page, final int limit) {
         return page.select(".documents-row").stream()
-                .limit(MAX_RATING_RELEASES)
+                .limit(limit)
                 .map(row -> {
                     final Element link = row.selectFirst("a.item__title");
                     final Element date = row.selectFirst("[data-type=date]");
@@ -96,9 +154,9 @@ public class ExternalNewsUseCaseImpl implements ExternalNewsUseCase {
     /**
      * Строка таблицы НКР: заголовок-ссылка (a.blue-link), дата «23.07.2026» в одной из ячеек.
      */
-    private List<NewsModel> parseNkr(final Document page) {
+    private List<NewsModel> parseNkr(final Document page, final int limit) {
         return page.select("a.blue-link[href*=/press-releases/]").stream()
-                .limit(MAX_RATING_RELEASES)
+                .limit(limit)
                 .map(link -> {
                     final Element row = link.closest("tr");
                     final Matcher date = NKR_DATE.matcher(row == null ? "" : row.text());

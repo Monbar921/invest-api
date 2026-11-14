@@ -18,6 +18,7 @@ import ru.invest.api.common.repository.CouponRepository;
 import ru.invest.api.tinkoff.supplier.mapper.TinkoffCouponMapper;
 import ru.invest.api.tinkoff.supplier.mapper.TinkoffPriceEntityMapper;
 import ru.invest.api.tinkoff.supplier.service.CouponCalculationService;
+import ru.invest.api.tinkoff.supplier.service.YieldMetrics;
 import ru.invest.api.tinkoff.supplier.usecase.CouponInterestUseCase;
 import ru.invest.api.tinkoff.supplier.usecase.TinkoffAmortizationUseCase;
 
@@ -64,8 +65,11 @@ public class CouponInterestUseCaseImpl implements CouponInterestUseCase {
                 .setAmortizations(amortizations);
         final CouponModel couponModel = tinkoffCouponMapper.toModel(coupon);
 
+        final YieldMetrics maturity = couponCalculationService.calculateMaturityMetrics(couponModel, bondModel);
         coupon.setInterest(couponCalculationService.calculateInterest(couponModel, bondModel))
-                .setYieldToMaturity(couponCalculationService.calculateYieldToMaturity(couponModel, bondModel))
+                .setYieldToMaturity(maturity.yield())
+                .setDurationMacaulay(maturity.durationMacaulay())
+                .setDurationModified(maturity.durationModified())
                 .setYieldToOffer(couponCalculationService.calculateYieldToOffer(couponModel, bondModel))
                 .setUpdated(updated);
     }

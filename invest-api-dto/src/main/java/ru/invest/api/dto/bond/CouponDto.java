@@ -20,5 +20,9 @@ public class CouponDto {
     private BigDecimal yieldToMaturity;
     /** Эффективная доходность к оферте в % годовых (выкуп по номиналу); null - оферты нет или посчитать нельзя */
     private BigDecimal yieldToOffer;
+    /** Дюрация Маколея к погашению, лет; null - доходность к погашению не посчитать */
+    private BigDecimal durationMacaulay;
+    /** Модифицированная дюрация, лет: изменение цены в % при сдвиге доходности на 1 п.п. */
+    private BigDecimal durationModified;
     private List<CouponDataDto> couponData;
 }

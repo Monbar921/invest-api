@@ -8,14 +8,11 @@ import org.mapstruct.Named;
 import org.mapstruct.NullValueMappingStrategy;
 import org.springframework.beans.factory.annotation.Autowired;
 import ru.invest.api.common.model.BondModel;
-import ru.invest.api.common.model.enums.RiskLevel;
 import ru.invest.api.common.model.parameters.BondParametersModel;
 import ru.invest.api.common.model.parameters.BondParametersRequestModel;
 import ru.invest.api.common.model.parameters.BondSortField;
 import ru.invest.api.common.model.parameters.BondSortModel;
 import ru.invest.api.common.model.parameters.BondSortOrder;
-import ru.invest.api.common.model.parameters.DateRangeModel;
-import ru.invest.api.common.model.parameters.ValueRangeModel;
 import ru.invest.api.common.usecase.BondComparatorUseCase;
 
 import java.util.Comparator;
@@ -37,18 +34,13 @@ public abstract class BondParametersMapper {
     @Setter(onMethod_ = @Autowired)
     private BondComparatorUseCase bondComparatorUseCase;
 
-    @Mapping(target = "comparator", source = "bondSorts", qualifiedByName = "toComparator")
-    @Mapping(target = "bondSorts", source = "bondSorts", qualifiedByName = "toBondSorts")
-    @Mapping(target = "batchLimit", source = "batchLimit", qualifiedByName = "toBatchLimit")
-    @Mapping(target = "currentPrice", source = "currentPrice")
-    @Mapping(target = "percentagePrice", source = "percentagePrice")
-    @Mapping(target = "riskLevels", source = "riskLevels")
-    @Mapping(target = "isOfz", source = "isOfz")
-    @Mapping(target = "isFixedCoupon", source = "isFixedCoupon")
-    @Mapping(target = "maturityDate", source = "maturityDate")
-    public abstract BondParametersModel toModel(Integer batchLimit, List<BondSortModel> bondSorts
-            , ValueRangeModel currentPrice, ValueRangeModel percentagePrice, List<RiskLevel> riskLevels, Boolean isOfz,
-            Boolean isFixedCoupon, DateRangeModel maturityDate);
+    /**
+     * Фильтры без сортировки и размера выборки - их проставляет {@link #toModel(BondParametersModel, List)}.
+     */
+    @Mapping(target = "comparator", ignore = true)
+    @Mapping(target = "bondSorts", ignore = true)
+    @Mapping(target = "batchLimit", ignore = true)
+    protected abstract BondParametersModel copyFilters(BondParametersModel source);
 
     @Mapping(target = "comparator", source = "bondSorts", qualifiedByName = "toComparator")
     @Mapping(target = "bondSorts", source = "bondSorts", qualifiedByName = "toBondSorts")
@@ -58,13 +50,11 @@ public abstract class BondParametersMapper {
     public abstract BondParametersModel toModel(BondParametersRequestModel bondParametersRequestModel);
 
     public BondParametersModel toModel(final BondParametersModel bondParametersModel, final List<BondSortModel> sorts) {
-        return toModel(getter(bondParametersModel, BondParametersModel::getBatchLimit), sorts,
-                getter(bondParametersModel, BondParametersModel::getCurrentPrice),
-                getter(bondParametersModel, BondParametersModel::getPercentagePrice),
-                getter(bondParametersModel, BondParametersModel::getRiskLevels),
-                getter(bondParametersModel, BondParametersModel::getIsOfz),
-                getter(bondParametersModel, BondParametersModel::getIsFixedCoupon),
-                getter(bondParametersModel, BondParametersModel::getMaturityDate));
+        final BondParametersModel result = bondParametersModel == null ? new BondParametersModel() : copyFilters(bondParametersModel);
+        return result
+                .setBondSorts(toBondSorts(sorts))
+                .setComparator(toComparator(sorts))
+                .setBatchLimit(toBatchLimit(getter(bondParametersModel, BondParametersModel::getBatchLimit)));
     }
 
     public BondParametersModel toModel(final BondParametersModel bondParametersModel) {

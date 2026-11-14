@@ -78,6 +78,19 @@ public class BondComparatorUseCaseImpl implements BondComparatorUseCase {
             case YIELD_TO_OFFER -> Comparator.comparing(
                     bond -> bond.getCoupon() != null ? bond.getCoupon().getYieldToOffer() : null,
                     Comparator.<BigDecimal>nullsLast(getOrder(bondSortOrder)));
+            case DURATION -> Comparator.comparing(
+                    BondScreenerValues::duration,
+                    Comparator.<BigDecimal>nullsLast(getOrder(bondSortOrder)));
+            // ASC - от худшего рейтинга к лучшему, как у остальных числовых полей: балл растёт с надёжностью
+            case CREDIT_RATING -> Comparator.comparing(
+                    BondScreenerValues::ratingScore,
+                    Comparator.<Integer>nullsLast(getOrder(bondSortOrder)));
+            case AVG_DAILY_TURNOVER -> Comparator.comparing(
+                    BondScreenerValues::avgDailyTurnoverRub,
+                    Comparator.<BigDecimal>nullsLast(getOrder(bondSortOrder)));
+            case SPREAD_TO_OFZ -> Comparator.comparing(
+                    BondModel::getSpreadToOfz,
+                    Comparator.<BigDecimal>nullsLast(getOrder(bondSortOrder)));
         };
     }
 
