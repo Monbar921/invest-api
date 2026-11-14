@@ -24,4 +24,9 @@ public interface BondAlertRepository extends JpaRepository<BondAlert, Long> {
     long countByUserId(String userId);
 
     List<BondAlert> findByEnabledTrue();
+
+    /** Правило уведомлений по сохранённому фильтру - одно на фильтр */
+    Optional<BondAlert> findByFilterId(Long filterId);
+
+    List<BondAlert> findByFilterIdIn(Collection<Long> filterIds);
 }

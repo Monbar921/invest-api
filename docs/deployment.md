@@ -58,10 +58,12 @@ Telegram-бот: `ru.invest.api.telegram.enabled` (по умолчанию вы�
 сразу после старта), `...dispatcher.enabled` / `interval` (разбор очереди, 30 с), `max-days`,
 `give-up-after` (24 ч), `retention` (90 дней), `price-check-on-sync` (правила по цене и доходности после каждого
 обновления цен; нужен включённый `ru.invest.api.stock.supplier.scheduler.price`, иначе цены обновляются только ночью),
-`news-check-on-sync` (новости, рейтинги, ключевая ставка - после каждой загрузки ленты, `ru.invest.api.news.scheduler`). Без включённого Telegram-бота уведомления сразу получают `FAILED`.
+`news-check-on-sync` (новости, рейтинги, ключевая ставка - после каждой загрузки ленты, `ru.invest.api.news.scheduler`),
+`filter-max-bonds` (сколько новых облигаций перечислять в уведомлении по сохранённому фильтру, 10; правила по фильтрам
+проверяются вместе с порогами цены - тоже по `price-check-on-sync`). Без включённого Telegram-бота уведомления сразу получают `FAILED`.
 
 Тарифы: `ru.invest.api.plans.default-plan` (тариф без подписки), `zone` (пояс последнего дня подписки, Москва),
-`plans.<id>` - `title`, `description`, `paid`, `limits` (все из `ALERTS`, `PORTFOLIO_POSITIONS`, не меньше 0),
+`plans.<id>` - `title`, `description`, `paid`, `limits` (все из `ALERTS`, `PORTFOLIO_POSITIONS`, `SAVED_FILTERS`, не меньше 0),
 `features` (`CALENDAR_ICS`, `BROKER_IMPORT`), `price` и `period` - цена и срок для оплаты (только у платного, вместе). id тарифа
 хранится в подписках - у выданного не менять. Ошибка в настройке не даёт
 приложению стартовать. Выдать тариф: `PUT /internal/rest/maintenance/account/<sub Keycloak>/plan` с заголовком

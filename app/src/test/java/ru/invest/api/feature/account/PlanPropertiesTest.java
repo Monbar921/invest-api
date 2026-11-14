@@ -27,6 +27,7 @@ class PlanPropertiesTest {
         runner.withPropertyValues(valid())
                 .withPropertyValues(PREFIX + "plans.pro-1.title=Про", PREFIX + "plans.pro-1.paid=true",
                         PREFIX + "plans.pro-1.limits.ALERTS=0", PREFIX + "plans.pro-1.limits.PORTFOLIO_POSITIONS=10",
+                        PREFIX + "plans.pro-1.limits.SAVED_FILTERS=1",
                         PREFIX + "plans.pro-1.features=CALENDAR_ICS")
                 .run(context -> {
                     assertThat(context).hasNotFailed();
@@ -62,14 +63,14 @@ class PlanPropertiesTest {
     void badPlanIdOrTitleFailsStartup() {
         runner.withPropertyValues(valid())
                 .withPropertyValues(PREFIX + "plans.Pro.title=Про", PREFIX + "plans.Pro.limits.ALERTS=1",
-                        PREFIX + "plans.Pro.limits.PORTFOLIO_POSITIONS=1")
+                        PREFIX + "plans.Pro.limits.PORTFOLIO_POSITIONS=1", PREFIX + "plans.Pro.limits.SAVED_FILTERS=1")
                 .run(context -> assertThat(context).hasFailed());
         assertFails(FREE + "title= ");
     }
 
     @Test
     void unknownLimitOrFeatureFailsStartup() {
-        assertFails(FREE + "limits.SAVED_FILTERS=1");
+        assertFails(FREE + "limits.AI_REQUESTS=1");
         assertFails(FREE + "features=AI_SUMMARY");
     }
 
@@ -78,6 +79,7 @@ class PlanPropertiesTest {
         runner.withPropertyValues(valid())
                 .withPropertyValues(PREFIX + "plans.pro.title=Про", PREFIX + "plans.pro.paid=true",
                         PREFIX + "plans.pro.limits.ALERTS=1", PREFIX + "plans.pro.limits.PORTFOLIO_POSITIONS=1",
+                        PREFIX + "plans.pro.limits.SAVED_FILTERS=1",
                         PREFIX + "plans.pro.price=299.50", PREFIX + "plans.pro.period=P1M")
                 .run(context -> {
                     assertThat(context).hasNotFailed();
@@ -113,7 +115,8 @@ class PlanPropertiesTest {
             PREFIX + "default-plan=free",
             FREE + "title=Бесплатный",
             FREE + "limits.ALERTS=50",
-            FREE + "limits.PORTFOLIO_POSITIONS=200"
+            FREE + "limits.PORTFOLIO_POSITIONS=200",
+            FREE + "limits.SAVED_FILTERS=5"
         };
     }
 

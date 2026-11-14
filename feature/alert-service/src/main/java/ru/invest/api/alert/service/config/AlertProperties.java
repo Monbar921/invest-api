@@ -36,6 +36,9 @@ public class AlertProperties {
     /** Проверять правила по новостям, рейтингам и ключевой ставке после каждой загрузки ленты; false - в тестах */
     private boolean newsCheckOnSync = true;
 
+    /** Сколько новых облигаций перечислять в одном уведомлении по сохранённому фильтру; остальные - числом */
+    private int filterMaxBonds = 10;
+
     private Dispatcher dispatcher = new Dispatcher();
 
     @Data

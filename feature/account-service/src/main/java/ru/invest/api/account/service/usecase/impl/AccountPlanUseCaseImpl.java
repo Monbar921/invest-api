@@ -23,6 +23,7 @@ import ru.invest.api.common.repository.AccountAutoRenewalRepository;
 import ru.invest.api.common.repository.AccountSubscriptionRepository;
 import ru.invest.api.common.repository.BondAlertRepository;
 import ru.invest.api.common.repository.PortfolioPositionRepository;
+import ru.invest.api.common.repository.SavedFilterRepository;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -46,6 +47,7 @@ public class AccountPlanUseCaseImpl implements AccountPlanUseCase {
     private final AccountAutoRenewalRepository autoRenewalRepository;
     private final BondAlertRepository alertRepository;
     private final PortfolioPositionRepository positionRepository;
+    private final SavedFilterRepository savedFilterRepository;
     private final DateTimeMapper dateTimeMapper;
 
     @Override
@@ -184,6 +186,7 @@ public class AccountPlanUseCaseImpl implements AccountPlanUseCase {
         return switch (limit) {
             case ALERTS -> alertRepository.countByUserId(userId);
             case PORTFOLIO_POSITIONS -> positionRepository.countByUserId(userId);
+            case SAVED_FILTERS -> savedFilterRepository.countByUserId(userId);
         };
     }
 

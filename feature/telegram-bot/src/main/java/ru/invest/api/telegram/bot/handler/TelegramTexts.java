@@ -53,6 +53,7 @@ final class TelegramTexts {
             case BOND_NEWS -> "новости";
             case ISSUER_RATING -> "рейтинги эмитента";
             case KEY_RATE -> "решения по ключевой ставке";
+            case SAVED_FILTER -> "новые облигации в выборке";
         };
     }
 
@@ -61,6 +62,9 @@ final class TelegramTexts {
     }
 
     private static String bond(final AlertModel alert) {
+        if (alert.filterId() != null) {
+            return "Фильтр «%s»".formatted(alert.filterName());
+        }
         if (alert.ticker() == null) {
             return "Банк России";
         }

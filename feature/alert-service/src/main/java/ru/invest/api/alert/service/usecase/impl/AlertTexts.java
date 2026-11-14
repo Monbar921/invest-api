@@ -18,7 +18,11 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Тексты уведомлений. Простой текст: Telegram получает его без разметки, экранировать ничего не нужно.
@@ -140,6 +144,34 @@ final class AlertTexts {
         return "Цена за день %s%%: сейчас %s%% от номинала (закрытие прошлого дня %s%%)\n%s%s".formatted(
                 signed(change), number(value), number(previousClose), bond(bond.getName(), bond.getTicker()),
                 price(bond, false));
+    }
+
+    /**
+     * Новые облигации в выборке фильтра: «Фильтр «Надёжные»: в выборку вошли 3 облигации» и по строке на облигацию
+     * с ценой и доходностью к погашению; сверх max - «и ещё N».
+     */
+    static String filter(final String filterName, final List<BondModel> bonds, final int max) {
+        final int count = bonds.size();
+        final StringBuilder text = new StringBuilder("Фильтр «%s»: в выборку %s %d %s".formatted(filterName,
+                plural(count, "вошла", "вошли", "вошли"), count, plural(count, "облигация", "облигации", "облигаций")));
+        bonds.stream().limit(max).forEach(bond -> text.append('\n').append(filterLine(bond)));
+        if (count > max) {
+            text.append("\nи ещё ").append(count - max);
+        }
+        return text.toString();
+    }
+
+    /** «Авто Финанс Банк БО-001Р-18 (RU000A10EQ34): 100,5% от номинала, доходность 21,3%» */
+    private static String filterLine(final BondModel bond) {
+        final BigDecimal price = bond.getPrice() == null ? null : bond.getPrice().getPercentagePrice();
+        final BigDecimal yield = bond.getCoupon() == null ? null : bond.getCoupon().getYieldToMaturity();
+        final String values = Stream.of(
+                        price == null ? null : number(price) + "% от номинала",
+                        yield == null ? null : "доходность " + number(yield) + "%")
+                .filter(Objects::nonNull)
+                .collect(Collectors.joining(", "));
+        final String name = bond(bond.getName(), bond.getTicker());
+        return values.isEmpty() ? name : name + ": " + values;
     }
 
     /** Строка с ценой: у доходности - и % от номинала; у цены - только деньги, % уже в заголовке */

@@ -11,6 +11,8 @@ import java.time.LocalDateTime;
  * Правило уведомления с подписью облигации.
  *
  * @param bondName        название облигации; null - облигации уже нет в системе
+ * @param filterId        у SAVED_FILTER: сохранённый фильтр
+ * @param filterName      у SAVED_FILTER: название фильтра
  * @param days            у правил по датам
  * @param direction       у правил по цене и доходности
  * @param threshold       у правил по цене и доходности: уровень или изменение в %
@@ -24,6 +26,8 @@ public record AlertModel(Long id,
                          String bondName,
                          String isin,
                          AlertType type,
+                         Long filterId,
+                         String filterName,
                          Integer days,
                          AlertDirection direction,
                          BigDecimal threshold,

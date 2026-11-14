@@ -12,12 +12,14 @@ import ru.invest.api.alert.service.model.AlertRuleModel;
 import ru.invest.api.alert.service.model.NotificationModel;
 import ru.invest.api.alert.service.usecase.AlertCheckUseCase;
 import ru.invest.api.alert.service.usecase.AlertUseCase;
+import ru.invest.api.alert.service.usecase.FilterAlertCheckUseCase;
 import ru.invest.api.alert.service.usecase.NotificationDispatchUseCase;
 import ru.invest.api.alert.service.usecase.PriceAlertCheckUseCase;
 import ru.invest.api.bond.supplier.usecase.BondUseCase;
 import ru.invest.api.common.entity.Bond;
 import ru.invest.api.common.entity.BondAlert;
 import ru.invest.api.common.entity.Notification;
+import ru.invest.api.common.entity.SavedFilter;
 import ru.invest.api.common.exception.GeneralNotFoundEntityException;
 import ru.invest.api.common.exception.GeneralUnprocessableEntityException;
 import ru.invest.api.common.exception.enums.ExceptionErrorCode;
@@ -33,6 +35,8 @@ import ru.invest.api.common.repository.BondAlertRepository;
 import ru.invest.api.common.repository.BondRepository;
 import ru.invest.api.common.repository.NewsRepository;
 import ru.invest.api.common.repository.NotificationRepository;
+import ru.invest.api.common.repository.SavedFilterMatchRepository;
+import ru.invest.api.common.repository.SavedFilterRepository;
 import ru.invest.api.common.usecase.BondEventUseCase;
 import ru.invest.api.common.usecase.EntitlementUseCase;
 
@@ -70,6 +74,9 @@ public class AlertUseCaseImpl implements AlertUseCase {
     private final BondEventUseCase bondEventUseCase;
     private final NotificationDispatchUseCase dispatchUseCase;
     private final EntitlementUseCase entitlementUseCase;
+    private final FilterAlertCheckUseCase filterAlertCheckUseCase;
+    private final SavedFilterRepository filterRepository;
+    private final SavedFilterMatchRepository filterMatchRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -82,12 +89,18 @@ public class AlertUseCaseImpl implements AlertUseCase {
                         .collect(Collectors.toSet()))
                 .stream()
                 .collect(Collectors.toMap(Bond::getTicker, Function.identity(), (first, second) -> first));
-        return alerts.stream().map(alert -> toModel(alert, bonds.get(alert.getTicker()))).toList();
+        final Map<Long, String> filterNames = filterNames(alerts);
+        return alerts.stream()
+                .map(alert -> toModel(alert, bonds.get(alert.getTicker()), filterName(filterNames, alert)))
+                .toList();
     }
 
     @Override
     public AlertModel create(final String userId, final AlertRuleModel rule) {
         final AlertType type = rule.type();
+        if (type == AlertType.SAVED_FILTER) {
+            throw unprocessable("SAVED_FILTER rules are switched on and off at /alerts/filters");
+        }
         validate(type, rule.days(), rule.direction(), rule.threshold());
         if (type.hasBond() && (rule.ticker() == null || rule.ticker().isBlank())) {
             throw unprocessable("ticker is required for %s".formatted(type));
@@ -161,7 +174,12 @@ public class AlertUseCaseImpl implements AlertUseCase {
     @Override
     @Transactional
     public void delete(final String userId, final Long id) {
-        alertRepository.delete(find(userId, id));
+        final BondAlert alert = find(userId, id);
+        alertRepository.delete(alert);
+        // правило по фильтру включат заново - выборка запомнится заново
+        if (alert.getFilterId() != null) {
+            filterMatchRepository.deleteByFilterId(alert.getFilterId());
+        }
     }
 
     @Override
@@ -192,6 +210,10 @@ public class AlertUseCaseImpl implements AlertUseCase {
         if (alert.getType().isNewsRule()) {
             alert.setCursorId(newsRepository.findMaxId().orElse(0L));
         }
+        if (alert.getType() == AlertType.SAVED_FILTER) {
+            // отправная точка - выборка на момент включения, её запомнит проверка
+            alert.setState(null);
+        }
         if (alert.getType() == AlertType.FLOATER_COUPON && bond != null) {
             alert.setCursorDate(bondEventUseCase.getEvents(bond, LocalDate.now(properties.getZone())).stream()
                     .filter(event -> event.getType() == BondEventType.COUPON && event.getAmount() != null)
@@ -209,6 +231,8 @@ public class AlertUseCaseImpl implements AlertUseCase {
             queued = alertCheckUseCase.check(alert.getId(), today);
         } else if (alert.getType().isPriceRule()) {
             queued = priceAlertCheckUseCase.check(alert.getId(), today);
+        } else if (alert.getType() == AlertType.SAVED_FILTER) {
+            queued = filterAlertCheckUseCase.check(alert.getId());
         } else {
             // новости и объявленные купоны - только новые, сразу проверять нечего
             queued = 0;
@@ -267,7 +291,20 @@ public class AlertUseCaseImpl implements AlertUseCase {
         final Bond bond = alert.getTicker() == null
                 ? null
                 : bondRepository.findByTickerIn(List.of(alert.getTicker())).stream().findFirst().orElse(null);
-        return toModel(alert, bond);
+        return toModel(alert, bond, filterName(filterNames(List.of(alert)), alert));
+    }
+
+    private Map<Long, String> filterNames(final List<BondAlert> alerts) {
+        final List<Long> ids = alerts.stream().map(BondAlert::getFilterId).filter(Objects::nonNull).toList();
+        return ids.isEmpty()
+                ? Map.of()
+                : filterRepository.findAllById(ids).stream()
+                .collect(Collectors.toMap(SavedFilter::getId, SavedFilter::getName));
+    }
+
+    /** У правил без фильтра filterId - null: Map.of() не принимает null ключом */
+    private static String filterName(final Map<Long, String> names, final BondAlert alert) {
+        return alert.getFilterId() == null ? null : names.get(alert.getFilterId());
     }
 
     private BondAlert find(final String userId, final Long id) {
@@ -276,11 +313,11 @@ public class AlertUseCaseImpl implements AlertUseCase {
                         NOT_FOUND.formatted(id)));
     }
 
-    private AlertModel toModel(final BondAlert alert, final Bond bond) {
+    private AlertModel toModel(final BondAlert alert, final Bond bond, final String filterName) {
         return new AlertModel(alert.getId(), alert.getTicker(),
                 bond == null ? null : bond.getName(),
                 bond == null ? null : bond.getIsin(),
-                alert.getType(), alert.getDays(), alert.getDirection(), alert.getThreshold(), alert.getBaseValue(),
+                alert.getType(), alert.getFilterId(), filterName, alert.getDays(), alert.getDirection(), alert.getThreshold(), alert.getBaseValue(),
                 alert.getState(), alert.isEnabled(), alert.getCreatedAt(), alert.getLastTriggeredAt());
     }
 

@@ -90,7 +90,7 @@ public class PlanTest extends AbstractInvestApplicationTest {
         assertThat(plan.getValidUntil(), nullValue());
         assertThat(plan.getPlan().getFeatures(), contains(PlanFeatureDto.CALENDAR_ICS));
         assertThat(plan.getLimits().stream().map(PlanLimitUsageDto::getLimit).toList(),
-                contains(PlanLimitDto.ALERTS, PlanLimitDto.PORTFOLIO_POSITIONS));
+                contains(PlanLimitDto.ALERTS, PlanLimitDto.PORTFOLIO_POSITIONS, PlanLimitDto.SAVED_FILTERS));
         assertThat(usage(plan, PlanLimitDto.ALERTS).getMax(), equalTo(FREE_ALERTS));
         assertThat(usage(plan, PlanLimitDto.ALERTS).getUsed(), equalTo(1L));
         assertThat(usage(plan, PlanLimitDto.PORTFOLIO_POSITIONS).getMax(), equalTo(FREE_POSITIONS));

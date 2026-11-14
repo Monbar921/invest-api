@@ -80,6 +80,10 @@ public class BondAlert {
     @Column(name = "trigger_count")
     private int triggerCount;
 
+    /** Сохранённый фильтр - только у SAVED_FILTER; правило удаляется вместе с фильтром */
+    @Column(name = "filter_id")
+    private Long filterId;
+
     @Column(name = "enabled")
     private boolean enabled;
 

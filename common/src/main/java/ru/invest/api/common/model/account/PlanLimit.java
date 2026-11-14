@@ -7,5 +7,7 @@ public enum PlanLimit {
     /** Правила уведомлений */
     ALERTS,
     /** Покупки в портфеле */
-    PORTFOLIO_POSITIONS
+    PORTFOLIO_POSITIONS,
+    /** Сохранённые фильтры облигаций */
+    SAVED_FILTERS
 }

@@ -18,7 +18,8 @@ public class EntitlementUseCaseImpl implements EntitlementUseCase {
     /** Что ограничивает лимит - для сообщения: «не больше 50 правил уведомлений» */
     private static final Map<PlanLimit, String> LIMIT_NAMES = Map.of(
             PlanLimit.ALERTS, "правил уведомлений",
-            PlanLimit.PORTFOLIO_POSITIONS, "покупок в портфеле");
+            PlanLimit.PORTFOLIO_POSITIONS, "покупок в портфеле",
+            PlanLimit.SAVED_FILTERS, "сохранённых фильтров");
     private static final Map<PlanFeature, String> FEATURE_NAMES = Map.of(
             PlanFeature.CALENDAR_ICS, "Подписка на календарь выплат",
             PlanFeature.BROKER_IMPORT, "Импорт сделок от брокера");

@@ -128,6 +128,7 @@ ru:
             limits:
               ALERTS: 50
               PORTFOLIO_POSITIONS: 200
+              SAVED_FILTERS: 5
             features: [CALENDAR_ICS]
           premium:
             title: Премиум
@@ -139,6 +140,7 @@ ru:
             limits:
               ALERTS: 500
               PORTFOLIO_POSITIONS: 2000
+              SAVED_FILTERS: 50
             features: [CALENDAR_ICS, BROKER_IMPORT]
       # оплата тарифов (docs/features/INVEST-001-payments): Т-Касса, выключена до решений владельца 0.1, 0.2, 0.5.
       # Ключи терминала - только из переменных окружения. notification-url - публичный адрес gateway: Т-Касса шлёт

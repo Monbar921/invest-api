@@ -24,4 +24,5 @@
     <include file="tables/018-portfolio-trades.xml" relativeToChangelogFile="true"/>
     <include file="tables/019-portfolio-import.xml" relativeToChangelogFile="true"/>
     <include file="tables/020-screener.xml" relativeToChangelogFile="true"/>
+    <include file="tables/021-saved-filter.xml" relativeToChangelogFile="true"/>
 </databaseChangeLog>

@@ -69,6 +69,7 @@ ru:
             limits:
               ALERTS: 50
               PORTFOLIO_POSITIONS: 200
+              SAVED_FILTERS: 3
             features: [CALENDAR_ICS]
           basic:
             title: Базовый
@@ -76,6 +77,7 @@ ru:
             limits:
               ALERTS: 40
               PORTFOLIO_POSITIONS: 200
+              SAVED_FILTERS: 3
           premium:
             title: Премиум
             paid: true
@@ -84,6 +86,7 @@ ru:
             limits:
               ALERTS: 52
               PORTFOLIO_POSITIONS: 300
+              SAVED_FILTERS: 10
             features: [CALENDAR_ICS, BROKER_IMPORT]
       # оплата для PaymentTest: клиент Т-Кассы замокан, автопродление вызывается из теста (шедулер выключен);
       # premium продаётся (299 ₽ за месяц), basic - платный без цены, только ручная выдача

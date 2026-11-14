@@ -16,12 +16,16 @@ import java.time.ZonedDateTime;
 @NoArgsConstructor
 public class AlertDto {
     private Long id;
-    /** null - правило без облигации (KEY_RATE) */
+    /** null - правило без облигации (KEY_RATE, SAVED_FILTER) */
     private String ticker;
     /** null - облигации уже нет в системе */
     private String bondName;
     private String isin;
     private AlertTypeDto type;
+    /** Сохранённый фильтр - только у SAVED_FILTER */
+    private Long filterId;
+    /** Название сохранённого фильтра - только у SAVED_FILTER */
+    private String filterName;
     /** За сколько дней до события, 1..60; только у правил по датам */
     private Integer days;
     /** Только у правил по цене и доходности */

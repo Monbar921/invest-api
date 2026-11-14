@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.4.xsd">
+
+    <!-- сохранённые фильтры списка облигаций: параметры BondParametersRequest в JSON, название уникально у пользователя
+         без учёта регистра -->
+    <changeSet id="INVEST-001-create-saved-filter-table" author="d.v.kornilovich">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="saved_filter"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="saved_filter">
+            <column autoIncrement="true" name="id" type="bigserial">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="user_id" type="varchar(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name" type="varchar(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="scope" type="varchar(16)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="parameters" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="timestamp"/>
+        </createTable>
+        <sql>
+            create unique index saved_filter_user_name_uq on saved_filter (user_id, lower(name));
+        </sql>
+    </changeSet>
+
+    <!-- правило уведомлений по фильтру (тип SAVED_FILTER): ссылается на фильтр и удаляется вместе с ним; одно на фильтр -->
+    <changeSet id="INVEST-001-bond-alert-filter-id" author="d.v.kornilovich">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="bond_alert" columnName="filter_id"/>
+            </not>
+        </preConditions>
+
+        <addColumn tableName="bond_alert">
+            <column name="filter_id" type="bigint"/>
+        </addColumn>
+        <addForeignKeyConstraint baseTableName="bond_alert" baseColumnNames="filter_id"
+                                 constraintName="fk_bond_alert_filter_id"
+                                 referencedTableName="saved_filter" referencedColumnNames="id" onDelete="CASCADE"/>
+        <sql>
+            create unique index bond_alert_filter_uq on bond_alert (filter_id) where filter_id is not null;
+        </sql>
+    </changeSet>
+
+    <!-- выборка фильтра на прошлой проверке: облигации, о которых уже уведомили или которые были в выборке при
+         включении уведомлений. Облигация - по uid, без внешнего ключа: облигации пересоздаются -->
+    <changeSet id="INVEST-001-create-saved-filter-match-table" author="d.v.kornilovich">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="saved_filter_match"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="saved_filter_match">
+            <column autoIncrement="true" name="id" type="bigserial">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="filter_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="uid" type="varchar(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="ticker" type="varchar(100)"/>
+            <column name="matched_at" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="saved_filter_match" baseColumnNames="filter_id"
+                                 constraintName="fk_saved_filter_match_filter_id"
+                                 referencedTableName="saved_filter" referencedColumnNames="id" onDelete="CASCADE"/>
+        <addUniqueConstraint tableName="saved_filter_match" columnNames="filter_id, uid"
+                             constraintName="saved_filter_match_filter_uid_uq"/>
+    </changeSet>
+</databaseChangeLog>
