@@ -60,7 +60,11 @@ Telegram-бот: `ru.invest.api.telegram.enabled` (по умолчанию вы�
 обновления цен; нужен включённый `ru.invest.api.stock.supplier.scheduler.price`, иначе цены обновляются только ночью),
 `news-check-on-sync` (новости, рейтинги, ключевая ставка - после каждой загрузки ленты, `ru.invest.api.news.scheduler`),
 `filter-max-bonds` (сколько новых облигаций перечислять в уведомлении по сохранённому фильтру, 10; правила по фильтрам
-проверяются вместе с порогами цены - тоже по `price-check-on-sync`). Без включённого Telegram-бота уведомления сразу получают `FAILED`.
+проверяются вместе с порогами цены - тоже по `price-check-on-sync`). Монитор риска по портфелю идёт после загрузки ленты
+(по `news-check-on-sync`): `risk.quiet-days` (сколько дней то же событие не повторяется, 3), `risk.max-per-check` (5),
+`risk.scan-limit` (новостей за проверку, 1000). Дайджест портфеля: `digest.scheduler.enabled` / `cron` / `zone`
+(по умолчанию 10:00 МСК; в тестах шедулера нет), `digest.weekly-day` (день еженедельного, `MONDAY`),
+`digest.max-payments` / `max-news` (сколько строк перечислять, 5). Без включённого Telegram-бота уведомления сразу получают `FAILED`.
 
 Тарифы: `ru.invest.api.plans.default-plan` (тариф без подписки), `zone` (пояс последнего дня подписки, Москва),
 `plans.<id>` - `title`, `description`, `paid`, `limits` (все из `ALERTS`, `PORTFOLIO_POSITIONS`, `SAVED_FILTERS`, не меньше 0),

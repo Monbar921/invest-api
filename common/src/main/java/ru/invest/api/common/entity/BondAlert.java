@@ -84,6 +84,14 @@ public class BondAlert {
     @Column(name = "filter_id")
     private Long filterId;
 
+    /**
+     * Дайджест портфеля: отпечаток состава портфеля (тикеры и количество, SHA-256) на последнем дайджесте. Состав
+     * изменился - изменение стоимости не считается: оно было бы от покупок и продаж, а не от цен. Стоимость на последнем
+     * дайджесте - в base_value, последняя просмотренная новость - в cursor_id
+     */
+    @Column(name = "digest_holdings")
+    private String digestHoldings;
+
     @Column(name = "enabled")
     private boolean enabled;
 

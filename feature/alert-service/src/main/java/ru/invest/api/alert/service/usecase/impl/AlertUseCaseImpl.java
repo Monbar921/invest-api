@@ -122,7 +122,7 @@ public class AlertUseCaseImpl implements AlertUseCase {
                 .setType(type)
                 .setEnabled(true)
                 .setCreatedAt(LocalDateTime.now(ZoneOffset.UTC));
-        if (type.isDateRule()) {
+        if (type.isDateRule() || type == AlertType.PORTFOLIO_DIGEST) {
             alert.setDays(rule.days());
         } else if (type.isPriceRule()) {
             alert.setDirection(rule.direction()).setThreshold(rule.threshold());
@@ -138,7 +138,9 @@ public class AlertUseCaseImpl implements AlertUseCase {
     public AlertModel update(final String userId, final Long id, final AlertChangeModel change) {
         final BondAlert alert = find(userId, id);
         final AlertType type = alert.getType();
-        final Integer days = type.isDateRule() ? Optional.ofNullable(change.days()).orElse(alert.getDays()) : null;
+        final Integer days = type.isDateRule() || type == AlertType.PORTFOLIO_DIGEST
+                ? Optional.ofNullable(change.days()).orElse(alert.getDays())
+                : null;
         final AlertDirection direction = type.isPriceRule()
                 ? Optional.ofNullable(change.direction()).orElse(alert.getDirection())
                 : null;
@@ -207,7 +209,7 @@ public class AlertUseCaseImpl implements AlertUseCase {
      * и последнем купоне с уже известным размером.
      */
     private void startFromNow(final BondAlert alert, final BondModel bond) {
-        if (alert.getType().isNewsRule()) {
+        if (alert.getType().isNewsRule() || alert.getType().isPortfolioRule()) {
             alert.setCursorId(newsRepository.findMaxId().orElse(0L));
         }
         if (alert.getType() == AlertType.SAVED_FILTER) {
@@ -253,8 +255,15 @@ public class AlertUseCaseImpl implements AlertUseCase {
             }
             return;
         }
+        if (type == AlertType.PORTFOLIO_DIGEST) {
+            if (days == null || days != 1 && days != PortfolioDigestUseCaseImpl.WEEK) {
+                throw unprocessable("days must be 1 (daily) or %d (weekly) for %s".formatted(
+                        PortfolioDigestUseCaseImpl.WEEK, type));
+            }
+            return;
+        }
         if (!type.isPriceRule()) {
-            // новости, рейтинги, ключевая ставка, объявленный купон - без параметров
+            // новости, рейтинги, ключевая ставка, объявленный купон, монитор риска - без параметров
             return;
         }
         if (direction == null || threshold == null) {

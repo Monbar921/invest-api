@@ -14,6 +14,9 @@ import java.util.stream.Collectors;
  * Тексты бота, которые собираются из данных.
  */
 final class TelegramTexts {
+    /** Период дайджеста раз в неделю, дней */
+    private static final int WEEK = 7;
+
     private TelegramTexts() {
     }
 
@@ -54,6 +57,9 @@ final class TelegramTexts {
             case ISSUER_RATING -> "рейтинги эмитента";
             case KEY_RATE -> "решения по ключевой ставке";
             case SAVED_FILTER -> "новые облигации в выборке";
+            case PORTFOLIO_RISK -> "риски: рейтинг, приостановка торгов, дефолт";
+            case PORTFOLIO_DIGEST -> Integer.valueOf(WEEK).equals(alert.days()) ? "дайджест раз в неделю"
+                    : "дайджест раз в день";
         };
     }
 
@@ -64,6 +70,9 @@ final class TelegramTexts {
     private static String bond(final AlertModel alert) {
         if (alert.filterId() != null) {
             return "Фильтр «%s»".formatted(alert.filterName());
+        }
+        if (alert.type().isPortfolioRule()) {
+            return "Портфель";
         }
         if (alert.ticker() == null) {
             return "Банк России";

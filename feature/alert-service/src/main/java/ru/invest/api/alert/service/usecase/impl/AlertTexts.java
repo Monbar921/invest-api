@@ -1,5 +1,6 @@
 package ru.invest.api.alert.service.usecase.impl;
 
+import ru.invest.api.alert.service.model.RiskKind;
 import ru.invest.api.common.model.BondModel;
 import ru.invest.api.common.model.MoneyModel;
 import ru.invest.api.common.model.PriceModel;
@@ -8,12 +9,15 @@ import ru.invest.api.common.model.alert.AlertType;
 import ru.invest.api.common.model.event.BondEventModel;
 import ru.invest.api.common.model.news.NewsModel;
 import ru.invest.api.common.model.news.NewsSource;
+import ru.invest.api.portfolio.service.model.CalendarEventModel;
+import ru.invest.api.portfolio.service.model.PortfolioCalendarModel;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -90,6 +94,120 @@ final class AlertTexts {
                 : ", " + news.getPublishedAt().atOffset(ZoneOffset.UTC).atZoneSameInstant(MOSCOW).format(DATE);
         return head + "\n" + news.getTitle() + "\n" + source(news.getSource()) + published
                 + (news.getUrl() == null ? "" : "\n" + news.getUrl());
+    }
+
+    /**
+     * Риск по портфелю: вид риска, эмитент, облигации портфеля, новость с источником, датой и ссылкой.
+     */
+    static String risk(final RiskKind kind, final String emitter, final List<String> bonds, final String title,
+                       final NewsSource source, final LocalDateTime publishedAt, final String url) {
+        final StringBuilder text = new StringBuilder("Риск по портфелю: ").append(kind.getTitle());
+        if (emitter != null) {
+            text.append("\nЭмитент: ").append(emitter);
+        }
+        text.append("\nВ портфеле: ").append(String.join(", ", bonds))
+                .append('\n').append(title)
+                .append('\n').append(source(source));
+        if (publishedAt != null) {
+            text.append(", ").append(moscowDate(publishedAt).format(DATE));
+        }
+        if (url != null) {
+            text.append('\n').append(url);
+        }
+        return text.toString();
+    }
+
+    /**
+     * Дайджест портфеля: стоимость и её изменение, выплаты периода с итогом, заголовки новостей; сверх max - «и ещё N».
+     *
+     * @param weekly        за неделю, иначе за день
+     * @param value         стоимость портфеля в рублях; null - не посчитать (нет курса)
+     * @param change        изменение с прошлого дайджеста; null - первый дайджест или состав портфеля менялся
+     * @param previousValue стоимость на прошлом дайджесте; null - его не было
+     * @param since         день прошлого дайджеста
+     */
+    @SuppressWarnings("checkstyle:ParameterNumber")
+    static String digest(final boolean weekly, final LocalDate today, final BigDecimal value, final BigDecimal change,
+                         final BigDecimal previousValue, final LocalDate since, final PortfolioCalendarModel calendar,
+                         final List<NewsModel> news, final int maxPayments, final int maxNews) {
+        final StringBuilder text = new StringBuilder("Дайджест портфеля за %s, %s".formatted(
+                weekly ? "неделю" : "день", today.format(DATE)));
+        text.append("\nСтоимость: ").append(value == null ? "не посчитать - нет цены или курса валюты" : rub(value));
+        if (value != null && previousValue != null && since != null) {
+            if (change == null) {
+                text.append(" (состав портфеля менялся с ").append(since.format(DATE))
+                        .append(" - изменение не считается)");
+            } else if (change.setScale(2, RoundingMode.HALF_UP).signum() == 0) {
+                text.append(" (без изменений с ").append(since.format(DATE)).append(')');
+            } else {
+                final String percent = previousValue.signum() == 0
+                        ? ""
+                        : ", " + signed(change.multiply(BigDecimal.valueOf(HUNDRED))
+                        .divide(previousValue, 2, RoundingMode.HALF_UP)) + "%";
+                text.append(" (").append(signedRub(change)).append(percent).append(" с ")
+                        .append(since.format(DATE)).append(')');
+            }
+        }
+        final List<CalendarEventModel> events = calendar.events();
+        if (!events.isEmpty()) {
+            text.append(weekly ? "\n\nВыплаты за 7 дней:" : "\n\nВыплаты сегодня:");
+            events.stream().limit(maxPayments).forEach(event -> text.append("\n• ").append(payment(event)));
+            if (events.size() > maxPayments) {
+                text.append("\nи ещё ").append(events.size() - maxPayments);
+            }
+            if (calendar.amountInRub() != null && calendar.amountInRub().signum() > 0) {
+                text.append("\nИтого: ").append(rub(calendar.amountInRub()));
+                if (calendar.incomplete()) {
+                    text.append(" (не все размеры выплат известны)");
+                }
+            }
+        }
+        if (!news.isEmpty()) {
+            text.append("\n\nНовости по облигациям портфеля:");
+            news.stream().limit(maxNews).forEach(item -> text.append("\n• ").append(item.getTitle())
+                    .append(" (").append(source(item.getSource()))
+                    .append(item.getPublishedAt() == null ? "" : ", " + moscowDate(item.getPublishedAt()).format(DATE))
+                    .append(')'));
+            if (news.size() > maxNews) {
+                text.append("\nи ещё ").append(news.size() - maxNews);
+            }
+        }
+        return text.toString();
+    }
+
+    /** «14.11.2026 купон Авто Финанс Банк БО-001Р-18 (RU000A10EQ34), 10 шт.: 152,1 ₽» */
+    private static String payment(final CalendarEventModel event) {
+        final String kind = switch (event.type()) {
+            case COUPON -> "купон";
+            case AMORTIZATION -> "частичное погашение";
+            case OFFER -> "оферта";
+            case MATURITY -> "погашение";
+        };
+        final String head = "%s %s %s, %d шт.".formatted(event.date().format(DATE), kind,
+                bond(event.bondName(), event.ticker()), event.quantity());
+        if (event.amountUnknown()) {
+            return head + ": размер не объявлен";
+        }
+        return event.amount() == null
+                ? head
+                : head + ": " + money(new MoneyModel().setQuantity(event.amount()).setCurrency(event.currency()));
+    }
+
+    /** «1 234 567,89 ₽» */
+    private static String rub(final BigDecimal value) {
+        return new DecimalFormat("#,##0.00", DecimalFormatSymbols.getInstance(RU))
+                .format(value.setScale(2, RoundingMode.HALF_UP)) + " ₽";
+    }
+
+    /** «+12 345,67 ₽», «−1 200,00 ₽» */
+    private static String signedRub(final BigDecimal value) {
+        final BigDecimal rounded = value.setScale(2, RoundingMode.HALF_UP);
+        final String abs = rub(rounded.abs());
+        return rounded.signum() > 0 ? "+" + abs : rounded.signum() < 0 ? "−" + abs : abs;
+    }
+
+    private static LocalDate moscowDate(final LocalDateTime utc) {
+        return utc.atOffset(ZoneOffset.UTC).atZoneSameInstant(MOSCOW).toLocalDate();
     }
 
     private static String source(final NewsSource source) {

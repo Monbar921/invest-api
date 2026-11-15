@@ -4,6 +4,7 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
+import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.ZoneId;
 
@@ -40,6 +41,39 @@ public class AlertProperties {
     private int filterMaxBonds = 10;
 
     private Dispatcher dispatcher = new Dispatcher();
+
+    private Risk risk = new Risk();
+
+    private Digest digest = new Digest();
+
+    /** Монитор риска по портфелю */
+    @Data
+    public static class Risk {
+        /**
+         * Сколько дней одно и то же событие (риск того же вида по тому же эмитенту) не повторяется: о дефолте пишут
+         * биржа, агентства и несколько СМИ, иногда на следующий день
+         */
+        private int quietDays = 3;
+
+        /** Больше уведомлений по одному правилу за проверку не шлём (первая загрузка ленты, сбой) */
+        private int maxPerCheck = 5;
+
+        /** Сколько новых новостей просматривать за проверку; остальные - в следующую */
+        private int scanLimit = 1000;
+    }
+
+    /** Дайджест портфеля */
+    @Data
+    public static class Digest {
+        /** День отправки еженедельного дайджеста; ежедневный - каждый день */
+        private DayOfWeek weeklyDay = DayOfWeek.MONDAY;
+
+        /** Сколько выплат перечислять; остальные - числом */
+        private int maxPayments = 5;
+
+        /** Сколько новостей перечислять; остальные - числом */
+        private int maxNews = 5;
+    }
 
     @Data
     public static class Dispatcher {

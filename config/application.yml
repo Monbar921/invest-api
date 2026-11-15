@@ -94,8 +94,22 @@ ru:
           zone: Europe/Moscow
         # правила по цене и доходности - после каждого обновления цен (scheduler.price и шаг price ночной цепочки)
         price-check-on-sync: true
-        # правила по новостям, рейтингам и ключевой ставке - после каждой загрузки ленты (news.scheduler)
+        # правила по новостям, рейтингам и ключевой ставке и монитор риска - после каждой загрузки ленты (news.scheduler)
         news-check-on-sync: true
+        # монитор риска по портфелю: то же событие по эмитенту не повторяется quiet-days дней
+        risk:
+          quiet-days: 3
+          max-per-check: 5
+          scan-limit: 1000
+        # дайджест портфеля: ежедневный - каждый день, еженедельный - в weekly-day
+        digest:
+          weekly-day: MONDAY
+          max-payments: 5
+          max-news: 5
+          scheduler:
+            enabled: true
+            cron: "0 0 10 * * *"
+            zone: Europe/Moscow
         # очередь отправки: повторы при сбоях связи, отказ через сутки
         dispatcher:
           enabled: true

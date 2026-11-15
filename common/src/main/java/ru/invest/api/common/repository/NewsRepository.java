@@ -1,5 +1,6 @@
 package ru.invest.api.common.repository;
 
+import org.springframework.data.domain.Limit;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -45,9 +46,24 @@ public interface NewsRepository extends JpaRepository<News, Long> {
     @Query("select n from News n left join fetch n.links where n.id in :ids")
     List<News> findWithLinksByIdIn(Collection<Long> ids);
 
+    /** id новостей новее afterId по возрастанию - монитор риска читает их пачкой, затем со ссылками */
+    @Query("select n.id from News n where n.id > :afterId order by n.id")
+    List<Long> findIdsAfter(Long afterId, Limit limit);
+
     /**
-     * Самый новый id Мосбиржи: новости идут по возрастанию id, загрузка останавливается на уже известных.
+     * Новости новее afterId по выпускам портфеля: упомянут выпуск или новость относится к его эмитенту; новые первыми.
      */
+    @Query("""
+            select n from News n
+            where n.id > :afterId
+              and exists (select 1 from NewsLink l
+                          where l.news = n
+                            and (l.isin in :isins
+                                 or l.emitterId in (select i.emitterId from BondIssuer i where i.isin in :isins)))
+            order by n.id desc
+            """)
+    List<News> findByIsinsAfter(Long afterId, Collection<String> isins, Limit limit);
+
     /** Последняя загруженная новость: с неё начинают новые правила по новостям */
     @Query("select max(n.id) from News n")
     Optional<Long> findMaxId();

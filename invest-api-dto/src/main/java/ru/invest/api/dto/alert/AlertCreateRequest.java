@@ -16,11 +16,11 @@ public class AlertCreateRequest {
     /** Самое раннее предупреждение; на бэке то же ограничение - ru.invest.api.alerts.max-days */
     public static final int MAX_DAYS = 60;
 
-    /** Обязателен, кроме KEY_RATE (правило без облигации) */
+    /** Обязателен, кроме правил без облигации: KEY_RATE, PORTFOLIO_RISK, PORTFOLIO_DIGEST */
     private String ticker;
     @NotNull(message = "type is required")
     private AlertTypeDto type;
-    /** Для правил по датам */
+    /** Для правил по датам; у PORTFOLIO_DIGEST - период: 1 (день) или 7 (неделя) */
     @Min(value = 1, message = "days must be from 1 to 60")
     @Max(value = MAX_DAYS, message = "days must be from 1 to 60")
     private Integer days;

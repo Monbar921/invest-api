@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.4.xsd">
+
+    <!-- дайджест портфеля: стоимость (base_value) и новости (cursor_id) - в имеющихся колонках, отпечаток состава
+         портфеля на последнем дайджесте - в новой: состав изменился - изменение стоимости не считается.
+         base_value numeric(12,4) мал для стоимости портфеля в рублях - расширяется -->
+    <changeSet id="INVEST-001-bond-alert-digest-columns" author="d.v.kornilovich">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="bond_alert" columnName="digest_holdings"/>
+            </not>
+        </preConditions>
+
+        <addColumn tableName="bond_alert">
+            <column name="digest_holdings" type="varchar(64)"/>
+        </addColumn>
+        <modifyDataType tableName="bond_alert" columnName="base_value" newDataType="numeric(20,4)"/>
+    </changeSet>
+
+    <!-- монитор риска и дайджест - по одному на пользователя -->
+    <changeSet id="INVEST-001-bond-alert-portfolio-rules-unique" author="d.v.kornilovich">
+        <sql>
+            create unique index if not exists bond_alert_user_portfolio_risk_uq_idx on bond_alert (user_id)
+            where type = 'PORTFOLIO_RISK';
+            create unique index if not exists bond_alert_user_portfolio_digest_uq_idx on bond_alert (user_id)
+            where type = 'PORTFOLIO_DIGEST';
+        </sql>
+        <rollback>
+            <sql>
+                drop index bond_alert_user_portfolio_digest_uq_idx;
+                drop index bond_alert_user_portfolio_risk_uq_idx;
+            </sql>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

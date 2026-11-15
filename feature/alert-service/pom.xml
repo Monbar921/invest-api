@@ -23,6 +23,12 @@
             <artifactId>news-supplier</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <!-- монитор риска и дайджест: облигации, стоимость и выплаты портфеля -->
+        <dependency>
+            <groupId>ru.invest.api</groupId>
+            <artifactId>portfolio-service</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 
 </project>

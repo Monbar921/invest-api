@@ -40,7 +40,15 @@ public enum AlertType {
     KEY_RATE(null),
 
     /** в выборку сохранённого фильтра вошли новые облигации (после обновления цен); правило без облигации */
-    SAVED_FILTER(null);
+    SAVED_FILTER(null),
+
+    /**
+     * риск по облигациям портфеля: понижение рейтинга, приостановка торгов, дефолт и технический дефолт (по новостям,
+     * привязанным к выпускам и эмитентам); правило без облигации, одно на пользователя
+     */
+    PORTFOLIO_RISK(null),
+    /** дайджест портфеля раз в days дней (1 или 7): стоимость, ближайшие выплаты, новости; правило без облигации */
+    PORTFOLIO_DIGEST(null);
 
     /** Событие облигации, о котором предупреждает правило по дате; null - правило по цене или доходности */
     private final BondEventType eventType;
@@ -60,9 +68,14 @@ public enum AlertType {
         return this == BOND_NEWS || this == ISSUER_RATING || this == KEY_RATE;
     }
 
-    /** Правило относится к облигации; ключевая ставка и фильтр - нет */
+    /** Правило относится к облигации; ключевая ставка, фильтр и правила портфеля - нет */
     public boolean hasBond() {
-        return this != KEY_RATE && this != SAVED_FILTER;
+        return this != KEY_RATE && this != SAVED_FILTER && !isPortfolioRule();
+    }
+
+    /** Правило по всему портфелю пользователя: риски и дайджест */
+    public boolean isPortfolioRule() {
+        return this == PORTFOLIO_RISK || this == PORTFOLIO_DIGEST;
     }
 
     /** Порог - уровень значения, а не изменение: срабатывает при пересечении, с повторным взведением */

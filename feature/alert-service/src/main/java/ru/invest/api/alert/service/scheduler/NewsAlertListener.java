@@ -7,10 +7,12 @@ import org.springframework.stereotype.Component;
 import ru.invest.api.alert.service.config.AlertProperties;
 import ru.invest.api.alert.service.usecase.NewsAlertCheckUseCase;
 import ru.invest.api.alert.service.usecase.NotificationDispatchUseCase;
+import ru.invest.api.alert.service.usecase.PortfolioRiskCheckUseCase;
 import ru.invest.api.common.model.event.NewsSyncedEvent;
 
 /**
- * Лента новостей загружена (раз в 15 минут) - проверить правила по новостям, рейтингам и ключевой ставке. Ошибка
+ * Лента новостей загружена (раз в 15 минут) - проверить правила по новостям, рейтингам и ключевой ставке и монитор
+ * риска по портфелю. Ошибка
  * проверки не должна ломать загрузку новостей: она пишется в лог.
  */
 @Slf4j
@@ -19,6 +21,7 @@ import ru.invest.api.common.model.event.NewsSyncedEvent;
 public class NewsAlertListener {
     private final AlertProperties properties;
     private final NewsAlertCheckUseCase newsAlertCheckUseCase;
+    private final PortfolioRiskCheckUseCase riskCheckUseCase;
     private final NotificationDispatchUseCase dispatchUseCase;
 
     @EventListener
@@ -33,6 +36,13 @@ public class NewsAlertListener {
             }
         } catch (final RuntimeException e) {
             log.error("News alert check after news sync failed", e);
+        }
+        try {
+            if (riskCheckUseCase.checkAll() > 0) {
+                dispatchUseCase.dispatchSoon();
+            }
+        } catch (final RuntimeException e) {
+            log.error("Portfolio risk check after news sync failed", e);
         }
     }
 }
