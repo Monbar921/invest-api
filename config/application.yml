@@ -203,6 +203,36 @@ ru:
           type: ${TELEGRAM_PROXY_TYPE:NONE}
           host: ${TELEGRAM_PROXY_HOST:127.0.0.1}
           port: ${TELEGRAM_PROXY_PORT:2080}
+        # публичный канал: публикует тот же бот (он - администратор канала); выключен - в канал ничего не уходит
+        channel:
+          enabled: ${TELEGRAM_CHANNEL_ENABLED:false}
+          # «@имя» канала или числовой id «-100...»
+          chat-id: ${TELEGRAM_CHANNEL_CHAT_ID:}
+          # публичный адрес сайта для ссылок на страницы продукта
+          site-url: ${TELEGRAM_CHANNEL_SITE_URL:}
+          zone: Europe/Moscow
+          max-posts-per-day: 5
+          min-interval: PT30M
+          posting-from: "09:00"
+          posting-to: "21:00"
+          max-age: P2D
+          retention: P90D
+          rating-actions: true
+          key-rate: true
+          weekly-top:
+            enabled: true
+            per-group: 3
+            min-turnover-rub: 1000000
+            min-years-to-maturity: 0.5
+            groups:
+              - { title: "AAA – AA-", min: "AA-", max: "AAA" }
+              - { title: "A+ – A-", min: "A-", max: "A+" }
+              - { title: "BBB+ – BBB-", min: "BBB-", max: "BBB+" }
+              - { title: "BB+ – BB-", min: "BB-", max: "BB+" }
+          scheduler:
+            enabled: true
+            publish-interval: PT5M
+            weekly-top-cron: "0 0 11 * * MON"
 
 spring:
   # 4 потока на @Scheduled: разбор очереди уведомлений (раз в 30 с) не ждёт долгих синхронизаций

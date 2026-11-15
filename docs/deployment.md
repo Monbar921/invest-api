@@ -54,6 +54,13 @@ Telegram-бот: `ru.invest.api.telegram.enabled` (по умолчанию вы�
 работать в одном экземпляре приложения (long polling). Если Telegram недоступен, приложение стартует и работает,
 в логе раз в 5 минут `Telegram is unavailable`.
 
+Публичный канал: `ru.invest.api.telegram.channel.*`, по умолчанию выключен. Включение - `TELEGRAM_CHANNEL_ENABLED=true`
+вместе с `TELEGRAM_CHANNEL_CHAT_ID` (`@имя` канала или `-100...`) и `TELEGRAM_CHANNEL_SITE_URL` (публичный адрес
+сайта для ссылок); без них приложение не стартует. Нужен включённый бот, и бот должен быть администратором канала с
+правом публикации. Лимит постов в день, пауза, окно публикации, срок актуальности, группы подборки и её расписание
+(`scheduler.weekly-top-cron`, понедельник 11:00 МСК) - в `config/application.yml`, см.
+[INVEST-001-telegram-channel](features/INVEST-001-telegram-channel/).
+
 Уведомления: `ru.invest.api.alerts.scheduler.enabled` / `cron` / `zone` (проверка правил, по умолчанию 09:00 МСК, и
 сразу после старта), `...dispatcher.enabled` / `interval` (разбор очереди, 30 с), `max-days`,
 `give-up-after` (24 ч), `retention` (90 дней), `price-check-on-sync` (правила по цене и доходности после каждого

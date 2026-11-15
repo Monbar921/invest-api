@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.4.xsd">
+
+    <!-- очередь постов публичного Telegram-канала: сбор пишет сюда, публикация идёт отдельно с лимитом в день.
+         dedup_key не даёт опубликовать один и тот же пост дважды (перезапуск, повторная загрузка ленты) -->
+    <changeSet id="INVEST-001-create-channel-post-table" author="d.v.kornilovich">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="channel_post"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="channel_post">
+            <column autoIncrement="true" name="id" type="bigserial">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="kind" type="varchar(32)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="dedup_key" type="varchar(200)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="channel_post_dedup_key_uq"/>
+            </column>
+            <column name="text" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="varchar(16)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="attempts" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="next_attempt_at" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="expires_at" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="sent_at" type="timestamp"/>
+            <column name="message_id" type="int"/>
+            <column name="last_error" type="text"/>
+        </createTable>
+
+        <createIndex tableName="channel_post" indexName="channel_post_status_next_attempt_idx">
+            <column name="status"/>
+            <column name="next_attempt_at"/>
+        </createIndex>
+        <createIndex tableName="channel_post" indexName="channel_post_status_sent_idx">
+            <column name="status"/>
+            <column name="sent_at"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

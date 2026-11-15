@@ -113,6 +113,12 @@ ru:
         polling: false
         bot-token: TEST
         bot-username: invest_test_bot
+        # канал включён, но без сбора после загрузки ленты и без шедулера: TelegramChannelTest вызывает use case сам
+        channel:
+          enabled: true
+          chat-id: "@invest_test_channel"
+          site-url: https://invest.test
+          collect-on-sync: false
 spring:
   jpa:
     # без этого EntityManager живёт весь HTTP-запрос: ручная синхронизация свечей копила в нём сотни тысяч

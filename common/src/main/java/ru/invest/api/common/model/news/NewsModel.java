@@ -25,7 +25,7 @@ public class NewsModel {
     private LocalDateTime publishedAt;
     /** ISIN выпусков, упомянутых в новости */
     private Set<String> isins = Set.of();
-    /** Эмитенты Мосбиржи, к которым относится новость */
+    /** Эмитенты Мосбиржи, к которым относится новость; при чтении - из ссылок новости (в API не отдаются) */
     private Set<Long> emitterIds = Set.of();
     /** Текст новости для поиска эмитентов по названию; в БД не хранится */
     private String bodyForMatching;

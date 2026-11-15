@@ -26,4 +26,5 @@
     <include file="tables/020-screener.xml" relativeToChangelogFile="true"/>
     <include file="tables/021-saved-filter.xml" relativeToChangelogFile="true"/>
     <include file="tables/022-portfolio-monitor.xml" relativeToChangelogFile="true"/>
+    <include file="tables/023-telegram-channel.xml" relativeToChangelogFile="true"/>
 </databaseChangeLog>

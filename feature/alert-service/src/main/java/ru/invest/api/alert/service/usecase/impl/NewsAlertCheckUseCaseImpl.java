@@ -10,6 +10,7 @@ import ru.invest.api.common.entity.Bond;
 import ru.invest.api.common.entity.BondAlert;
 import ru.invest.api.common.exception.GeneralNotFoundEntityException;
 import ru.invest.api.common.model.alert.AlertType;
+import ru.invest.api.common.model.news.KeyRateDecision;
 import ru.invest.api.common.model.news.NewsModel;
 import ru.invest.api.common.model.news.NewsSource;
 import ru.invest.api.common.repository.BondAlertRepository;
@@ -25,7 +26,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -36,10 +36,6 @@ public class NewsAlertCheckUseCaseImpl implements NewsAlertCheckUseCase {
     /** Сколько последних новостей просматривать за проверку: лента грузится раз в 15 минут, больше не набирается */
     private static final int PAGE_SIZE = 50;
     private static final Set<NewsSource> RATING_SOURCES = Set.of(NewsSource.ACRA, NewsSource.NKR);
-    // «Банк России принял решение сохранить ключевую ставку на уровне 14,00% годовых» (так ЦБ пишет сейчас),
-    // «Банк России снизил ключевую ставку на 50 б.п.» - и неопределённая форма, и прошедшее время
-    private static final Pattern KEY_RATE_DECISION = Pattern.compile(
-            "(снизи|повыси|сохрани)(л|ть)\\s+ключевую\\s+ставку", Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
     private static final Set<AlertType> NEWS_TYPES = Set.of(AlertType.BOND_NEWS, AlertType.ISSUER_RATING,
             AlertType.KEY_RATE);
 
@@ -160,7 +156,7 @@ public class NewsAlertCheckUseCaseImpl implements NewsAlertCheckUseCase {
 
     private List<NewsModel> keyRateDecisions() {
         return newsUseCase.getFeed(Set.of(NewsSource.CBR_PRESS), PageRequest.of(0, PAGE_SIZE)).getContent().stream()
-                .filter(item -> item.getTitle() != null && KEY_RATE_DECISION.matcher(item.getTitle()).find())
+                .filter(item -> KeyRateDecision.matches(item.getTitle()))
                 .toList();
     }
 }

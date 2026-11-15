@@ -41,7 +41,7 @@ invest-gateway ──────▶│ ui-service: /internal/rest/bonds/**, /in
 | `feature/account-service`         | тарифы и права: тарифы с ценами из конфигурации (`PlanProperties`), подписки пользователей, проверка лимитов и фич (`EntitlementUseCase`), тариф пользователя, его выдача вручную и по оплате (`AccountPlanUseCase`) |
 | `feature/payment-service`         | оплата тарифов: провайдер за интерфейсом `PaymentProvider` (Т-Касса), покупка, webhook с проверкой подписи, история платежей, автопродление по сохранённой карте (`RenewalScheduler`) |
 | `feature/import-service`          | импорт сделок от брокера: токен T-Invest только на чтение (зашифрован, `TokenCipher`), клиент T-Invest API с токеном пользователя (`TinvestClient`), разбор файлов отчётов за интерфейсом `ReportParser` (CSV, HTML Сбербанка, XLSX Альфа-Банка), предпросмотр и подтверждение (`PortfolioImportUseCase`) - сделки создаются через `PortfolioUseCase` / `PortfolioTradeUseCase` |
-| `feature/telegram-bot`            | Telegram-бот: OkHttp-клиент с прокси из настроек, long polling, команды `/start` `/stop` `/help`, привязка чата к пользователю, проверка связи |
+| `feature/telegram-bot`            | Telegram-бот: OkHttp-клиент с прокси из настроек, long polling, команды `/start` `/stop` `/help`, привязка чата к пользователю, проверка связи; публичный канал (пакет `channel`): сбор постов и публикация |
 | `feature/ui-service`              | REST-контроллеры, маппинг в DTO, обработка ошибок, выгрузка списка облигаций в CSV и XLSX (`BondCsvWriter`, `BondXlsxWriter`) |
 | `invest-api-dto`                  | DTO запросов и ответов, общие с клиентами                                                      |
 | `invest-api-spring-boot-starter`  | Feign-клиент `InvestApiBondClient` + `@EnableInvestApiBondClient` для других сервисов и тестов |
@@ -175,6 +175,7 @@ PostgreSQL, схема задаётся в конфиге (`spring.liquibase.def
 | `payment` | платежи за тариф: пользователь, тариф, срок (ISO-8601), сумма в рублях, `PURCHASE` / `RENEWAL`, статус `NEW` / `PENDING` / `SUCCEEDED` / `FAILED` / `REFUNDED`, провайдер, наш номер заказа (уникален с провайдером), id и статус у провайдера, страница оплаты, маска карты, ошибка, автопродление, выданная подписка (`subscription_id` - платёж применён). Записи не удаляются |
 | `account_auto_renewal` | автопродление: пользователь, тариф, провайдер, токен сохранённой карты (`RebillId`, не номер карты), маска карты, когда списать, неудач подряд, платёж, которым включено, когда и почему отключено. Действующее (`cancelled_at is null`) у пользователя одно - частичный уникальный индекс |
 | `telegram_link_token` | одноразовые токены ссылки привязки: SHA-256 токена, пользователь, срок (10 минут) |
+| `channel_post` | очередь и история постов публичного канала: вид (`RATING_ACTION` / `KEY_RATE` / `WEEKLY_TOP`), текст, статус PENDING / SENT / FAILED / SKIPPED, попытки, срок актуальности, когда опубликован и `message_id`; `dedup_key` уникален (id новости или неделя подборки) |
 | `shedlock`     | блокировки шедулеров                                                                  |
 
 У всех таблиц аудит: `created_at/by`, `updated_at/by` (шедулер пишет процесс `SCHEDULER_PROCESS`,
@@ -338,6 +339,13 @@ Telegram не теряет уведомления: они ждут и повто
 Привязка: UI получает одноразовую ссылку `t.me/<bot>?start=<токен>`, пользователь нажимает «Старт», бот получает
 `/start <токен>` и сохраняет `chat_id` за владельцем токена (`TelegramLinkUseCase`). Правила - в
 [business-rules.md](business-rules.md#telegram-привязка-чата). Обрабатываются только личные чаты.
+
+Публичный канал (пакет `channel`, `ru.invest.api.telegram.channel`): после загрузки ленты (`NewsSyncedEvent`)
+`ChannelNewsListener` собирает посты о рейтинговых действиях и ключевой ставке в `channel_post`, `ChannelScheduler`
+раз в 5 минут публикует один пост (окно, лимит дня, пауза; ShedLock), по понедельникам собирает подборку недели из того
+же фильтра, что у списка облигаций. Публикует тот же бот (`TelegramClient`) - он администратор канала; ссылки -
+на публичные страницы сайта (`site-url`). Правила - в [business-rules.md](business-rules.md#публичный-telegram-канал),
+устройство - в [INVEST-001-telegram-channel](features/INVEST-001-telegram-channel/design.md).
 
 Сертификаты invest-public-api.tinkoff.ru и acra-ratings.ru подписаны корневым сертификатом Минцифры - его нужно добавить в truststore JVM
 (в образе это делает Dockerfile, см. [deployment.md](deployment.md)).
