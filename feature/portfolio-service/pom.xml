@@ -17,6 +17,12 @@
             <artifactId>bond-supplier</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <!-- эмитенты Мосбиржи и их короткие названия - для аналитики портфеля -->
+        <dependency>
+            <groupId>ru.invest.api</groupId>
+            <artifactId>news-supplier</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 
 </project>

@@ -5,6 +5,7 @@ import org.mapstruct.Mapping;
 import ru.invest.api.common.mapper.DateTimeMapper;
 import ru.invest.api.dto.portfolio.BrokerDto;
 import ru.invest.api.dto.portfolio.CalendarLinkDto;
+import ru.invest.api.dto.portfolio.PortfolioAnalyticsDto;
 import ru.invest.api.dto.portfolio.PortfolioCalendarDto;
 import ru.invest.api.dto.portfolio.PortfolioDto;
 import ru.invest.api.dto.portfolio.PortfolioGroupDto;
@@ -14,6 +15,7 @@ import ru.invest.api.dto.portfolio.PortfolioSaleRequest;
 import ru.invest.api.dto.portfolio.PortfolioTradeDto;
 import ru.invest.api.portfolio.service.model.BrokerModel;
 import ru.invest.api.portfolio.service.model.CalendarLinkModel;
+import ru.invest.api.portfolio.service.model.PortfolioAnalyticsModel;
 import ru.invest.api.portfolio.service.model.PortfolioCalendarModel;
 import ru.invest.api.portfolio.service.model.PortfolioGroupModel;
 import ru.invest.api.portfolio.service.model.PortfolioModel;
@@ -31,6 +33,8 @@ public interface PortfolioDtoMapper {
     PortfolioPositionDto toDto(PositionModel position);
 
     PortfolioGroupDto toDto(PortfolioGroupModel group);
+
+    PortfolioAnalyticsDto toDto(PortfolioAnalyticsModel analytics);
 
     PortfolioTradeDto toDto(TradeModel trade);
 

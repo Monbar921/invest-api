@@ -18,12 +18,14 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import ru.invest.api.dto.portfolio.BrokerDto;
 import ru.invest.api.dto.portfolio.CalendarLinkDto;
+import ru.invest.api.dto.portfolio.PortfolioAnalyticsDto;
 import ru.invest.api.dto.portfolio.PortfolioCalendarDto;
 import ru.invest.api.dto.portfolio.PortfolioDto;
 import ru.invest.api.dto.portfolio.PortfolioPositionDto;
 import ru.invest.api.dto.portfolio.PortfolioPositionRequest;
 import ru.invest.api.dto.portfolio.PortfolioSaleRequest;
 import ru.invest.api.dto.portfolio.PortfolioTradeDto;
+import ru.invest.api.portfolio.service.usecase.PortfolioAnalyticsUseCase;
 import ru.invest.api.portfolio.service.usecase.PortfolioCalendarUseCase;
 import ru.invest.api.portfolio.service.usecase.PortfolioTradeUseCase;
 import ru.invest.api.portfolio.service.usecase.PortfolioUseCase;
@@ -45,6 +47,7 @@ public class PortfolioController {
     private final PortfolioUseCase portfolioUseCase;
     private final PortfolioTradeUseCase portfolioTradeUseCase;
     private final PortfolioCalendarUseCase portfolioCalendarUseCase;
+    private final PortfolioAnalyticsUseCase portfolioAnalyticsUseCase;
     private final PortfolioDtoMapper portfolioDtoMapper;
 
     /**
@@ -56,6 +59,17 @@ public class PortfolioController {
     public PortfolioDto getPortfolio(@RequestHeader(value = UserIdHeader.NAME, required = false) final String userId,
                                      @RequestParam(required = false) final BigDecimal taxRatePercent) {
         return portfolioDtoMapper.toDto(portfolioUseCase.getPortfolio(UserIdHeader.require(userId), taxRatePercent));
+    }
+
+    /**
+     * Аналитика открытых позиций: доли по эмитентам, секторам, рейтингам, валютам, типу купона и годам погашения,
+     * средневзвешенные доходность и дюрация, крупнейший эмитент, чувствительность к ставке ±1 п.п. Позиции без
+     * признака - в группе с key = null, без оценки в рублях - в unvalued.
+     */
+    @GetMapping("/analytics")
+    public PortfolioAnalyticsDto getAnalytics(
+            @RequestHeader(value = UserIdHeader.NAME, required = false) final String userId) {
+        return portfolioDtoMapper.toDto(portfolioAnalyticsUseCase.getAnalytics(UserIdHeader.require(userId)));
     }
 
     /**
