@@ -249,7 +249,7 @@ public class PortfolioMonitorTest extends AbstractInvestApplicationTest {
                 Стоимость: 10 050,00 ₽
 
                 Выплаты сегодня:
-                • %s купон Авто Финанс Банк БО-001Р-18 (RU000A10EQ34), 10 шт.: 152,1 ₽
+                • %s купон Авто Финанс Банк БО-001Р-18 (RU000A10EQ34), 10 шт.: 152,10 ₽
                 Итого: 152,10 ₽""".formatted(today.format(DATE), today.format(DATE))));
         // тот же день - не повторяется
         assertThat(digestUseCase.send(alert.getId(), today), equalTo(false));
@@ -300,6 +300,20 @@ public class PortfolioMonitorTest extends AbstractInvestApplicationTest {
                 today.plusDays(1).format(DATE), LocalDate.now(MOSCOW).format(DATE))));
         // показанные новости в следующий дайджест не попадают - он пустой
         assertThat(digestUseCase.send(alert.getId(), today.plusDays(2)), equalTo(false));
+    }
+
+    @Test
+    void firstDigestHasNewsSinceCreation() {
+        position(ALICE, BANK, 10);
+        insertNews("MOEX", "До включения дайджеста", BANK, BANK_EMITTER, LocalDateTime.of(2026, 11, 10, 10, 0));
+        // как переключатель в UI: правило создаётся сразу включённым, без выключения и включения заново
+        final AlertDto alert = create(Map.of("type", "PORTFOLIO_DIGEST", "days", 1));
+        insertNews("MOEX", "После включения дайджеста", BANK, BANK_EMITTER, LocalDateTime.of(2026, 11, 12, 10, 0));
+
+        assertThat(digestUseCase.send(alert.getId(), today), equalTo(true));
+        assertThat(texts().getFirst(), containsString("Новости по облигациям портфеля:\n"
+                + "• После включения дайджеста (Мосбиржа, 12.11.2026)"));
+        assertThat(texts().getFirst(), not(containsString("До включения")));
     }
 
     @Test

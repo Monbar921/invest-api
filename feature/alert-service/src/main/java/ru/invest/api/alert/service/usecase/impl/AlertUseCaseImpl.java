@@ -122,8 +122,12 @@ public class AlertUseCaseImpl implements AlertUseCase {
                 .setType(type)
                 .setEnabled(true)
                 .setCreatedAt(LocalDateTime.now(ZoneOffset.UTC));
-        if (type.isDateRule() || type == AlertType.PORTFOLIO_DIGEST) {
+        if (type.isDateRule()) {
             alert.setDays(rule.days());
+        } else if (type == AlertType.PORTFOLIO_DIGEST) {
+            // период, и новости в первом дайджесте - только после включения
+            alert.setDays(rule.days());
+            startFromNow(alert, null);
         } else if (type.isPriceRule()) {
             alert.setDirection(rule.direction()).setThreshold(rule.threshold());
             arm(alert, bond);

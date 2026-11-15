@@ -188,15 +188,20 @@ final class AlertTexts {
         if (event.amountUnknown()) {
             return head + ": размер не объявлен";
         }
-        return event.amount() == null
-                ? head
-                : head + ": " + money(new MoneyModel().setQuantity(event.amount()).setCurrency(event.currency()));
+        return event.amount() == null ? head : head + ": " + amount(event.amount(), event.currency());
     }
 
     /** «1 234 567,89 ₽» */
     private static String rub(final BigDecimal value) {
-        return new DecimalFormat("#,##0.00", DecimalFormatSymbols.getInstance(RU))
-                .format(value.setScale(2, RoundingMode.HALF_UP)) + " ₽";
+        return amount(value, "rub");
+    }
+
+    /** Сумма дайджеста - всегда с копейками и разрядами, как итог: «156,20 ₽», «1 200,00 USD» */
+    private static String amount(final BigDecimal value, final String currency) {
+        final String code = currency == null ? "" : currency.toUpperCase(RU);
+        final String sign = "RUB".equals(code) || "RUR".equals(code) ? "₽" : code;
+        return (new DecimalFormat("#,##0.00", DecimalFormatSymbols.getInstance(RU))
+                .format(value.setScale(2, RoundingMode.HALF_UP)) + " " + sign).strip();
     }
 
     /** «+12 345,67 ₽», «−1 200,00 ₽» */
